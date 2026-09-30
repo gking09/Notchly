@@ -18,7 +18,7 @@
 
 import XCTest
 
-@testable import Atoll
+@testable import Notchly
 
 /// The media key tap cannot be created until Accessibility is granted, and
 /// granting it does not relaunch the app — so the retry schedule is the only

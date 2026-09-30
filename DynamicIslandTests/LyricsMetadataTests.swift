@@ -17,7 +17,7 @@
  */
 
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 /// The line between metadata that identifies a song and metadata that only
 /// looks like it does.

@@ -9,7 +9,7 @@
  */
 
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 final class AudioTapTests: XCTestCase {
     private let targets = [

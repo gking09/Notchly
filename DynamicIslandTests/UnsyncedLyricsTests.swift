@@ -17,7 +17,7 @@
  */
 
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 /// A track with no timed lyrics available still shows its words, but nothing
 /// may claim to know which of them is being sung.

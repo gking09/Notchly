@@ -9,7 +9,7 @@
  */
 
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 /// The adapter's diff updates omit what has not changed, so "absent" and
 /// "present but null" mean different things for the playback position. Optional

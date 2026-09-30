@@ -18,7 +18,7 @@
 
 import XCTest
 import Defaults
-@testable import Atoll
+@testable import Notchly
 
 final class PinnedLyricsContextTests: XCTestCase {
     private let lines = LRCParser.parse("""

@@ -19,7 +19,7 @@
 #if os(macOS)
 import AppKit
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 final class FlyoutFrameCalculatorTests: XCTestCase {
 

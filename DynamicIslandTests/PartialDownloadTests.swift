@@ -18,7 +18,7 @@
 
 import XCTest
 
-@testable import Atoll
+@testable import Notchly
 
 /// The download live activity is driven purely by what the Downloads folder
 /// looks like from one scan to the next, so the browsers' naming conventions

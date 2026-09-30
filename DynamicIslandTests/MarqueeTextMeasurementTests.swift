@@ -9,7 +9,7 @@
  */
 
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 /// The marquee measures a loop of two copies of the text and has to recover the
 /// width of a single copy from it. Getting that arithmetic wrong is invisible in

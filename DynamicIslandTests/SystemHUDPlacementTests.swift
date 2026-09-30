@@ -18,7 +18,7 @@
 
 import XCTest
 
-@testable import Atoll
+@testable import Notchly
 
 /// Which HUD can be drawn depends on whether the Mac is locked, and getting it
 /// wrong is silent: the keys simply do nothing, because this app has already

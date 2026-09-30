@@ -1,5 +1,5 @@
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 /// The screen these use is a 14" MacBook Pro: 1710pt wide, notch 185pt wide and
 /// centred, so the menu bar's left strip runs 0...762.5.

@@ -17,7 +17,7 @@
  */
 
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 /// Finding the playing track again in NetEase's catalogue from nothing but
 /// the metadata a player publishes.

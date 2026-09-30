@@ -18,7 +18,7 @@
 
 import XCTest
 
-@testable import Atoll
+@testable import Notchly
 
 /// Nobody on the project has Cider installed, so what these pin down is the
 /// wire format: the paths, the header, the request body, and how each kind of

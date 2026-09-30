@@ -11,7 +11,7 @@
 import AppKit
 import Combine
 import XCTest
-@testable import Atoll
+@testable import Notchly
 
 @MainActor
 final class AppleMusicControllerTests: XCTestCase {
