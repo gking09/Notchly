@@ -27,11 +27,8 @@ struct DynamicIslandHeader: View {
     @ObservedObject var timerManager = TimerManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
     @State private var showTimerPopover = false
-    @State private var showPerAppVolumePopover = false
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
-    @Default(.enablePerAppVolume) var enablePerAppVolume
-    @Default(.showPerAppVolumeIcon) var showPerAppVolumeIcon
     @Default(.showBatteryIndicator) var showBatteryIndicator
     @Default(.showBatteryPercentInside) var showBatteryPercentInside
     @Default(.showMinimalisticBatteryIndicator) var showMinimalisticBatteryIndicator
@@ -144,34 +141,6 @@ struct DynamicIslandHeader: View {
                         }
                     }
                     
-                    if enablePerAppVolume && showPerAppVolumeIcon {
-                        Button(action: {
-                            withAnimation(.smooth) {
-                                showPerAppVolumePopover.toggle()
-                            }
-                        }) {
-                            Capsule()
-                                .fill(.black)
-                                .frame(width: 30, height: 30)
-                                .overlay {
-                                    headerGlyph("slider.vertical.3")
-                                }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .popover(isPresented: $showPerAppVolumePopover, arrowEdge: .bottom) {
-                            PerAppVolumePopover()
-                        }
-                        .onChange(of: showPerAppVolumePopover) { isActive in
-                            vm.isPerAppVolumePopoverActive = isActive
-
-                            if !isActive {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    vm.shouldRecheckHover.toggle()
-                                }
-                            }
-                        }
-                    }
-
                     if Defaults[.settingsIconInNotch] {
                         Button(action: {
                             SettingsWindowController.shared.showWindow()
@@ -243,12 +212,6 @@ struct DynamicIslandHeader: View {
         }
         .foregroundColor(.gray)
         .environmentObject(vm)
-        .onChange(of: enablePerAppVolume) { _, newValue in
-            if !newValue {
-                showPerAppVolumePopover = false
-                vm.isPerAppVolumePopoverActive = false
-            }
-        }
         .onChange(of: enableTimerFeature) { _, newValue in
             if !newValue {
                 showTimerPopover = false

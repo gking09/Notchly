@@ -923,12 +923,6 @@ extension Defaults.Keys {
     // Legacy key name: the separate control window is gone, this now shows inline notch controls.
     static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
     
-    // MARK: Per-App Volume
-    static let enablePerAppVolume = Key<Bool>("enablePerAppVolume", default: false)
-    static let showPerAppVolumeIcon = Key<Bool>("showPerAppVolumeIcon", default: true)
-    static let perAppVolumeLevels = Key<[String: Double]>("perAppVolumeLevels", default: [:])
-    static let perAppVolumeMuted = Key<Set<String>>("perAppVolumeMuted", default: [])
-
     // MARK: Third-Party Extensions
     static let enableThirdPartyExtensions = Key<Bool>("enableThirdPartyExtensions", default: true)
     static let enableExtensionLiveActivities = Key<Bool>("enableExtensionLiveActivities", default: true)

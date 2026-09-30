@@ -2248,7 +2248,6 @@ struct ContentView: View {
     private func hasAnyActivePopovers() -> Bool {
      return vm.isBatteryPopoverActive || 
          vm.isTimerPopoverActive ||
-         vm.isPerAppVolumePopoverActive ||
          vm.isMediaOutputPopoverActive ||
          vm.isReminderPopoverActive
     }

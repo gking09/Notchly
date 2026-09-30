@@ -20,12 +20,7 @@ import AudioToolbox
 import CoreAudio
 import Foundation
 
-/// The CoreAudio property reads shared by the visualizer tap and the per-app
-/// volume taps.
-///
-/// These were originally file-private helpers inside `AudioTap`; both features
-/// need the same four lookups, so they live in one place rather than being
-/// kept in sync by hand.
+/// CoreAudio process property reads used by the visualizer tap.
 enum AudioProcessQuery {
 
     /// Every process CoreAudio currently knows about, playing or not.

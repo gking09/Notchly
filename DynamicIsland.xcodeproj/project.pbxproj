@@ -34,7 +34,6 @@
 		A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */; };
 		A1B2C3D40000000000000003 /* NetEaseLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */; };
 		A1B2C3D4E5F60718293A4B5C /* ExtensionRPCServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* ExtensionRPCServerTests.swift */; };
-		A1C0FFEE0002000000000001 /* PerAppVolumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0002000000000002 /* PerAppVolumeTests.swift */; };
 		A1C0FFEE0003000000000001 /* PinnedLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */; };
 		A1C0FFEE0004000000000001 /* UnsyncedLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */; };
 		A3C83CAF84544DCE386C3BB8 /* DynamicIslandUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54078F29304A9DBBEFBDF932 /* DynamicIslandUITests.swift */; };
@@ -99,7 +98,6 @@
 		A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LyricsMetadataTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NetEaseLyricsTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* ExtensionRPCServerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExtensionRPCServerTests.swift; sourceTree = "<group>"; };
-		A1C0FFEE0002000000000002 /* PerAppVolumeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PerAppVolumeTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinnedLyricsTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnsyncedLyricsTests.swift; sourceTree = "<group>"; };
 		A4B5C6D7E8F90123456789AC /* AppleMusicControllerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleMusicControllerTests.swift; sourceTree = "<group>"; };
@@ -212,7 +210,6 @@
 				8DC2ACF06B40405DB1A8F99E /* MarqueeTextMeasurementTests.swift */,
 				DFA269966BB987D4A1B411A2 /* SpotifyLibraryTests.swift */,
 				A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */,
-				A1C0FFEE0002000000000002 /* PerAppVolumeTests.swift */,
 				A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */,
 				C1DE0FAV0001000000000002 /* CiderFavoritingTests.swift */,
 				2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */,
@@ -491,7 +488,6 @@
 				A4B5C6D7E8F90123456789AB /* AppleMusicControllerTests.swift in Sources */,
 				B4777BB9FE29243B253B8306 /* SpotifyLibraryTests.swift in Sources */,
 				A1C0FFEE0003000000000001 /* PinnedLyricsTests.swift in Sources */,
-				A1C0FFEE0002000000000001 /* PerAppVolumeTests.swift in Sources */,
 				A1C0FFEE0004000000000001 /* UnsyncedLyricsTests.swift in Sources */,
 				C1DE0FAV0001000000000001 /* CiderFavoritingTests.swift in Sources */,
 				738C4EBB63E3449B923997D0 /* MenuBarClearanceTests.swift in Sources */,

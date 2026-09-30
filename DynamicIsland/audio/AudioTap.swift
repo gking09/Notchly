@@ -69,9 +69,7 @@ let audioIOProc: AudioDeviceIOProc = {
     return noErr
 }
 
-// These four lookups moved to `AudioProcessQuery` when the per-app volume
-// taps started needing the same reads. They stay here as thin wrappers so the
-// call sites below read the way they always have.
+// Thin wrappers over `AudioProcessQuery` so the call sites below stay concise.
 private func getAudioObjectID(for pid: pid_t) -> AudioObjectID? {
     AudioProcessQuery.processObject(for: pid)
 }
