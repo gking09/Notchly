@@ -2388,7 +2388,6 @@ struct ContentView: View {
          vm.isStatsPopoverActive ||
          vm.isTimerPopoverActive ||
          vm.isPerAppVolumePopoverActive ||
-         vm.isCaffeinatePopoverActive ||
          vm.isMediaOutputPopoverActive ||
          vm.isReminderPopoverActive
     }
