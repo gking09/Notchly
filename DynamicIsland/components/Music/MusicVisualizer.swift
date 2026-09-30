@@ -100,6 +100,9 @@ class AudioSpectrum: NSView {
             animation.toValue = CGFloat.random(in: 0.35 ... 1.0)
             animation.duration = 0.3
             animation.autoreverses = true
+            // Ease in and out so each bar swells and settles instead of ticking
+            // linearly between targets.
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animation.fillMode = .forwards
             animation.isRemovedOnCompletion = false
             if #available(macOS 13.0, *) {
@@ -109,10 +112,22 @@ class AudioSpectrum: NSView {
         }
     }
     
+    /// Settles every bar back to its resting height. Eased from wherever the bar
+    /// currently is, so pausing the music lowers the visualizer rather than
+    /// snapping it flat.
     private func resetBars() {
+        let resting: CGFloat = 0.35
         for barLayer in barLayers {
+            let current = (barLayer.presentation()?.value(forKeyPath: "transform.scale.y") as? CGFloat) ?? resting
             barLayer.removeAllAnimations()
-            barLayer.transform = CATransform3DMakeScale(1, 0.35, 1)
+            barLayer.transform = CATransform3DMakeScale(1, resting, 1)
+            guard abs(current - resting) > 0.01, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { continue }
+            let settle = CABasicAnimation(keyPath: "transform.scale.y")
+            settle.fromValue = current
+            settle.toValue = resting
+            settle.duration = 0.3
+            settle.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            barLayer.add(settle, forKey: "settle")
         }
     }
     

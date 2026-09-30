@@ -364,10 +364,7 @@ struct MinimalisticMusicPlayerView: View {
 
     private var lyricsView: some View {
         let line = musicManager.currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
-        let transition: AnyTransition = .asymmetric(
-            insertion: .move(edge: .bottom).combined(with: .opacity),
-            removal: .move(edge: .top).combined(with: .opacity)
-        )
+        let transition: AnyTransition = .lyricLine
 
         return HStack(spacing: 6) {
             if !line.isEmpty {
@@ -389,7 +386,7 @@ struct MinimalisticMusicPlayerView: View {
         }
         .padding(.horizontal, 6)
         .frame(maxWidth: .infinity, maxHeight: 40, alignment: .topLeading)
-        .animation(.smooth(duration: 0.32), value: line)
+        .animation(NotchlyTheme.Motion.spring, value: line)
     }
     
 

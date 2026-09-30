@@ -27,7 +27,7 @@ struct HoverButton: View {
     var iconColor: Color = .white
     var scale: Image.Scale = .medium
     var pressEffect: PressEffect? = nil
-    var contentTransition: ContentTransition = .symbolEffect
+    var contentTransition: ContentTransition = .symbolEffect(.replace)
     var externalTriggerToken: Int? = nil
     var externalTriggerEffect: PressEffect? = nil
     /// When set, the button draws an animated skip glyph instead of `icon`:
@@ -81,6 +81,8 @@ struct HoverButton: View {
                                     .foregroundColor(iconColor)
                                     .contentTransition(contentTransition)
                                     .font(scale == .large ? .largeTitle : .body)
+                                    // play <-> pause and friends morph rather than swap
+                                    .animation(NotchlyTheme.Motion.snappy, value: icon)
 
                                 if case .wiggle = pressEffect {
                                     if #available(macOS 15.0, *) {
@@ -141,22 +143,21 @@ struct HoverButton: View {
     private func triggerPressEffect(override: PressEffect? = nil) {
         // Fires for taps and for gesture-driven pulses alike, and independently
         // of pressEffect — skip buttons no longer use one.
-        if skipDirection != nil {
+        if let skipDirection {
             skipToken += 1
+            // The chevrons march; the button also gives a small shove the way
+            // it is travelling, then springs back.
+            if override == nil && pressEffect == nil {
+                nudge(by: skipDirection == .forward ? 3 : -3)
+                return
+            }
         }
 
         guard let effect = override ?? pressEffect else { return }
 
         switch effect {
         case .nudge(let amount):
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.55)) {
-                pressOffset = amount
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
-                    pressOffset = 0
-                }
-            }
+            nudge(by: amount)
         case .wiggle(let direction):
             guard #available(macOS 14.0, *) else { return }
             wiggleToken += 1
@@ -170,6 +171,18 @@ struct HoverButton: View {
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
                     wiggleAngle = 0
                 }
+            }
+        }
+    }
+
+    private func nudge(by amount: CGFloat) {
+        guard !NotchlyTheme.Motion.reduceMotion else { return }
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.55)) {
+            pressOffset = amount
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
+                pressOffset = 0
             }
         }
     }

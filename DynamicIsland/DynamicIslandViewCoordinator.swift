@@ -47,6 +47,9 @@ struct sneakPeek {
     var accentColor: Color?
     var styleOverride: SneakPeekStyle? = nil
     var targetScreenName: String? = nil
+    /// Advances on every event, including ones that leave `value` unchanged, so
+    /// a HUD can react to a key pressed while already at the end of its range.
+    var pulse: Int = 0
 }
 
 struct ExpandedItem {
@@ -197,7 +200,8 @@ class DynamicIslandViewCoordinator: ObservableObject {
             updated.accentColor = accentColor
             updated.styleOverride = styleOverride
             updated.targetScreenName = targetScreen?.localizedName
-            withAnimation(.smooth(duration: 0.3)) {
+            updated.pulse = self.sneakPeek.pulse &+ 1
+            withAnimation(NotchlyTheme.Motion.spring) {
                 self.sneakPeek = updated
             }
         }

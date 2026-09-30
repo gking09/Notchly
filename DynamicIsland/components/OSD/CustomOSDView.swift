@@ -46,6 +46,8 @@ struct CustomOSDView: View {
                     .font(.system(size: iconSize, weight: .regular))
                     .foregroundStyle(iconColor)
                     .symbolRenderingMode(.hierarchical)
+                    .contentTransition(.symbolEffect(.replace))
+                    .animation(NotchlyTheme.Motion.spring, value: symbolName)
             }
             .frame(width: 80, height: 60, alignment: .center) // Fixed container for icon
             
@@ -139,6 +141,7 @@ struct CustomOSDView: View {
                     .frame(width: 6, height: progressBarHeight)
             }
         }
+        .animation(NotchlyTheme.Motion.spring, value: Int(value * CGFloat(segmentCount)))
     }
     
     private var inactiveSegmentColor: Color {

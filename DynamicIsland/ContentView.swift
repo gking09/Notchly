@@ -120,8 +120,25 @@ struct ContentView: View {
                     gestureProgress: gestureProgress,
                     minimalistic: Defaults[.enableMinimalisticUI]
                 ) + notchHorizontalPadding * 2
-                : 460
+                : NotchWingLayout.make(
+                    notchWidth: max(vm.closedNotchSize.width, 96) + (isHovering ? 8 : 0),
+                    leftContent: MusicWingMetrics.maxTrackInfoWidth,
+                    rightContent: MusicWingMetrics.maxTrackInfoWidth,
+                    innerClearance: NotchWingLayout.innerClearance
+                ).totalWidth + notchHorizontalPadding * 2
             return CGSize(width: max(baseSize.width, inlineWidth), height: baseSize.height)
+        }
+
+        // Inline volume / brightness / backlight (and Bluetooth, mic) HUDs draw a
+        // wing either side of the notch; keep the outer frame wide enough for
+        // them even when the open notch is narrow (minimalistic, pill mode).
+        if vm.notchState == .closed,
+           isSneakPeekVisibleOnCurrentScreen,
+           Defaults[.inlineHUD],
+           ![.music, .battery, .reminder].contains(coordinator.sneakPeek.type) {
+            let hudWidth = InlineHUD.reservedWidth(closedNotchWidth: vm.closedNotchSize.width)
+                + notchHorizontalPadding * 2
+            return CGSize(width: max(baseSize.width, hudWidth), height: baseSize.height)
         }
 
         if let size = recordingHUDLayout.size(
@@ -916,6 +933,7 @@ struct ContentView: View {
         guard vm.notchState == .closed,
               !vm.hideOnClosed,
               closedContentWidth > 0,
+              !closedActivityKeepsWingsCentred,
               let menusRightEdge = menuBarLayout.appMenusRightEdge,
               let screenFrame = getScreenFrame(currentScreenName)
         else { return 0 }
@@ -926,6 +944,34 @@ struct ContentView: View {
             menusRightEdge: menusRightEdge,
             gap: MenuBarLayout.clearanceGap
         )
+    }
+
+    /// True while the closed notch shows an activity built from `NotchWings`
+    /// (the inline HUDs and the music activity).
+    ///
+    /// Those keep their two wings the same width with the notch-sized gap dead
+    /// centre, and stay clear of the frontmost app's menus by narrowing the
+    /// wings (see `ClosedNotchMetrics`). Sliding them sideways, as the offset
+    /// does for other activities, would carry the gap off the hardware cut-out:
+    /// the left wing would slide under the notch and the right wing would be
+    /// clipped by the surface.
+    private var closedActivityKeepsWingsCentred: Bool {
+        guard vm.notchState == .closed else { return false }
+        if currentScreenExpansionType == .battery && isBatteryHUDVisibleOnCurrentScreen { return false }
+
+        let sneakType = coordinator.sneakPeek.type
+        let isAirPodsListeningModeSneak = sneakType == .bluetoothAudio
+            && coordinator.sneakPeek.value < 0
+            && AirPodsListeningMode.fromHUDSymbol(coordinator.sneakPeek.icon) != nil
+        if isSneakPeekVisibleOnCurrentScreen
+            && (Defaults[.inlineHUD] || isAirPodsListeningModeSneak)
+            && ![.music, .battery, .reminder].contains(sneakType) {
+            return true
+        }
+        if capsLockManager.isCapsLockActive && Defaults[.enableCapsLockIndicator] && !lockScreenManager.isLocked {
+            return true
+        }
+        return closedMusicPairingEligible(hasActiveMusicSnapshot: hasActiveMusicSnapshotForClosedPairing)
     }
 
     @ViewBuilder
@@ -999,7 +1045,7 @@ struct ContentView: View {
                               .transition(
                                   coordinator.sneakPeek.type == .capsLock
                                       ? AnyTransition.move(edge: .trailing).combined(with: .opacity)
-                                      : AnyTransition.opacity
+                                      : AnyTransition.hudReveal
                               )
                       } else if vm.notchState == .closed && capsLockManager.isCapsLockActive && Defaults[.enableCapsLockIndicator] && !vm.hideOnClosed && !lockScreenManager.isLocked {
                           InlineHUD(type: .constant(.capsLock), value: .constant(1.0), icon: .constant(""), hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
@@ -1039,6 +1085,7 @@ struct ContentView: View {
                               .padding(.bottom, 10)
                               .padding(.leading, 4)
                               .padding(.trailing, 8)
+                              .transition(.hudReveal)
                           }
                           // Old sneak peek music
                           else if coordinator.sneakPeek.type == .music {
@@ -1161,11 +1208,81 @@ struct ContentView: View {
                     .frame(width: sideSize, height: sideSize)
                 Rectangle()
                     .fill(.black)
-                    .frame(width: vm.closedNotchSize.width - 20)
+                    .frame(width: vm.closedNotchSize.width)
                 IdleAnimationView()
                     .frame(width: sideSize, height: sideSize)
             }
         }.frame(height: vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0), alignment: .center)
+    }
+
+    /// Whether the closed music activity is showing the track's title and artist
+    /// beside the notch (the inline sneak peek after a track change).
+    private var closedMusicShowsTrackInfo: Bool {
+        coordinator.expandingView.show
+            && coordinator.expandingView.type == .music
+            && Defaults[.enableSneakPeek]
+            && Defaults[.sneakPeekStyles] == .inline
+    }
+
+    private var closedMusicTextColor: Color {
+        Defaults[.coloredSpectrogram] ? Color(nsColor: musicManager.avgColor) : Color.gray
+    }
+
+    private static let closedMusicTitleFont = NSFont.systemFont(ofSize: 12, weight: .medium)
+    private static let closedMusicArtistFont = NSFont.systemFont(ofSize: 11, weight: .regular)
+
+    /// Wing sizes for the closed music activity.
+    ///
+    /// The wings are symmetric and the gap between them is exactly the notch, so
+    /// the artwork, title, artist and visualizer only ever sit beside the
+    /// cut-out. The wider side (artwork + title, or artist + visualizer) sets
+    /// both wings, which grow together on a spring.
+    private func closedMusicWingLayout(secondary: MusicSecondaryLiveActivity?) -> NotchWingLayout {
+        let closedHeight = vm.effectiveClosedNotchHeight
+        let notchContentHeight = isHovering ? max(0, closedHeight) : max(0, closedHeight - 12)
+        let wingBaseWidth = max(0, notchContentHeight + gestureProgress / 2)
+        let artworkSize = max(0, closedHeight - 12)
+        let showsInfo = closedMusicShowsTrackInfo
+        let visualizerWidth = CGFloat(Defaults[.visualizerBarCount]) * 4
+
+        let titleWidth: CGFloat = showsInfo
+            ? NotchWingLayout.textWidth(musicManager.songTitle, font: Self.closedMusicTitleFont)
+                + (musicManager.isCurrentTrackExplicit ? 22 : 0) + 2
+            : 0
+        // The right wing belongs to the pairing (timer, reminder...) when there
+        // is one, so the artist only shows alongside the plain visualizer.
+        let artistWidth: CGFloat = (showsInfo && secondary == nil)
+            ? NotchWingLayout.textWidth(musicManager.artistName, font: Self.closedMusicArtistFont) + 2
+            : 0
+
+        let leftContent = MusicWingMetrics.leftContent(
+            artworkWidth: artworkSize + 3,
+            titleWidth: titleWidth,
+            showsTrackInfo: showsInfo
+        )
+        let pairedRight = resolvedRightWingWidth(
+            for: secondary,
+            baseWidth: wingBaseWidth,
+            centerBaseWidth: max(vm.closedNotchSize.width, 96),
+            notchHeight: notchContentHeight
+        )
+        let rightContent = secondary == nil
+            ? max(pairedRight, MusicWingMetrics.rightContent(
+                visualizerWidth: max(visualizerWidth, 0),
+                artistWidth: artistWidth,
+                showsTrackInfo: showsInfo
+            ))
+            : pairedRight
+
+        return NotchWingLayout.make(
+            notchWidth: max(vm.closedNotchSize.width, 96),
+            leftContent: leftContent,
+            rightContent: rightContent,
+            minimumWing: wingBaseWidth,
+            centerExtra: isHovering ? 8 : 0,
+            innerClearance: showsInfo ? NotchWingLayout.innerClearance : 0,
+            maximumTotalWidth: ClosedNotchMetrics.maximumContentWidth(screenName: currentScreenName)
+        )
     }
 
     @ViewBuilder
@@ -1174,108 +1291,127 @@ struct ContentView: View {
         let closedHeight = vm.effectiveClosedNotchHeight
         let outerHeight = closedHeight + (isHovering ? 8 : 0)
         let notchContentHeight = isHovering ? max(0, closedHeight) : max(0, closedHeight - 12)
-        let wingBaseWidth = max(0, notchContentHeight + gestureProgress / 2)
-        let artworkHeight = max(0, closedHeight - 12)
-        let artworkSize = min(artworkHeight, wingBaseWidth)
-        let rawCenterBaseWidth = vm.closedNotchSize.width + (isHovering ? 8 : 0)
-        let centerBaseWidth = max(rawCenterBaseWidth, 96)
-        let inlineSneakPeekActive = (
-            coordinator.expandingView.show &&
-            coordinator.expandingView.type == .music &&
-            Defaults[.enableSneakPeek] &&
-            Defaults[.sneakPeekStyles] == .inline
-        )
-        let rightWingWidth = resolvedRightWingWidth(
-            for: secondary,
-            baseWidth: wingBaseWidth,
-            centerBaseWidth: centerBaseWidth,
-            notchHeight: notchContentHeight
-        )
-        let effectiveCenterWidth = inlineSneakPeekActive ? 380 : centerBaseWidth
-        let notchWidth = wingBaseWidth + effectiveCenterWidth + rightWingWidth
+        let artworkSize = max(0, closedHeight - 12)
+        let layout = closedMusicWingLayout(secondary: secondary)
+        let showsInfo = closedMusicShowsTrackInfo
         let badgeBaseSize = max(13, artworkSize * 0.36)
         let badgeDisplaySize = badgeDisplaySize(for: secondary, baseSize: badgeBaseSize)
         let badgeOffset = badgeOverlayOffset(for: secondary, badgeSize: badgeDisplaySize)
+        let artistFieldWidth = MusicWingMetrics.textFieldWidth(
+            wingContentWidth: layout.contentWidth,
+            reserved: CGFloat(Defaults[.visualizerBarCount]) * 4
+        )
+        let titleFieldWidth = MusicWingMetrics.textFieldWidth(
+            wingContentWidth: layout.contentWidth,
+            reserved: artworkSize + 3
+        )
+        let albumArt = musicManager.albumArt
+        let artCornerRadius = albumArt.size.width / max(albumArt.size.height, 1) > 1.0
+            ? MusicPlayerImageSizes.cornerRadiusInset.closed / 3.0
+            : MusicPlayerImageSizes.cornerRadiusInset.closed
 
-        HStack(spacing: 0) {
-            ZStack(alignment: .bottomTrailing) {
-                // Keep the matched-geometry source bounded to the closed
-                // artwork square while the surrounding hover flap expands.
-                ZStack(alignment: .bottomTrailing) {
-                    Color.clear
-                        .frame(width: artworkSize, height: artworkSize)
-                        .background(
-                            Image(nsImage: musicManager.albumArt)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .clipShape(RoundedRectangle(cornerRadius: musicManager.albumArt.size.width/musicManager.albumArt.size.height > 1.0 ? MusicPlayerImageSizes.cornerRadiusInset.closed/3.0 : MusicPlayerImageSizes.cornerRadiusInset.closed))
+        ZStack {
+            NotchWings(layout: layout, height: outerHeight) {
+                HStack(spacing: MusicWingMetrics.spacing) {
+                    ZStack(alignment: .bottomTrailing) {
+                        // Keep the matched-geometry source bounded to the closed
+                        // artwork square while the surrounding hover flap expands.
+                        ZStack(alignment: .bottomTrailing) {
+                            Color.clear
+                                .frame(width: artworkSize, height: artworkSize)
+                                .background(
+                                    CrossfadeArtwork(image: albumArt, cornerRadius: artCornerRadius)
+                                )
+                                .clipped()
+                                .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
+                                .albumArtFlip(angle: musicManager.flipAngle)
+                                .trackChangePop(trigger: musicManager.songTitle + "\u{1F}" + musicManager.artistName)
+                                // Paused art settles back a little, playing art fills its square.
+                                .scaleEffect(musicManager.isPlaying ? 1 : 0.94)
+                                .opacity(musicManager.isPlaying ? 1 : 0.86)
+                                .animation(NotchlyTheme.Motion.spring, value: musicManager.isPlaying)
+                            albumArtBadge(for: secondary, badgeSize: badgeDisplaySize)
+                                .offset(x: badgeOffset.width, y: badgeOffset.height)
+                                .id(secondary?.id ?? "music-badge")
+                                .contentTransition(.symbolEffect(.replace))
+                        }
+                        .frame(width: artworkSize, height: artworkSize, alignment: .bottomTrailing)
+                    }
+                    .frame(width: artworkSize + 3, height: notchContentHeight, alignment: .center)
+
+                    if showsInfo, titleFieldWidth > 8, !musicManager.songTitle.isEmpty {
+                        MusicTitleMarqueeView(
+                            text: musicManager.songTitle,
+                            isExplicit: musicManager.isCurrentTrackExplicit,
+                            font: .system(size: 12, weight: .medium),
+                            nsFont: .callout,
+                            textColor: closedMusicTextColor,
+                            minDuration: 0.4,
+                            frameWidth: titleFieldWidth,
+                            badgeHeight: 13
                         )
-                        .clipped()
-                        .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
-                        .albumArtFlip(angle: musicManager.flipAngle)
-                    albumArtBadge(for: secondary, badgeSize: badgeDisplaySize)
-                        .offset(x: badgeOffset.width, y: badgeOffset.height)
-                        .id(secondary?.id ?? "music-badge")
+                        .id("closed-title-\(musicManager.songTitle)")
+                        .transition(.wingSlide(from: .leading))
+                    }
+                }
+                .animation(NotchlyTheme.Motion.spring, value: showsInfo)
+                .animation(NotchlyTheme.Motion.spring, value: musicManager.songTitle)
+            } right: {
+                HStack(spacing: MusicWingMetrics.spacing) {
+                    if showsInfo, secondary == nil, artistFieldWidth > 8, !musicManager.artistName.isEmpty {
+                        MarqueeText(
+                            .constant(musicManager.artistName),
+                            font: .system(size: 11, weight: .regular),
+                            nsFont: .caption1,
+                            textColor: closedMusicTextColor,
+                            minDuration: 0.4,
+                            frameWidth: artistFieldWidth
+                        )
+                        .id("closed-artist-\(musicManager.artistName)")
+                        .transition(.wingSlide(from: .trailing))
+                    }
+
+                    musicRightWing(for: secondary, notchHeight: notchContentHeight, trailingWidth: layout.rightWing)
+                        .frame(
+                            width: (showsInfo && secondary == nil)
+                                ? CGFloat(Defaults[.visualizerBarCount]) * 4
+                                : max(0, layout.contentWidth),
+                            height: notchContentHeight,
+                            alignment: .center
+                        )
+                        .contentShape(Rectangle())
+                        .onHover { hovering in
+                            guard shouldShowClosedMusicWaveformPlayPauseOverlay(for: secondary) else {
+                                if isHoveringClosedMusicWaveformControl {
+                                    isHoveringClosedMusicWaveformControl = false
+                                }
+                                return
+                            }
+                            withAnimation(.smooth(duration: 0.16)) {
+                                isHoveringClosedMusicWaveformControl = hovering
+                            }
+                        }
+                        .id(secondary?.id ?? "music-spectrum")
                         .contentTransition(.symbolEffect(.replace))
                 }
-                .frame(width: artworkSize, height: artworkSize, alignment: .bottomTrailing)
+                .animation(NotchlyTheme.Motion.spring, value: showsInfo)
+                .animation(NotchlyTheme.Motion.spring, value: musicManager.artistName)
             }
-            .frame(width: wingBaseWidth, height: notchContentHeight, alignment: .center)
-
-            Rectangle()
-                .fill(.black)
-                .frame(width: effectiveCenterWidth, height: notchContentHeight)
-                .overlay(
-                    HStack(alignment: .top) {
-                        if(coordinator.expandingView.show && coordinator.expandingView.type == .music) {
-                            MusicTitleMarqueeView(
-                                text: musicManager.songTitle,
-                                isExplicit: musicManager.isCurrentTrackExplicit,
-                                textColor: Defaults[.coloredSpectrogram] ? Color(nsColor: musicManager.avgColor) : Color.gray,
-                                minDuration: 0.4,
-                                frameWidth: max(0, (effectiveCenterWidth - vm.closedNotchSize.width) / 2 - 12),
-                                badgeHeight: 13
-                            )
-                            .padding(.leading, 8)
-                            .opacity((coordinator.expandingView.show && Defaults[.enableSneakPeek] && Defaults[.sneakPeekStyles] == .inline) ? 1 : 0)
-                            Spacer(minLength: vm.closedNotchSize.width)
-                            Text(musicManager.artistName)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .foregroundStyle(Defaults[.coloredSpectrogram] ? Color(nsColor: musicManager.avgColor) : Color.gray)
-                                .padding(.trailing, 8)
-                                .opacity((coordinator.expandingView.show && coordinator.expandingView.type == .music && Defaults[.enableSneakPeek] && Defaults[.sneakPeekStyles] == .inline) ? 1 : 0)
-                        } else if Defaults[.showSongMetadataInClosedNotch] && isNonNotchScreen && !musicManager.songTitle.isEmpty {
-                            MarqueeText(
-                                .constant("\(musicManager.songTitle) • \(musicManager.artistName)"),
-                                textColor: Defaults[.coloredSpectrogram] ? Color(nsColor: musicManager.avgColor) : Color.gray,
-                                minDuration: 3,
-                                frameWidth: max(0, effectiveCenterWidth - 16)
-                            )
-                            .padding(.horizontal, 8)
-                        }
-                    }
-                    .clipped()
+            // On displays without a notch the "notch" is drawn, not cut, so its
+            // middle is free to carry the song line.
+            if Defaults[.showSongMetadataInClosedNotch] && isNonNotchScreen && !musicManager.songTitle.isEmpty
+                && !(coordinator.expandingView.show && coordinator.expandingView.type == .music) {
+                MarqueeText(
+                    .constant("\(musicManager.songTitle) • \(musicManager.artistName)"),
+                    textColor: closedMusicTextColor,
+                    minDuration: 3,
+                    frameWidth: max(0, layout.centerGap - 16)
                 )
-
-            musicRightWing(for: secondary, notchHeight: notchContentHeight, trailingWidth: rightWingWidth)
-                .frame(width: rightWingWidth, height: notchContentHeight, alignment: .center)
-                .contentShape(Rectangle())
-                .onHover { hovering in
-                    guard shouldShowClosedMusicWaveformPlayPauseOverlay(for: secondary) else {
-                        if isHoveringClosedMusicWaveformControl {
-                            isHoveringClosedMusicWaveformControl = false
-                        }
-                        return
-                    }
-                    withAnimation(.smooth(duration: 0.16)) {
-                        isHoveringClosedMusicWaveformControl = hovering
-                    }
-                }
-                .id(secondary?.id ?? "music-spectrum")
-                .contentTransition(.symbolEffect(.replace))
+                .padding(.horizontal, 8)
+                .frame(width: layout.centerGap, height: notchContentHeight)
+                .clipped()
+            }
         }
-        .frame(width: notchWidth, height: notchContentHeight)
         .frame(height: outerHeight, alignment: .center)
         .animation(.smooth(duration: 0.25), value: secondary?.id)
     }

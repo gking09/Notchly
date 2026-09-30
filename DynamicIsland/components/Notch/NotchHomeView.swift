@@ -211,9 +211,7 @@ struct DynamicIslandArtworkSourceView: View {
             if let liveCanvasURL {
                 DynamicIslandArtworkVideoView(url: liveCanvasURL, videoGravity: .resizeAspectFill)
             } else {
-                Image(nsImage: musicManager.albumArt)
-                    .resizable()
-                    .aspectRatio(contentMode: contentMode)
+                CrossfadeArtwork(image: musicManager.albumArt, cornerRadius: 0, contentMode: contentMode)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
@@ -402,6 +400,7 @@ struct AlbumArtView: View {
             }
             .buttonStyle(PlainButtonStyle())
             .scaleEffect(musicManager.isPlaying ? 1 : 0.85)
+            .animation(NotchlyTheme.Motion.spring, value: musicManager.isPlaying)
             
             albumArtDarkOverlay
         }
@@ -508,10 +507,7 @@ struct MusicControlsView: View {
             )
             .fontWeight(.medium)
             if enableLyrics && showCalendar {
-                let transition = AnyTransition.asymmetric(
-                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                    removal: .move(edge: .top).combined(with: .opacity)
-                )
+                let transition = AnyTransition.lyricLine
 
                 let line = musicManager.currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
                 let isInstrumentalBreak = musicManager.isInInstrumentalBreak
@@ -545,7 +541,7 @@ struct MusicControlsView: View {
                     .padding(.top, 2)
                     .id(line)
                     .transition(transition)
-                    .animation(.easeInOut(duration: 0.32), value: line)
+                    .animation(NotchlyTheme.Motion.spring, value: line)
                 }
             }
         }
@@ -1312,6 +1308,10 @@ struct CustomSlider: View {
     var desaturatesWhenIdle: Bool = false
     
     @State private var isHovering: Bool = false
+    /// Progress as of the previous render. Ticks move it a hair at a time and
+    /// follow the playhead exactly; a seek moves it by a chunk, and that one
+    /// glides to its new place on a spring.
+    @State private var previousProgress: Double = 0
     @Default(.enableRealTimeWaveform) var enableRealTimeWaveform
     @Default(.enableWaveformScrubber) var enableWaveformScrubber
 
@@ -1336,6 +1336,9 @@ struct CustomSlider: View {
             let filledTrackWidth = min(max(progress, 0), 1) * max(1, width)
             
             let showScrubber = isHovering && enableRealTimeWaveform && enableWaveformScrubber
+            let isSeekJump = !dragging
+                && !NotchlyTheme.Motion.reduceMotion
+                && abs(progress - previousProgress) > 0.012
 
             ZStack(alignment: .bottomLeading) {
                 // Background track
@@ -1361,7 +1364,14 @@ struct CustomSlider: View {
                     Capsule()
                         .fill(color)
                         .frame(width: filledTrackWidth, height: trackHeight)
-                        .transaction { $0.disablesAnimations = true }
+                        .transaction { transaction in
+                            if isSeekJump {
+                                transaction.disablesAnimations = false
+                                transaction.animation = NotchlyTheme.Motion.spring
+                            } else {
+                                transaction.disablesAnimations = true
+                            }
+                        }
                 }
             }
             // The track swells from its middle, so it grows into the space
@@ -1396,6 +1406,9 @@ struct CustomSlider: View {
             .animation(.easeOut(duration: 0.2), value: trackSaturation)
             .animation(.easeOut(duration: 0.2), value: trackOpacity)
             .animation(NotchlyTheme.Motion.snappy, value: dragging)
+            .onChange(of: progress) { _, newProgress in
+                previousProgress = newProgress
+            }
             .onHover { hovering in
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isHovering = hovering

@@ -117,6 +117,13 @@ struct InlineHUD: View {
     
     @State private var displayName: String = ""
 
+    /// Widest either wing of the inline HUD ever asks for. Anything that has to
+    /// reserve room for the HUD before it draws (the notch's outer frame) uses
+    /// this so it can never be narrower than the wings.
+    static let widestWingContent: CGFloat = 190
+
+    /// Closed-notch width of the AirPods listening-mode HUD. The wings are
+    /// symmetric -- the long mode label sets both -- so the gap stays on the notch.
     static func airPodsListeningModeWidth(
         closedNotchWidth: CGFloat,
         gestureProgress: CGFloat,
@@ -124,8 +131,22 @@ struct InlineHUD: View {
     ) -> CGFloat {
         let leadingWidth: CGFloat = minimalistic ? 36 : 44
         let trailingWidth: CGFloat = minimalistic ? 136 : 180
-        let centerWidth = max(closedNotchWidth - 20, 0)
-        return leadingWidth + gestureProgress / 2 + centerWidth + trailingWidth + gestureProgress / 2
+        return NotchWingLayout.make(
+            notchWidth: closedNotchWidth,
+            leftContent: leadingWidth + gestureProgress / 2,
+            rightContent: trailingWidth + gestureProgress / 2,
+            innerClearance: NotchWingLayout.innerClearance
+        ).totalWidth
+    }
+
+    /// Notch width reserved while any inline HUD is showing.
+    static func reservedWidth(closedNotchWidth: CGFloat) -> CGFloat {
+        NotchWingLayout.make(
+            notchWidth: closedNotchWidth,
+            leftContent: widestWingContent,
+            rightContent: widestWingContent,
+            innerClearance: NotchWingLayout.innerClearance
+        ).totalWidth
     }
     
     var body: some View {
@@ -237,225 +258,221 @@ struct InlineHUD: View {
             return max(width, minimum)
         }()
 
-        return HStack {
-            HStack(spacing: 5) {
-                Group {
-                    switch (type) {
-                        case .volume:
-                            if icon.isEmpty {
-                                // Show headphone icon if Bluetooth audio is connected, otherwise speaker
-                                let baseIcon = bluetoothManager.isBluetoothAudioConnected ? "headphones" : SpeakerSymbol(value)
-                                Image(systemName: baseIcon)
-                                    .contentTransition(.interpolate)
+        // The wings are always the same width and the gap between them is the
+        // notch itself, so the cut-out is left empty and everything stays to
+        // one side of it. `infoWidth` / `trailingWidth` are what each side wants;
+        // the layout takes the wider and gives both wings that, limited to what
+        // the screen (and the frontmost app's menus) leave.
+        let layout = NotchWingLayout.make(
+            notchWidth: vm.closedNotchSize.width,
+            leftContent: infoWidth,
+            rightContent: trailingWidth,
+            innerClearance: NotchWingLayout.innerClearance,
+            maximumTotalWidth: ClosedNotchMetrics.maximumContentWidth(screenName: vm.screen)
+        )
+        let wingHeight = vm.closedNotchSize.height + (hoverAnimation ? 8 : 0)
+
+        return HUDBumpReader(type: type, value: value) { bumpToken, bumpEdge in
+            NotchWings(layout: layout, height: wingHeight) {
+                HStack(spacing: 5) {
+                    Group {
+                        switch (type) {
+                            case .volume, .brightness, .backlight:
+                                HUDGlyph(
+                                    type: type,
+                                    value: value,
+                                    icon: icon,
+                                    bumpToken: bumpToken,
+                                    bluetoothConnected: bluetoothManager.isBluetoothAudioConnected
+                                )
+                            case .mic:
+                                Image(systemName: "mic")
+                                    .symbolRenderingMode(.hierarchical)
                                     .symbolVariant(value > 0 ? .none : .slash)
-                                    .frame(width: 20, height: 15, alignment: .leading)
-                            } else {
-                                Image(systemName: icon)
-                                    .contentTransition(.interpolate)
-                                    .opacity(value.isZero ? 0.6 : 1)
-                                    .scaleEffect(value.isZero ? 0.85 : 1)
-                                    .frame(width: 20, height: 15, alignment: .leading)
-                            }
-                        case .brightness:
-                            Image(systemName: !icon.isEmpty ? icon : BrightnessSymbol(value))
-                                .contentTransition(.interpolate)
-                                .frame(width: 20, height: 15, alignment: .center)
-                        case .backlight:
-                            Image(systemName: BacklightSymbol(value))
-                                .contentTransition(.interpolate)
-                                .frame(width: 20, height: 15, alignment: .center)
-                        case .mic:
-                            Image(systemName: "mic")
-                                .symbolRenderingMode(.hierarchical)
-                                .symbolVariant(value > 0 ? .none : .slash)
-                                .contentTransition(.interpolate)
-                                .frame(width: 20, height: 15, alignment: .center)
-                        case .bluetoothAudio:
-                            if let listeningMode {
-                                AirPodsListeningModeSymbol(mode: listeningMode)
                                     .contentTransition(.interpolate)
                                     .frame(width: 20, height: 15, alignment: .center)
-                            } else if useBluetoothHUD3DIcon,
-                               lowAlert == nil,
-                               let deviceType = bluetoothManager.lastConnectedDevice?.deviceType,
-                               let url = deviceType.inlineHUDAnimationURL {
-                                LoopingVideoIcon(url: url, size: CGSize(width: 20, height: 20))
-                                    .frame(width: 20, height: 20, alignment: .center)
-                            } else {
-                                Image(systemName: icon.isEmpty ? "dot.radiowaves.left.and.right" : icon)
+                            case .bluetoothAudio:
+                                if let listeningMode {
+                                    AirPodsListeningModeSymbol(mode: listeningMode)
+                                        .contentTransition(.interpolate)
+                                        .frame(width: 20, height: 15, alignment: .center)
+                                } else if useBluetoothHUD3DIcon,
+                                   lowAlert == nil,
+                                   let deviceType = bluetoothManager.lastConnectedDevice?.deviceType,
+                                   let url = deviceType.inlineHUDAnimationURL {
+                                    LoopingVideoIcon(url: url, size: CGSize(width: 20, height: 20))
+                                        .frame(width: 20, height: 20, alignment: .center)
+                                } else {
+                                    Image(systemName: icon.isEmpty ? "dot.radiowaves.left.and.right" : icon)
+                                        .symbolRenderingMode(.hierarchical)
+                                        .contentTransition(.interpolate)
+                                        .frame(width: 20, height: 15, alignment: .center)
+                                        .symbolEffect(.pulse, options: .repeating, isActive: lowAlert != nil && !NotchlyTheme.Motion.reduceMotion)
+                                }
+                            case .capsLock:
+                                Image(systemName: "capslock.fill")
                                     .symbolRenderingMode(.hierarchical)
                                     .contentTransition(.interpolate)
                                     .frame(width: 20, height: 15, alignment: .center)
-                                    .symbolEffect(.pulse, options: .repeating, isActive: lowAlert != nil && !NotchlyTheme.Motion.reduceMotion)
-                            }
-                        case .capsLock:
-                            Image(systemName: "capslock.fill")
-                                .symbolRenderingMode(.hierarchical)
-                                .contentTransition(.interpolate)
-                                .frame(width: 20, height: 15, alignment: .center)
-                                .foregroundStyle(capsLockAccentColor)
-                        default:
-                            EmptyView()
+                                    .foregroundStyle(capsLockAccentColor)
+                            default:
+                                EmptyView()
+                        }
                     }
-                }
-                .foregroundStyle(.white)
-                .symbolVariant(.fill)
+                    .foregroundStyle(.white)
+                    .symbolVariant(.fill)
                 
-                // Use marquee text for device names to handle long names
-                if type == .bluetoothAudio {
-                    if isListeningModeEvent {
-                        EmptyView()
-                    } else if showBluetoothDeviceNameMarquee {
-                        MarqueeText(
-                            $displayName,
-                            font: .system(size: 13, weight: .medium),
-                            nsFont: .body,
-                            textColor: .white,
-                            minDuration: 0.2,
-                            frameWidth: infoWidth
-                        )
-                    } else if lowAlert != nil {
-                        Text("Low")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.red)
-                            .lineLimit(1)
-                            .transition(.opacity)
-                    }
-                } else if type != .capsLock {
-                    Text(Type2Name(type))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-                        .allowsTightening(true)
-                        .contentTransition(.numericText())
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: infoWidth, height: vm.notchSize.height - (hoverAnimation ? 0 : 12), alignment: .leading)
-            
-            Rectangle()
-                .fill(.black)
-                .frame(width: vm.closedNotchSize.width - 20)
-            
-            HStack {
-                if (type == .mic) {
-                    Text(value.isZero ? "muted" : "unmuted")
-                        .foregroundStyle(NotchlyTheme.Palette.textSecondary)
-                        .lineLimit(1)
-                        .allowsTightening(true)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .contentTransition(.interpolate)
-                } else if (type == .capsLock) {
-                    if showCapsLockLabel {
-                        Text("Caps Lock")
-                            .foregroundStyle(capsLockAccentColor)
+                    // Use marquee text for device names to handle long names
+                    if type == .bluetoothAudio {
+                        if isListeningModeEvent {
+                            EmptyView()
+                        } else if showBluetoothDeviceNameMarquee {
+                            MarqueeText(
+                                $displayName,
+                                font: .system(size: 13, weight: .medium),
+                                nsFont: .body,
+                                textColor: .white,
+                                minDuration: 0.2,
+                                frameWidth: max(0, layout.contentWidth - 25)
+                            )
+                        } else if lowAlert != nil {
+                            Text("Low")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.red)
+                                .lineLimit(1)
+                                .transition(.opacity)
+                        }
+                    } else if type != .capsLock {
+                        Text(Type2Name(type))
                             .font(.subheadline)
                             .fontWeight(.medium)
+                            .lineLimit(1)
+                            .allowsTightening(true)
+                            .contentTransition(.numericText())
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } right: {
+                HStack {
+                    if (type == .mic) {
+                        Text(value.isZero ? "muted" : "unmuted")
+                            .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                             .lineLimit(1)
                             .allowsTightening(true)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .contentTransition(.interpolate)
-                    }
-                } else if (type == .bluetoothAudio) {
-                    if let listeningMode {
-                        let listeningModeTextWidth: CGFloat = enableMinimalisticUI ? 96 : 124
+                    } else if (type == .capsLock) {
+                        if showCapsLockLabel {
+                            Text("Caps Lock")
+                                .foregroundStyle(capsLockAccentColor)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                                .allowsTightening(true)
+                                .multilineTextAlignment(.trailing)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .contentTransition(.interpolate)
+                        }
+                    } else if (type == .bluetoothAudio) {
+                        if let listeningMode {
+                            let listeningModeTextWidth: CGFloat = enableMinimalisticUI ? 96 : 124
 
-                        // Render every mode label with a trailing-aligned Text.
-                        // The previous MarqueeText path is `.leading`-aligned
-                        // internally, so the longer modes (Noise Cancellation /
-                        // Adaptive Audio / Conversation Awareness) hugged the notch
-                        // edge and were clipped behind it — only the short,
-                        // trailing-aligned modes (Transparency / Off) stayed
-                        // visible. A scaling Text keeps every mode on screen.
-                        Text(listeningMode.displayName)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                            .truncationMode(.tail)
-                            .allowsTightening(true)
-                            .frame(
-                                width: min(max(trailingWidth - 44, 64), listeningModeTextWidth),
-                                alignment: .trailing
-                            )
+                            // Render every mode label with a trailing-aligned Text.
+                            // The previous MarqueeText path is `.leading`-aligned
+                            // internally, so the longer modes (Noise Cancellation /
+                            // Adaptive Audio / Conversation Awareness) hugged the notch
+                            // edge and were clipped behind it — only the short,
+                            // trailing-aligned modes (Transparency / Off) stayed
+                            // visible. A scaling Text keeps every mode on screen.
+                            Text(listeningMode.displayName)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                                .truncationMode(.tail)
+                                .allowsTightening(true)
+                                .frame(
+                                    width: min(max(trailingWidth - 44, 64), listeningModeTextWidth),
+                                    alignment: .trailing
+                                )
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        } else if hasBatteryLevel {
+                            let indicatorSpacing: CGFloat = {
+                                if useCircularIndicator {
+                                    return showBluetoothPercent ? 8 : 2
+                                }
+                                return showBluetoothPercent ? 6 : 4
+                            }()
+
+                            HStack(spacing: indicatorSpacing) {
+                                if useCircularIndicator {
+                                    CircularBatteryIndicator(
+                                        value: value,
+                                        tint: alertTint,
+                                        useColorCoding: useColorCodedBatteryDisplay && progressBarStyle != .segmented,
+                                        smoothGradient: useSmoothColorGradient
+                                    )
+                                    .allowsHitTesting(false)
+                                } else {
+                                    LinearBatteryIndicator(
+                                        value: value,
+                                        tint: alertTint,
+                                        useColorCoding: useColorCodedBatteryDisplay && progressBarStyle != .segmented,
+                                        smoothGradient: useSmoothColorGradient
+                                    )
+                                    .allowsHitTesting(false)
+                                }
+
+                                if showBluetoothPercent {
+                                    Text("\(Int(value * 100))%")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(alertTint ?? .white)
+                                        .lineLimit(1)
+                                        .contentTransition(.numericText(value: Double(value)))
+                                }
+                            }
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                    } else if hasBatteryLevel {
-                        let indicatorSpacing: CGFloat = {
-                            if useCircularIndicator {
-                                return showBluetoothPercent ? 8 : 2
-                            }
-                            return showBluetoothPercent ? 6 : 4
-                        }()
-
-                        HStack(spacing: indicatorSpacing) {
-                            if useCircularIndicator {
-                                CircularBatteryIndicator(
-                                    value: value,
-                                    tint: alertTint,
-                                    useColorCoding: useColorCodedBatteryDisplay && progressBarStyle != .segmented,
-                                    smoothGradient: useSmoothColorGradient
-                                )
-                                .allowsHitTesting(false)
+                        }
+                    } else {
+                        // Volume and brightness displays
+                        Group {
+                            if type == .volume {
+                                Group {
+                                    if value.isZero {
+                                        Text("muted")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(NotchlyTheme.Palette.textSecondary)
+                                            .lineLimit(1)
+                                            .allowsTightening(true)
+                                            .multilineTextAlignment(.trailing)
+                                            .transition(.blurReplace)
+                                    } else {
+                                        HStack(spacing: 6) {
+                                            DraggableProgressBar(value: $value, colorMode: .volume)
+                                            PercentageLabel(value: value, isVisible: showProgressPercentages)
+                                        }
+                                        .hudBump(trigger: bumpToken, edge: bumpEdge)
+                                        .transition(.blurReplace)
+                                    }
+                                }
+                                .animation(NotchlyTheme.Motion.spring, value: value.isZero)
                             } else {
-                                LinearBatteryIndicator(
-                                    value: value,
-                                    tint: alertTint,
-                                    useColorCoding: useColorCodedBatteryDisplay && progressBarStyle != .segmented,
-                                    smoothGradient: useSmoothColorGradient
-                                )
-                                .allowsHitTesting(false)
-                            }
-
-                            if showBluetoothPercent {
-                                Text("\(Int(value * 100))%")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(alertTint ?? .white)
-                                    .lineLimit(1)
-                                    .contentTransition(.numericText(value: Double(value)))
+                                HStack(spacing: 6) {
+                                    DraggableProgressBar(value: $value)
+                                    PercentageLabel(value: value, isVisible: showProgressPercentages)
+                                }
+                                .hudBump(trigger: bumpToken, edge: bumpEdge)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
-                } else {
-                    // Volume and brightness displays
-                    Group {
-                        if type == .volume {
-                            Group {
-                                if value.isZero {
-                                    Text("muted")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(NotchlyTheme.Palette.textSecondary)
-                                        .lineLimit(1)
-                                        .allowsTightening(true)
-                                        .multilineTextAlignment(.trailing)
-                                        .contentTransition(.numericText())
-                                } else {
-                                    HStack(spacing: 6) {
-                                        DraggableProgressBar(value: $value, colorMode: .volume)
-                                        PercentageLabel(value: value, isVisible: showProgressPercentages)
-                                    }
-                                    .transition(.opacity.combined(with: .scale))
-                                }
-                            }
-                            .animation(NotchlyTheme.Motion.snappy, value: value.isZero)
-                        } else {
-                            HStack(spacing: 6) {
-                                DraggableProgressBar(value: $value)
-                                PercentageLabel(value: value, isVisible: showProgressPercentages)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .padding(.trailing, trailingWidth > 0 ? 4 : 0)
-            .frame(width: trailingWidth, height: vm.closedNotchSize.height - (hoverAnimation ? 0 : 12), alignment: .center)
         }
-        .frame(height: vm.closedNotchSize.height + (hoverAnimation ? 8 : 0), alignment: .center)
         .onAppear {
             displayName = resolvedDisplayName
         }
@@ -539,39 +556,6 @@ struct InlineHUD: View {
         }
     }
 
-    func SpeakerSymbol(_ value: CGFloat) -> String {
-        switch(value) {
-            case 0:
-                return "speaker"
-            case 0...0.3:
-                return "speaker.wave.1"
-            case 0.3...0.8:
-                return "speaker.wave.2"
-            case 0.8...1:
-                return "speaker.wave.3"
-            default:
-                return "speaker.wave.2"
-        }
-    }
-    
-    func BrightnessSymbol(_ value: CGFloat) -> String {
-        switch(value) {
-            case 0...0.6:
-                return "sun.min"
-            case 0.6...1:
-                return "sun.max"
-            default:
-                return "sun.min"
-        }
-    }
-
-    func BacklightSymbol(_ value: CGFloat) -> String {
-        if value >= 0.5 {
-            return "light.max"
-        }
-        return "light.min"
-    }
-    
     /// The device a low-battery alert is about, otherwise the usual label.
     private var resolvedDisplayName: String {
         if type == .bluetoothAudio, let alert = bluetoothManager.activeLowBatteryAlert {

@@ -40,102 +40,74 @@ struct SystemEventIndicatorModifier: View {
     @Default(.showProgressPercentages) private var showProgressPercentages
     
     var body: some View {
-        HStack(spacing: 14) {
-            switch (eventType) {
-                case .volume:
-                    if icon.isEmpty {
-                        Image(systemName: SpeakerSymbol(value))
-                            .contentTransition(.interpolate)
+        HUDBumpReader(type: eventType, value: value) { bumpToken, bumpEdge in
+            HStack(spacing: 14) {
+                switch (eventType) {
+                    case .volume, .brightness, .backlight:
+                        HUDGlyph(
+                            type: eventType,
+                            value: value,
+                            icon: icon,
+                            bumpToken: bumpToken,
+                            bluetoothConnected: false
+                        )
+                        .foregroundStyle(.white)
+                    case .mic:
+                        Image(systemName: "mic")
                             .symbolVariant(value > 0 ? .none : .slash)
-                            .frame(width: 20, height: 15, alignment: .leading)
-                    } else {
-                        Image(systemName: icon)
-                            .contentTransition(.interpolate)
-                            .opacity(value.isZero ? 0.6 : 1)
-                            .scaleEffect(value.isZero ? 0.85 : 1)
-                            .frame(width: 20, height: 15, alignment: .leading)
-                    }
-                case .brightness:
-                    Image(systemName: "sun.max.fill")
-                        .contentTransition(.symbolEffect)
-                        .frame(width: 20, height: 15)
-                        .foregroundStyle(.white)
-                case .backlight:
-                    Image(systemName: BacklightSymbol(value))
-                        .contentTransition(.symbolEffect)
-                        .frame(width: 20, height: 15)
-                        .foregroundStyle(.white)
+                            .contentTransition(.symbolEffect(.replace))
+                            .frame(width: 20, height: 15)
+                            .foregroundStyle(.white)
+                    case .bluetoothAudio:
+                        if value < 0, let mode = AirPodsListeningMode.fromHUDSymbol(icon) {
+                            AirPodsListeningModeSymbol(mode: mode)
+                                .contentTransition(.interpolate)
+                                .frame(width: 20, height: 15)
+                                .foregroundStyle(.white)
+                        } else if !icon.isEmpty {
+                            Image(systemName: icon)
+                                .contentTransition(.interpolate)
+                                .frame(width: 20, height: 15)
+                                .foregroundStyle(.white)
+                        }
+                    default:
+                        EmptyView()
+                }
+                switch eventType {
                 case .mic:
-                    Image(systemName: "mic")
-                        .symbolVariant(value > 0 ? .none : .slash)
-                        .contentTransition(.interpolate)
-                        .frame(width: 20, height: 15)
-                        .foregroundStyle(.white)
-                case .bluetoothAudio:
-                    if value < 0, let mode = AirPodsListeningMode.fromHUDSymbol(icon) {
-                        AirPodsListeningModeSymbol(mode: mode)
-                            .contentTransition(.interpolate)
-                            .frame(width: 20, height: 15)
-                            .foregroundStyle(.white)
-                    } else if !icon.isEmpty {
-                        Image(systemName: icon)
-                            .contentTransition(.interpolate)
-                            .frame(width: 20, height: 15)
-                            .foregroundStyle(.white)
-                    }
-                default:
-                    EmptyView()
-            }
-            switch eventType {
-            case .mic:
-                Text(value > 0 ? "Mic unmuted" : "Mic muted")
-                    .foregroundStyle(NotchlyTheme.Palette.textSecondary)
-                    .lineLimit(1)
-                    .allowsTightening(true)
-                    .contentTransition(.numericText())
-            case .volume:
-                VolumeProgressSection(value: $value, showPercentages: showProgressPercentages)
-            case .brightness:
-                ProgressSection(value: $value, showPercentages: showProgressPercentages)
-            case .backlight:
-                ProgressSection(value: $value, showPercentages: showProgressPercentages)
-            case .bluetoothAudio:
-                if value < 0, let mode = AirPodsListeningMode.fromHUDSymbol(icon) {
-                    Text(mode.displayName)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.white)
+                    Text(value > 0 ? "Mic unmuted" : "Mic muted")
+                        .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                         .lineLimit(1)
                         .allowsTightening(true)
-                } else {
-                    ProgressSection(value: $value, showPercentages: showProgressPercentages, colorMode: .battery)
+                        .contentTransition(.numericText())
+                case .volume:
+                    VolumeProgressSection(value: $value, showPercentages: showProgressPercentages)
+                        .hudBump(trigger: bumpToken, edge: bumpEdge)
+                case .brightness:
+                    ProgressSection(value: $value, showPercentages: showProgressPercentages)
+                        .hudBump(trigger: bumpToken, edge: bumpEdge)
+                case .backlight:
+                    ProgressSection(value: $value, showPercentages: showProgressPercentages)
+                        .hudBump(trigger: bumpToken, edge: bumpEdge)
+                case .bluetoothAudio:
+                    if value < 0, let mode = AirPodsListeningMode.fromHUDSymbol(icon) {
+                        Text(mode.displayName)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .allowsTightening(true)
+                    } else {
+                        ProgressSection(value: $value, showPercentages: showProgressPercentages, colorMode: .battery)
+                    }
+                default:
+                    ProgressSection(value: $value, showPercentages: showProgressPercentages)
                 }
-            default:
-                ProgressSection(value: $value, showPercentages: showProgressPercentages)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .symbolVariant(.fill)
+            .imageScale(.large)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .symbolVariant(.fill)
-        .imageScale(.large)
-    }
-    
-    func SpeakerSymbol(_ value: CGFloat) -> String {
-        switch(value) {
-            case 0:
-                return "speaker.slash"
-            case 0...0.3:
-                return "speaker.wave.1"
-            case 0.3...0.8:
-                return "speaker.wave.2"
-            case 0.8...1:
-                return "speaker.wave.3"
-            default:
-                return "speaker.wave.2"
-        }
-    }
-
-    func BacklightSymbol(_ value: CGFloat) -> String {
-        value >= 0.5 ? "light.max" : "light.min"
     }
 }
 
@@ -164,14 +136,14 @@ struct VolumeProgressSection: View {
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(NotchlyTheme.Palette.textSecondary)
-                    .contentTransition(.numericText())
+                    .transition(.blurReplace)
             } else {
                 ProgressSection(value: $value, showPercentages: showPercentages, colorMode: .volume)
-                    .transition(.opacity.combined(with: .scale))
+                    .transition(.blurReplace)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(NotchlyTheme.Motion.snappy, value: value.isZero)
+        .animation(NotchlyTheme.Motion.spring, value: value.isZero)
     }
 }
 
@@ -188,7 +160,8 @@ struct PercentageLabel: View {
                     .fontWeight(.semibold)
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.9))
-                    .contentTransition(.numericText())
+                    .contentTransition(.numericText(value: Double(value)))
+                    .animation(NotchlyTheme.Motion.snappy, value: formattedValue)
                     .frame(width: 28, alignment: .trailing)
             }
         }
@@ -226,6 +199,8 @@ struct DraggableProgressBar: View {
     var colorMode: ProgressColorMode? = nil
     
     @State private var isDragging = false
+    /// 1 right after the value changes, easing back to 0: a soft bloom on the fill.
+    @State private var glow: Double = 0
     @Default(.progressBarStyle) private var progressBarStyle
     @Default(.useColorCodedVolumeDisplay) private var useColorCodedVolumeDisplay
     @Default(.useColorCodedBatteryDisplay) private var useColorCodedBatteryDisplay
@@ -267,6 +242,17 @@ struct DraggableProgressBar: View {
                 )
             }
             .frame(height: inlineHUD ? (isDragging ? 8 : 5) : (isDragging ? 9 : 6))
+        }
+        .onChange(of: value) { _, _ in
+            pulseGlow()
+        }
+    }
+
+    private func pulseGlow() {
+        guard !NotchlyTheme.Motion.reduceMotion, progressBarStyle != .segmented else { return }
+        withAnimation(.easeOut(duration: 0.1)) { glow = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.easeOut(duration: 0.5)) { glow = 0 }
         }
     }
     
@@ -317,6 +303,8 @@ struct DraggableProgressBar: View {
                 }
             }
         }
+        .shadow(color: Color.white.opacity(0.55 * glow), radius: 7 * glow)
+        .animation(NotchlyTheme.Motion.spring, value: clampedWidth)
     }
 
     private var shouldUseColorCoding: Bool {
