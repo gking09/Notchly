@@ -572,7 +572,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Ebullioscopic.Atoll.DynamicIslandTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgeking.Notchly.Tests;
 				PRODUCT_MODULE_NAME = DynamicIslandTests;
 				PRODUCT_NAME = DynamicIslandTests;
 				SDKROOT = macosx;
@@ -593,7 +593,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Ebullioscopic.Atoll.DynamicIslandTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgeking.Notchly.Tests;
 				PRODUCT_MODULE_NAME = DynamicIslandTests;
 				PRODUCT_NAME = DynamicIslandTests;
 				SDKROOT = macosx;
@@ -618,7 +618,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atoll.DynamicIslandUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgeking.Notchly.UITests;
 				PRODUCT_MODULE_NAME = DynamicIslandUITests;
 				PRODUCT_NAME = DynamicIslandUITests;
 				SDKROOT = macosx;
@@ -645,7 +645,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atoll.DynamicIslandUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgeking.Notchly.UITests;
 				PRODUCT_MODULE_NAME = DynamicIslandUITests;
 				PRODUCT_NAME = DynamicIslandUITests;
 				SDKROOT = macosx;
@@ -787,7 +787,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1637;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
-				DEVELOPMENT_TEAM = 9Y64TRM77N;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -805,7 +805,7 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DynamicIsland/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Atoll;
+				INFOPLIST_KEY_CFBundleDisplayName = Notchly;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_MetalCaptureEnabled = YES;
@@ -829,8 +829,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 2.3.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Ebullioscopic.Atoll.dev;
-				PRODUCT_NAME = Atoll;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgeking.Notchly.dev;
+				PRODUCT_NAME = Notchly;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
@@ -862,7 +862,7 @@
 				CURRENT_PROJECT_VERSION = 1637;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=macosx*]" = 9Y64TRM77N;
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -880,7 +880,7 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DynamicIsland/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Atoll;
+				INFOPLIST_KEY_CFBundleDisplayName = Notchly;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_MetalCaptureEnabled = YES;
@@ -904,8 +904,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 2.3.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Ebullioscopic.Atoll;
-				PRODUCT_NAME = Atoll;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgeking.Notchly;
+				PRODUCT_NAME = Notchly;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
