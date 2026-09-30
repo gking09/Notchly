@@ -99,7 +99,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .stats, .clipboard, .extensionExperience]
+    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .clipboard, .extensionExperience]
     
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
@@ -114,11 +114,9 @@ class DynamicIslandViewCoordinator: ObservableObject {
             let oldIdx = Self.tabOrder.firstIndex(of: oldValue) ?? 0
             let newIdx = Self.tabOrder.firstIndex(of: currentView) ?? 0
             tabSwitchForward = newIdx >= oldIdx
-            handleStatsTabTransition(from: oldValue, to: currentView)
         }
     }
     
-    @Published var statsSecondRowExpansion: CGFloat = 1
     @Published var selectedExtensionExperienceID: String?
     
     
@@ -224,7 +222,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
             Defaults.publisher(.dynamicShelf).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableTimerFeature).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.timerDisplayMode).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableStatsFeature).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableClipboardManager).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.clipboardDisplayMode).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher()
@@ -245,13 +242,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
 
     func suppressHoverOpen(for duration: TimeInterval = 0.35) {
         hoverOpenSuppressedUntil = Date().addingTimeInterval(max(0, duration))
-    }
-
-    private func handleStatsTabTransition(from oldValue: NotchViews, to newValue: NotchViews) {
-        guard oldValue != newValue else { return }
-        if newValue == .stats && Defaults[.enableStatsFeature] {
-            statsSecondRowExpansion = 1
-        }
     }
 
     private func handleTimerDisplayModeChange(_ mode: TimerDisplayMode) {

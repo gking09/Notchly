@@ -36,7 +36,7 @@ struct ProfileSelectionView: View {
             id: "developer",
             name: String(localized: "Developer"),
             icon: "terminal.fill",
-            description: String(localized: "Code and debug with stats monitoring, and screen assistant."),
+            description: String(localized: "Code and debug with the screen assistant."),
             gradient: [Color.blue, Color.purple]
         ),
         UserProfile(
@@ -207,7 +207,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     // Developer Profile Settings
     let isDeveloper = profiles.contains("developer")
     if isDeveloper {
-        Defaults[.enableStatsFeature] = true
         Defaults[.enableTimerFeature] = true
         Defaults[.enableScreenAssistant] = true
         Defaults[.showMirror] = false
@@ -220,7 +219,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
         Defaults[.showMirror] = true
         Defaults[.lightingEffect] = true
         Defaults[.inlineHUD] = true
-        Defaults[.enableStatsFeature] = false
         Defaults[.enableTimerFeature] = false
         Defaults[.enableMinimalisticUI] = false
         Defaults[.enableScreenAssistant] = false
@@ -231,7 +229,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     if isLightUse {
         Defaults[.enableMinimalisticUI] = true
         Defaults[.showMirror] = false
-        Defaults[.enableStatsFeature] = false
         Defaults[.enableTimerFeature] = true
         Defaults[.inlineHUD] = true
         Defaults[.enableScreenAssistant] = false
@@ -244,7 +241,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
         Defaults[.enableTimerFeature] = true
         Defaults[.showCalendar] = true
         Defaults[.showMirror] = false
-        Defaults[.enableStatsFeature] = false
         Defaults[.enableMinimalisticUI] = false
         Defaults[.enableScreenAssistant] = false
     }

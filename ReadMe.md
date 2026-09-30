@@ -76,7 +76,7 @@ Atoll turns the MacBook notch into a focused command surface for media, system i
 
 ## Quick Start
 - Hover near the notch to expand; click to enter controls.
-- Use tabs for Media, Stats, Timers, Clipboard, and more.
+- Use tabs for Media, Timers, Clipboard, and more.
 - Adjust layout, appearance, and shortcuts from Settings.
 - Add files to Shelf from Terminal: `open -a Atoll /path/to/file`.
 
@@ -93,7 +93,6 @@ Atoll turns the MacBook notch into a focused command surface for media, system i
 
 ## Troubleshooting (Basics)
 - After granting Accessibility or Screen Recording, quit and relaunch the app.
-- If metrics are empty, enable categories in Settings → Stats.
 - Media not responding: verify player is active and Music permission is granted.
 
 ## License
@@ -106,8 +105,6 @@ Atoll builds upon the work of several open-source projects and draws inspiration
 - [**Boring.Notch**](https://github.com/TheBoredTeam/boring.notch) - foundational codebase that provided the initial media player integration, AirDrop surface implementation, file dock functionality, and calendar event display. Major architectural patterns and notch interaction models were adapted from this project.
 
 - [**Alcove**](https://tryalcove.com) - primary inspiration for the Minimalistic Mode interface design and the conceptual framework for lock screen widget integration that informed Atoll's compact layout strategy.
-
-- [**Stats**](https://github.com/exelban/stats) - source implementation for CPU temperature monitoring via SMC (System Management Controller) access, frequency sampling through IOReport bindings, and per-core CPU utilisation tracking. The system metrics collection architecture derives from Stats project readers.
 
 - [**Open Meteo**](https://open-meteo.com) - weather apis for the lock screen widgets
 

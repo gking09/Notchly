@@ -576,13 +576,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             isHomeTabActive: coordinator.currentView == .home
         )
 
-        let adjustedContentSize = statsAdjustedNotchSize(
-            from: baseSize,
-            isStatsTabActive: coordinator.currentView == .stats,
-            secondRowProgress: coordinator.statsSecondRowExpansion
-        )
         let result = addShadowPadding(
-            to: adjustedContentSize,
+            to: baseSize,
             isMinimalistic: Defaults[.enableMinimalisticUI]
         )
 
@@ -821,36 +816,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        // Observe stats settings changes - use debounced updates
-        Defaults.publisher(.enableStatsFeature, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showCpuGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showMemoryGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showGpuGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showNetworkGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showDiskGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-
         Defaults.publisher(.openNotchWidth, options: []).sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()
         }.store(in: &cancellables)
-
-        MemoryUsageMonitor.shared.startMonitoring()
 
         ReminderLiveActivityManager.shared.$activeWindowReminders
             .receive(on: RunLoop.main)

@@ -24,7 +24,6 @@ private enum SettingsTabGroup: String, CaseIterable, Identifiable {
     case system
     case productivity
     case utilities
-    case developer
     case integrations
     case info
 
@@ -38,7 +37,6 @@ private enum SettingsTabGroup: String, CaseIterable, Identifiable {
         case .system:           return String(localized: "System")
         case .productivity:     return String(localized: "Productivity")
         case .utilities:        return String(localized: "Utilities")
-        case .developer:        return String(localized: "Developer")
         case .integrations:     return String(localized: "Integrations")
         case .info:             return nil
         }
@@ -57,7 +55,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case calendar
     case hudAndOSD
     case battery
-    case stats
     case clipboard
     case screenAssistant
     case downloads
@@ -76,7 +73,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .timer, .calendar:                                             return .productivity
         case .clipboard, .screenAssistant, .shelf,
              .downloads, .shortcuts:                                         return .utilities
-        case .stats:                                                        return .developer
         case .extensions:                                                    return .integrations
         case .about:                                                         return .info
         }
@@ -95,7 +91,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return String(localized: "Calendar")
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
-        case .stats: return String(localized: "Stats")
         case .clipboard: return String(localized: "Clipboard")
         case .screenAssistant: return String(localized: "Screen Assistant")
         case .downloads: return String(localized: "Downloads")
@@ -118,7 +113,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return "calendar"
         case .hudAndOSD: return "dial.medium.fill"
         case .battery: return "battery.100.bolt"
-        case .stats: return "chart.xyaxis.line"
         case .clipboard: return "clipboard"
         case .screenAssistant: return "brain.head.profile"
         case .downloads: return "square.and.arrow.down"
@@ -141,7 +135,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return .cyan
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
-        case .stats: return .teal
         case .clipboard: return .mint
         case .screenAssistant: return .pink
         case .downloads: return .gray
@@ -416,15 +409,6 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .timer, title: "Progress style", keywords: ["progress", "bar", "ring"], highlightID: SettingsTab.timer.highlightID(for: "Progress style")),
         SettingsSearchEntry(tab: .timer, title: "Accent colour", keywords: ["accent", "timer"], highlightID: SettingsTab.timer.highlightID(for: "Accent colour")),
 
-        // Stats
-        SettingsSearchEntry(tab: .stats, title: "Enable system stats monitoring", keywords: ["stats", "monitoring"], highlightID: SettingsTab.stats.highlightID(for: "Enable system stats monitoring")),
-        SettingsSearchEntry(tab: .stats, title: "Stop monitoring after closing the notch", keywords: ["stats", "auto stop"], highlightID: SettingsTab.stats.highlightID(for: "Stop monitoring after closing the notch")),
-        SettingsSearchEntry(tab: .stats, title: "CPU Usage", keywords: ["cpu", "graph"], highlightID: SettingsTab.stats.highlightID(for: "CPU Usage")),
-        SettingsSearchEntry(tab: .stats, title: "Temperature unit", keywords: ["cpu", "temperature", "celsius", "fahrenheit"], highlightID: SettingsTab.stats.highlightID(for: "Temperature unit")),
-        SettingsSearchEntry(tab: .stats, title: "Memory Usage", keywords: ["memory", "ram"], highlightID: SettingsTab.stats.highlightID(for: "Memory Usage")),
-        SettingsSearchEntry(tab: .stats, title: "GPU Usage", keywords: ["gpu", "graphics"], highlightID: SettingsTab.stats.highlightID(for: "GPU Usage")),
-        SettingsSearchEntry(tab: .stats, title: "Network Activity", keywords: ["network", "graph"], highlightID: SettingsTab.stats.highlightID(for: "Network Activity")),
-        SettingsSearchEntry(tab: .stats, title: "Disk I/O", keywords: ["disk", "io"], highlightID: SettingsTab.stats.highlightID(for: "Disk I/O")),
 
         // Clipboard
         SettingsSearchEntry(tab: .clipboard, title: "Enable Clipboard Manager", keywords: ["clipboard", "manager"], highlightID: SettingsTab.clipboard.highlightID(for: "Enable Clipboard Manager")),
@@ -750,7 +734,7 @@ struct SettingsView: View {
 
     private var availableTabs: [SettingsTab] {
         // Ordered to match group layout: core → media & display → system →
-        // productivity → utilities → developer → integrations → info.
+        // productivity → utilities → integrations → info.
         let ordered: [SettingsTab] = [
             // Core
             .general,
@@ -772,8 +756,6 @@ struct SettingsView: View {
             .shelf,
             .downloads,
             .shortcuts,
-            // Developer
-            .stats,
             // Integrations
             .extensions,
             // Info
@@ -966,7 +948,7 @@ struct SettingsView: View {
 
     private func isTabVisible(_ tab: SettingsTab) -> Bool {
         switch tab {
-        case .timer, .stats, .clipboard, .screenAssistant, .shelf:
+        case .timer, .clipboard, .screenAssistant, .shelf:
             return !enableMinimalisticUI
         default:
             return true
@@ -1019,10 +1001,6 @@ struct SettingsView: View {
         case .battery:
             SettingsForm(tab: .battery) {
                 Charge()
-            }
-        case .stats:
-            SettingsForm(tab: .stats) {
-                StatsSettings()
             }
         case .clipboard:
             SettingsForm(tab: .clipboard) {
@@ -7017,7 +6995,6 @@ struct Shortcuts: View {
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.enableClipboardManager) var enableClipboardManager
     @Default(.enableShortcuts) var enableShortcuts
-    @Default(.enableStatsFeature) var enableStatsFeature
 
     private func highlightID(_ title: String) -> String {
         SettingsTab.shortcuts.highlightID(for: title)
@@ -7809,265 +7786,6 @@ private struct TimerPresetComponentControl: View {
             }
         }
         .frame(width: 110, alignment: .leading)
-    }
-}
-
-struct StatsSettings: View {
-    @ObservedObject var statsManager = StatsManager.shared
-    @Default(.enableStatsFeature) var enableStatsFeature
-    @Default(.statsStopWhenNotchCloses) var statsStopWhenNotchCloses
-    @Default(.statsUpdateInterval) var statsUpdateInterval
-    @Default(.showCpuGraph) var showCpuGraph
-    @Default(.showMemoryGraph) var showMemoryGraph
-    @Default(.showGpuGraph) var showGpuGraph
-    @Default(.showNetworkGraph) var showNetworkGraph
-    @Default(.showDiskGraph) var showDiskGraph
-    @Default(.cpuTemperatureUnit) var cpuTemperatureUnit
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.stats.highlightID(for: title)
-    }
-
-    var enabledGraphsCount: Int {
-        [showCpuGraph, showMemoryGraph, showGpuGraph, showNetworkGraph, showDiskGraph].filter { $0 }.count
-    }
-
-    private var formattedUpdateInterval: String {
-        let seconds = Int(statsUpdateInterval.rounded())
-        if seconds >= 60 {
-            return "60 s (1 min)"
-        } else if seconds == 1 {
-            return "1 s"
-        } else {
-            return "\(seconds) s"
-        }
-    }
-
-    private var shouldShowStatsBatteryWarning: Bool {
-        !statsStopWhenNotchCloses && statsUpdateInterval <= 5
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableStatsFeature) {
-                    Text("Enable system stats monitoring")
-                }
-                .settingsHighlight(id: highlightID("Enable system stats monitoring"))
-                .onChange(of: enableStatsFeature) { _, newValue in
-                    if !newValue {
-                        statsManager.stopMonitoring()
-                    }
-                    // Note: Smart monitoring will handle starting when switching to stats tab
-                }
-            } header: {
-                Text("General")
-            } footer: {
-                Text("When enabled, the Stats tab will display real-time system performance graphs. This feature requires system permissions and may use additional battery.")
-                    .multilineTextAlignment(.trailing)
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-
-            if enableStatsFeature {
-                Section {
-                    Defaults.Toggle(key: .statsStopWhenNotchCloses) {
-                        Text("Stop monitoring after closing the notch")
-                    }
-                    .settingsHighlight(id: highlightID("Stop monitoring after closing the notch"))
-                    .help("When enabled, stats monitoring stops a few seconds after the notch closes.")
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Update interval")
-                            Spacer()
-                            Text(formattedUpdateInterval)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Slider(value: $statsUpdateInterval, in: 1...60, step: 1)
-                            .accessibilityLabel("Stats update interval")
-
-                        Text("Controls how often system metrics refresh while monitoring is active.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if shouldShowStatsBatteryWarning {
-                        Label {
-                            Text("High-frequency updates without a timeout can increase battery usage.")
-                        } icon: {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .padding(.top, 4)
-                    }
-                } header: {
-                    Text("Monitoring Behavior")
-                } footer: {
-                    Text("Sampling can continue while the notch is closed when the timeout is disabled.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    Defaults.Toggle(key: .showCpuGraph) {
-                        Text("CPU Usage")
-                    }
-                    .settingsHighlight(id: highlightID("CPU Usage"))
-
-                    if showCpuGraph {
-                        SettingsSegmentedPicker(
-                            "Temperature unit",
-                            selection: $cpuTemperatureUnit,
-                            items: Array(LockScreenWeatherTemperatureUnit.allCases)
-                        ) { $0.localizedName }
-                        .settingsHighlight(id: highlightID("Temperature unit"))
-                    }
-                    Defaults.Toggle(key: .showMemoryGraph) {
-                        Text("Memory Usage")
-                    }
-                    .settingsHighlight(id: highlightID("Memory Usage"))
-                    Defaults.Toggle(key: .showGpuGraph) {
-                        Text("GPU Usage")
-                    }
-                    .settingsHighlight(id: highlightID("GPU Usage"))
-                    Defaults.Toggle(key: .showNetworkGraph) {
-                        Text("Network Activity")
-                    }
-                    .settingsHighlight(id: highlightID("Network Activity"))
-                    Defaults.Toggle(key: .showDiskGraph) {
-                        Text("Disk I/O")
-                    }
-                    .settingsHighlight(id: highlightID("Disk I/O"))
-                } header: {
-                    Text("Graph Visibility")
-                } footer: {
-                    if enabledGraphsCount >= 4 {
-                        Text("With \(enabledGraphsCount) graphs enabled, the Dynamic Island will expand horizontally to accommodate all graphs in a single row.")
-                            .multilineTextAlignment(.trailing)
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    } else {
-                        Text("Each graph can be individually enabled or disabled. Network activity shows download/upload speeds, and disk I/O shows read/write speeds.")
-                            .multilineTextAlignment(.trailing)
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    }
-                }
-
-                Section {
-                    HStack {
-                        Text("Monitoring Status")
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(statsManager.isMonitoring ? .green : .red)
-                                .frame(width: 8, height: 8)
-                            Text(statsManager.isMonitoring ? "Active" : "Stopped")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if statsManager.isMonitoring {
-                        if showCpuGraph {
-                            HStack {
-                                Text("CPU Usage")
-                                Spacer()
-                                Text(statsManager.cpuUsageString)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if showMemoryGraph {
-                            HStack {
-                                Text("Memory Usage")
-                                Spacer()
-                                Text(statsManager.memoryUsageString)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if showGpuGraph {
-                            HStack {
-                                Text("GPU Usage")
-                                Spacer()
-                                Text(statsManager.gpuUsageString)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if showNetworkGraph {
-                            HStack {
-                                Text("Network Download")
-                                Spacer()
-                                Text(String(format: "%.1f MB/s", statsManager.networkDownload))
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            HStack {
-                                Text("Network Upload")
-                                Spacer()
-                                Text(String(format: "%.1f MB/s", statsManager.networkUpload))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if showDiskGraph {
-                            HStack {
-                                Text("Disk Read")
-                                Spacer()
-                                Text(String(format: "%.1f MB/s", statsManager.diskRead))
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            HStack {
-                                Text("Disk Write")
-                                Spacer()
-                                Text(String(format: "%.1f MB/s", statsManager.diskWrite))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        HStack {
-                            Text("Last Updated")
-                            Spacer()
-                            Text(statsManager.lastUpdated, style: .relative)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Live Performance Data")
-                }
-
-                Section {
-                    HStack {
-                        Button(statsManager.isMonitoring ? "Stop Monitoring" : "Start Monitoring") {
-                            if statsManager.isMonitoring {
-                                statsManager.stopMonitoring()
-                            } else {
-                                statsManager.startMonitoring()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .foregroundColor(statsManager.isMonitoring ? .red : .blue)
-
-                        Spacer()
-
-                        Button("Clear Data") {
-                            statsManager.clearHistory()
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(statsManager.isMonitoring)
-                    }
-                } header: {
-                    Text("Controls")
-                }
-            }
-        }
-        .navigationTitle("Stats")
     }
 }
 
