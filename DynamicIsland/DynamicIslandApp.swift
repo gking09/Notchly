@@ -116,13 +116,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let idleAnimationManager = IdleAnimationManager.shared  // NEW: Custom idle animations
     let downloadManager = DownloadManager.shared  // NEW: browser downloads detection
     let mediaControlsStateCoordinator = MediaControlsStateCoordinator.shared
-    let systemTimerBridge = SystemTimerBridge.shared
     var closeNotchWorkItem: DispatchWorkItem?
     private var previousScreens: [NSScreen]?
     private var onboardingWindowController: NSWindowController?
     private var cancellables = Set<AnyCancellable>()
     private var windowsHiddenForLock = false
-    private var optionalShortcutHandlersRegistered = false
     private weak var focusWithoutDevToolsMenuItem: NSMenuItem?
     private weak var focusUseDevToolsMenuItem: NSMenuItem?
     
@@ -466,7 +464,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                       Defaults[.enableSneakPeek] &&
                                       (
                                           coordinator.expandingView.show &&
-                                          (coordinator.expandingView.type == .music || coordinator.expandingView.type == .timer) &&
+                                          coordinator.expandingView.type == .music &&
                                           Defaults[.sneakPeekStyles] == .inline ||
                                           airPodsListeningModeSneakActive
                                       )
@@ -525,11 +523,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Use minimalistic or normal size based on settings
         var baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize(isDynamicIslandMode: shouldUseDynamicIslandMode(for: vm.screen)) : openNotchSize
-        
-        // Use a consistent height for different view types
-        if coordinator.currentView == .timer {
-            baseSize.height = 250 // Extra space for timer presets
-        }
         
         baseSize = inlineLyricsAdjustedNotchSize(
             from: baseSize,
@@ -770,25 +763,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        TimerManager.shared.$activeSource
-            .combineLatest(TimerManager.shared.$isTimerActive)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.debouncedUpdateWindowSize()
-            }
-            .store(in: &cancellables)
+        Publishers.MergeMany(
+            Defaults.publisher(.enableQuickActions, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.quickActionsOrder, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.quickActionsHidden, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.quickActionsShortcutName, options: []).map { _ in () }.eraseToAnyPublisher()
+        )
+        .sink { [weak self] _ in
+            self?.debouncedUpdateWindowSize()
+        }
+        .store(in: &cancellables)
 
-        Defaults.publisher(.enableShortcuts, options: []).sink { [weak self] change in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+        Defaults.publisher(.enableShortcuts, options: []).sink { change in
+            Task { @MainActor in
                 KeyboardShortcuts.isEnabled = change.newValue
-                self.updateFeatureShortcutAvailability()
-            }
-        }.store(in: &cancellables)
-
-        Defaults.publisher(.enableTimerFeature, options: []).sink { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateFeatureShortcutAvailability()
             }
         }.store(in: &cancellables)
 
@@ -940,8 +928,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         KeyboardShortcuts.isEnabled = Defaults[.enableShortcuts]
-        registerOptionalShortcutHandlers()
-        updateFeatureShortcutAvailability()
 
         if !Defaults[.showOnAllDisplays] {
             let viewModel = self.vm
@@ -1235,30 +1221,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func registerOptionalShortcutHandlers() {
-        guard !optionalShortcutHandlersRegistered else { return }
-        optionalShortcutHandlersRegistered = true
-
-        KeyboardShortcuts.onKeyDown(for: .startDemoTimer) {
-            guard Defaults[.enableShortcuts], Defaults[.enableTimerFeature] else { return }
-            TimerManager.shared.startDemoTimer(duration: 300)
-        }
-    }
-
-    @MainActor
-    private func updateFeatureShortcutAvailability() {
-        updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
-    }
-
-    @MainActor
-    private func updateShortcut(_ name: KeyboardShortcuts.Name, isEnabled: Bool) {
-        if isEnabled {
-            KeyboardShortcuts.enable(name)
-        } else {
-            KeyboardShortcuts.disable(name)
-        }
-    }
-    
     func playWelcomeSound() {
         let audioPlayer = AudioPlayer()
         audioPlayer.play(fileName: "dynamic", fileExtension: "m4a")

@@ -71,7 +71,10 @@ var openNotchSize: CGSize {
     let minWidth = currentRecommendedMinimumNotchWidth()
     let maxWidth = maxAllowedNotchWidth()
     let width = min(max(storedWidth, minWidth, sideLyricsRequiredNotchWidth()), maxWidth)
-    return .init(width: width, height: 200)
+    // The Quick Actions row sits above the Home content and needs its own room,
+    // so the music layout underneath keeps the height it always had.
+    let height: CGFloat = 200 + (quickActionsBarVisible() ? QuickActionsMetrics.extraNotchHeight : 0)
+    return .init(width: width, height: height)
 }
 
 /// Maximum notch width based on the current screen's point width.
@@ -103,11 +106,6 @@ func enabledStandardTabCount() -> Int {
 
     // Home tab
     if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] || Defaults[.showMirror] {
-        count += 1
-    }
-
-    // Timer tab (only in .tab display mode)
-    if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab {
         count += 1
     }
 
@@ -143,9 +141,6 @@ func enforceMinimumNotchWidth() {
 private let minimalisticBaseOpenNotchSize: CGSize = .init(width: 420, height: 180)
 // 10pt top padding + 40pt lyrics content; keep in sync with MinimalisticMusicPlayerView.calculateDynamicHeight
 private let minimalisticLyricsExtraHeight: CGFloat = 50
-let minimalisticTimerCountdownTopPadding: CGFloat = 12
-let minimalisticTimerCountdownContentHeight: CGFloat = 82
-let minimalisticTimerCountdownBlockHeight: CGFloat = minimalisticTimerCountdownTopPadding + minimalisticTimerCountdownContentHeight
 let notchShadowPaddingStandard: CGFloat = 18
 let notchShadowPaddingMinimalistic: CGFloat = 12
 
@@ -166,10 +161,6 @@ func minimalisticOpenNotchSize(isDynamicIslandMode: Bool) -> CGSize {
     if reminderCount > 0 {
         let reminderHeight = ReminderLiveActivityManager.additionalHeight(forRowCount: reminderCount)
         size.height += reminderHeight
-    }
-
-    if DynamicIslandViewCoordinator.shared.timerLiveActivityEnabled && TimerManager.shared.isExternalTimerActive {
-        size.height += minimalisticTimerCountdownBlockHeight
     }
 
     return size

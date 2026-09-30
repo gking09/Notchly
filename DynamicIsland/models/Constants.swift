@@ -486,34 +486,6 @@ enum MusicSkipBehavior: String, CaseIterable, Identifiable, Defaults.Serializabl
     }
 }
 
-enum TimerIconColorMode: String, CaseIterable, Identifiable, Defaults.Serializable {
-    case adaptive = "Adaptive"
-    case solid = "Solid"
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .adaptive: return String(localized:"Adaptive gradient")
-        case .solid: return String(localized:"Solid colour")
-        }
-    }
-}
-
-enum TimerProgressStyle: String, CaseIterable, Identifiable, Defaults.Serializable {
-    case bar = "Bar"
-    case ring = "Ring"
-    
-    var id: String { rawValue }
-    
-    var localizedName: String {
-        switch self {
-        case .bar: return String(localized:"Bar")
-        case .ring: return String(localized:"Ring")
-        }
-    }
-}
-
 enum FocusMonitoringMode: String, CaseIterable, Identifiable, Defaults.Serializable {
     case withoutDevTools = "withoutDevTools"
     case useDevTools = "useDevTools"
@@ -786,28 +758,19 @@ extension Defaults.Keys {
     static let useBluetoothHUD3DIcon = Key<Bool>("useBluetoothHUD3DIcon", default: true)
     static let showAirPodsListeningModeChanges = Key<Bool>("showAirPodsListeningModeChanges", default: true)
     
-    // MARK: Timer Feature
-    static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
-    static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)
-    static let timerPresets = Key<[TimerPreset]>("timerPresets", default: TimerPreset.defaultPresets)
-    static let showTimerPresetsInNotchTab = Key<Bool>("showTimerPresetsInNotchTab", default: true)
-    static let timerIconColorMode = Key<TimerIconColorMode>("timerIconColorMode", default: .solid)
-    static let timerSolidColor = Key<Color>("timerSolidColor", default: Color(.sRGB, red: 0.96, green: 0.96, blue: 0.98, opacity: 1))
-    static let timerShowsCountdown = Key<Bool>("timerShowsCountdown", default: true)
-    static let timerShowsLabel = Key<Bool>("timerShowsLabel", default: false)
-    static let timerShowsProgress = Key<Bool>("timerShowsProgress", default: true)
-    static let timerProgressStyle = Key<TimerProgressStyle>("timerProgressStyle", default: .bar)
-    static let mirrorSystemTimer = Key<Bool>("mirrorSystemTimer", default: true)
-    static let timerInputStyle = Key<TimerInputStyle>("timerInputStyle", default: .manual)
-    
-    
+    // MARK: Quick Actions
+    static let enableQuickActions = Key<Bool>("enableQuickActions", default: true)
+    /// Full ordering of every quick action, visible or not.
+    static let quickActionsOrder = Key<[QuickAction]>("quickActionsOrder", default: QuickAction.defaultOrder)
+    static let quickActionsHidden = Key<[QuickAction]>("quickActionsHidden", default: [])
+    /// Name of the Shortcuts shortcut the "Run shortcut" action runs.
+    static let quickActionsShortcutName = Key<String>("quickActionsShortcutName", default: "")
+
     // MARK: Reminder Live Activity
     static let enableReminderLiveActivity = Key<Bool>("enableReminderLiveActivity", default: true)
     static let reminderPresentationStyle = Key<ReminderPresentationStyle>("reminderPresentationStyle", default: .ringCountdown)
     static let reminderLeadTime = Key<Int>("reminderLeadTime", default: 5)
     static let reminderSneakPeekDuration = Key<Double>("reminderSneakPeekDuration", default: 5)
-    // Legacy key name: the separate control window is gone, this now shows inline notch controls.
-    static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
     
     
     // MARK: Keyboard Shortcuts

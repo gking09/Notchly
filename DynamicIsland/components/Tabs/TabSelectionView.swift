@@ -40,8 +40,6 @@ struct TabModel: Identifiable {
 
 struct TabSelectionView: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.enableTimerFeature) var enableTimerFeature
-    @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.showCalendar) private var showCalendar
     @Default(.showMirror) private var showMirror
     @Default(.showStandardMediaControls) private var showStandardMediaControls
@@ -53,10 +51,6 @@ struct TabSelectionView: View {
 
         if homeTabVisible {
             tabsArray.append(TabModel(label: "Home", icon: "house.fill", view: .home))
-        }
-
-        if enableTimerFeature && timerDisplayMode == .tab {
-            tabsArray.append(TabModel(label: "Timer", icon: "timer", view: .timer))
         }
 
         return tabsArray

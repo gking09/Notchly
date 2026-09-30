@@ -68,7 +68,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
             isMediaOutputPopoverActive = isAnyActive
         }
     }
-    @Published var isTimerPopoverActive: Bool = false
     @Published var shouldRecheckHover: Bool = false
     @Published var isScrollGestureActive: Bool = false
     private var scrollGestureSuppressionTokens: Set<UUID> = []
@@ -188,14 +187,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
             }
             .store(in: &cancellables)
 
-        TimerManager.shared.$activeSource
-            .combineLatest(TimerManager.shared.$isTimerActive)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _, _ in
-                self?.handleMinimalisticTimerHeightChange()
-            }
-            .store(in: &cancellables)
-
         Defaults.publisher(.openNotchWidth, options: [])
             .map { $0.newValue }
             .removeDuplicates()
@@ -225,6 +216,10 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
             Defaults.publisher(.showStandardMediaControls, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.autoHideInactiveNotchMediaPlayer, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showMirror, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableQuickActions, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.quickActionsOrder, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.quickActionsHidden, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.quickActionsShortcutName, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.lyricsPanelWidth, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.lyricsPanelOffset, options: []).map { _ in () }.eraseToAnyPublisher(),
             MusicManager.shared.$isPlaying.map { _ in () }.eraseToAnyPublisher(),
@@ -254,23 +249,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         )
     }
 
-    private func handleMinimalisticTimerHeightChange() {
-        guard Defaults[.enableMinimalisticUI] else { return }
-        guard notchState == .open else { return }
-        let updatedTarget = calculateDynamicNotchSize()
-        guard notchSize != updatedTarget else { return }
-        withAnimation(.smooth) {
-            notchSize = updatedTarget
-        }
-        if let delegate = AppDelegate.shared {
-            delegate.ensureWindowSize(
-                addShadowPadding(to: updatedTarget, isMinimalistic: Defaults[.enableMinimalisticUI]),
-                animated: true,
-                force: false
-            )
-        }
-    }
-    
     private func setupDetectorObserver() {
         // 1) Publisher for the user’s fullscreen detection setting
         let enabledPublisher = Defaults

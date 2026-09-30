@@ -266,11 +266,6 @@ struct InlineHUD: View {
                                 .symbolVariant(value > 0 ? .none : .slash)
                                 .contentTransition(.interpolate)
                                 .frame(width: 20, height: 15, alignment: .center)
-                        case .timer:
-                            Image(systemName: "timer")
-                                .symbolRenderingMode(.hierarchical)
-                                .contentTransition(.interpolate)
-                                .frame(width: 20, height: 15, alignment: .center)
                         case .bluetoothAudio:
                             if let listeningMode {
                                 AirPodsListeningModeSymbol(mode: listeningMode)
@@ -334,14 +329,6 @@ struct InlineHUD: View {
                 if (type == .mic) {
                     Text(value.isZero ? "muted" : "unmuted")
                         .foregroundStyle(NotchlyTheme.Palette.textSecondary)
-                        .lineLimit(1)
-                        .allowsTightening(true)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .contentTransition(.interpolate)
-                } else if (type == .timer) {
-                    Text(TimerManager.shared.formattedRemainingTime())
-                        .foregroundStyle(TimerManager.shared.timerColor)
                         .lineLimit(1)
                         .allowsTightening(true)
                         .multilineTextAlignment(.trailing)

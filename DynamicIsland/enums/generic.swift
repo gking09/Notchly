@@ -72,7 +72,6 @@ public enum NotchState {
 
 public enum NotchViews {
     case home
-    case timer
 }
 
 enum SettingsEnum {
@@ -155,16 +154,3 @@ enum LockScreenGlassCustomizationMode: String, CaseIterable, Defaults.Serializab
     }
 }
 
-enum TimerInputStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case ruler = "Ruler"
-    case manual = "Manual"
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .ruler: return String(localized: "Ruler")
-        case .manual: return String(localized: "Manual")
-        }
-    }
-}

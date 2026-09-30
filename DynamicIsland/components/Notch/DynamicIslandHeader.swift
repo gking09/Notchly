@@ -24,11 +24,7 @@ struct DynamicIslandHeader: View {
     @EnvironmentObject var webcamManager: WebcamManager
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @ObservedObject var timerManager = TimerManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
-    @State private var showTimerPopover = false
-    @Default(.enableTimerFeature) var enableTimerFeature
-    @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.showBatteryIndicator) var showBatteryIndicator
     @Default(.showBatteryPercentInside) var showBatteryPercentInside
     @Default(.showMinimalisticBatteryIndicator) var showMinimalisticBatteryIndicator
@@ -43,7 +39,6 @@ struct DynamicIslandHeader: View {
     /// 16pt of ink height, which is what actually makes a mixed row look even.
     private static let headerGlyphSizes: [String: CGFloat] = [
         "web.camera": 14.5,
-        "timer": 14.4,
         "gearshape": 14.2,
         // Not solved against measured ink the way the others were: the three
         // sliders stand slightly taller than `timer`, so this trims to match.
@@ -109,30 +104,6 @@ struct DynamicIslandHeader: View {
                             .contentShape(Circle())
                         }
                         .buttonStyle(.notchlyGlassCircle)
-                    }
-                    
-                    if Defaults[.enableTimerFeature] && timerDisplayMode == .popover {
-                        Button(action: {
-                            withAnimation(NotchlyTheme.Motion.spring) {
-                                showTimerPopover.toggle()
-                            }
-                        }) {
-                            headerGlyph("timer")
-                            .frame(width: 30, height: 30)
-                            .contentShape(Circle())
-                        }
-                        .buttonStyle(.notchlyGlassCircle)
-                        .popover(isPresented: $showTimerPopover, arrowEdge: .bottom) {
-                            TimerPopover()
-                        }
-                        .onChange(of: showTimerPopover) { isActive in
-                            vm.isTimerPopoverActive = isActive
-                            if !isActive {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    vm.shouldRecheckHover.toggle()
-                                }
-                            }
-                        }
                     }
                     
                     if Defaults[.settingsIconInNotch] {
@@ -203,25 +174,12 @@ struct DynamicIslandHeader: View {
         }
         .foregroundColor(NotchlyTheme.Palette.textSecondary)
         .environmentObject(vm)
-        .onChange(of: enableTimerFeature) { _, newValue in
-            if !newValue {
-                showTimerPopover = false
-                vm.isTimerPopoverActive = false
-            }
-        }
-        .onChange(of: timerDisplayMode) { _, mode in
-            if mode == .tab {
-                showTimerPopover = false
-                vm.isTimerPopoverActive = false
-            }
-        }
     }
 }
 
 private extension DynamicIslandHeader {
     var shouldSuppressStatusIndicators: Bool {
         Defaults[.settingsIconInNotch]
-            && Defaults[.enableTimerFeature]
     }
 }
 

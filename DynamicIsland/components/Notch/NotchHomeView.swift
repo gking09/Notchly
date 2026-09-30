@@ -890,6 +890,10 @@ struct NotchHomeView: View {
     @Default(.enableLyrics) private var enableLyrics
     @Default(.lyricsPanelWidth) private var lyricsPanelWidth
     @Default(.lyricsPanelOffset) private var lyricsPanelOffset
+    @Default(.enableQuickActions) private var enableQuickActions
+    @Default(.quickActionsOrder) private var quickActionsOrder
+    @Default(.quickActionsHidden) private var quickActionsHidden
+    @Default(.quickActionsShortcutName) private var quickActionsShortcutName
     @State private var showCalendarDeferred = false
     @State private var calendarSyncGeneration = 0
     let albumArtNamespace: Namespace.ID
@@ -897,6 +901,14 @@ struct NotchHomeView: View {
     /// Whether the music player should actively display (enabled AND has real content).
     private var shouldShowMusicPlayer: Bool {
         showStandardMediaControls && (!autoHideInactiveNotchMediaPlayer || musicManager.hasActiveSession)
+    }
+
+    private var quickActionsVisible: Bool {
+        enableQuickActions && !QuickActionsLayout.visibleActions(
+            order: quickActionsOrder,
+            hidden: quickActionsHidden,
+            shortcutName: quickActionsShortcutName
+        ).isEmpty
     }
 
     private var shouldShowSideLyrics: Bool {
@@ -936,34 +948,13 @@ struct NotchHomeView: View {
         Group {
             if Defaults[.enableMinimalisticUI] {
                 MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
-            } else if shouldShowSideLyrics {
-                sideLyricsContent
             } else {
-                HStack(alignment: .top, spacing: SideLyricsLayout.hStackSpacing) {
-                    // Normal mode: Show full music player with optional calendar and webcam
-                    if shouldShowMusicPlayer {
-                        MusicPlayerView(albumArtNamespace: albumArtNamespace)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(spacing: QuickActionsMetrics.contentSpacing) {
+                    if quickActionsVisible {
+                        QuickActionsBar()
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
-
-                    if showCalendar && showCalendarDeferred {
-                        Group {
-                            if shouldShowMusicPlayer {
-                                CalendarView()
-                            } else {
-                                StandaloneCalendarView()
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .onHover { isHovering in
-                            vm.isHoveringCalendar = isHovering
-                        }
-                        .environmentObject(vm)
-                    }
-
-                    if mirrorIsVisible {
-                        cameraPreview
-                    }
+                    standardContent
                 }
             }
         }
@@ -971,6 +962,41 @@ struct NotchHomeView: View {
             .combined(with: .move(edge: .top)))
         .blur(radius: vm.notchState == .closed ? 30 : 0)
         .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
+    }
+
+    /// Music player, calendar and mirror, laid out as before the row existed.
+    @ViewBuilder
+    private var standardContent: some View {
+        if shouldShowSideLyrics {
+            sideLyricsContent
+        } else {
+            HStack(alignment: .top, spacing: SideLyricsLayout.hStackSpacing) {
+                // Normal mode: Show full music player with optional calendar and webcam
+                if shouldShowMusicPlayer {
+                    MusicPlayerView(albumArtNamespace: albumArtNamespace)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if showCalendar && showCalendarDeferred {
+                    Group {
+                        if shouldShowMusicPlayer {
+                            CalendarView()
+                        } else {
+                            StandaloneCalendarView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onHover { isHovering in
+                        vm.isHoveringCalendar = isHovering
+                    }
+                    .environmentObject(vm)
+                }
+
+                if mirrorIsVisible {
+                    cameraPreview
+                }
+            }
+        }
     }
 
     private var sideLyricsContent: some View {
