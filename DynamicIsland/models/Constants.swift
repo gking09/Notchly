@@ -633,7 +633,7 @@ extension Defaults.Keys {
     static let selectedCameraID = Key<String>("selectedCameraID", default: "")
     static let settingsIconInNotch = Key<Bool>("settingsIconInNotch", default: true)
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
-    static let accentColor = Key<Color>("accentColor", default: Color.blue)
+    static let accentColor = Key<Color>("accentColor", default: Color(.sRGB, red: 0.85, green: 0.86, blue: 0.90, opacity: 1)) // Notchly silver
     static let enableShadow = Key<Bool>("enableShadow", default: true)
     static let cornerRadiusScaling = Key<Bool>("cornerRadiusScaling", default: true)
     static let useModernCloseAnimation = Key<Bool>("useModernCloseAnimation", default: true)
@@ -649,7 +649,7 @@ extension Defaults.Keys {
         "sliderUseAlbumArtColor",
         default: SliderColorEnum.white
     )
-    static let playerColorTinting = Key<Bool>("playerColorTinting", default: true)
+    static let playerColorTinting = Key<Bool>("playerColorTinting", default: false)
     static let useMusicVisualizer = Key<Bool>("useMusicVisualizer", default: true)
     static let visualizerBarCount = Key<Int>("visualizerBarCount", default: 4)
     static let enableWaveformScrubber = Key<Bool>("enableWaveformScrubber", default: true)
@@ -669,7 +669,7 @@ extension Defaults.Keys {
     static let reverseScrollGestures = Key<Bool>("reverseScrollGestures", default: false)
     
         // MARK: Media playback
-    static let coloredSpectrogram = Key<Bool>("coloredSpectrogram", default: true)
+    static let coloredSpectrogram = Key<Bool>("coloredSpectrogram", default: false)
     static let enableRealTimeWaveform = Key<Bool>("enableRealTimeWaveform", default: false)
     static let enableSneakPeek = Key<Bool>("enableSneakPeek", default: false)
     static let sneakPeekStyles = Key<SneakPeekStyle>("sneakPeekStyles", default: .standard)
@@ -778,7 +778,7 @@ extension Defaults.Keys {
     // MARK: Bluetooth Audio Devices
     static let showBluetoothDeviceConnections = Key<Bool>("showBluetoothDeviceConnections", default: true)
     static let useColorCodedBatteryDisplay = Key<Bool>("useColorCodedBatteryDisplay", default: true)
-    static let useColorCodedVolumeDisplay = Key<Bool>("useColorCodedVolumeDisplay", default: true)
+    static let useColorCodedVolumeDisplay = Key<Bool>("useColorCodedVolumeDisplay", default: false)
     static let useSmoothColorGradient = Key<Bool>("useSmoothColorGradient", default: true)
     static let useCircularBluetoothBatteryIndicator = Key<Bool>("useCircularBluetoothBatteryIndicator", default: true)
     static let showBluetoothBatteryPercentageText = Key<Bool>("showBluetoothBatteryPercentageText", default: false)
@@ -791,8 +791,8 @@ extension Defaults.Keys {
     static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)
     static let timerPresets = Key<[TimerPreset]>("timerPresets", default: TimerPreset.defaultPresets)
     static let showTimerPresetsInNotchTab = Key<Bool>("showTimerPresetsInNotchTab", default: true)
-    static let timerIconColorMode = Key<TimerIconColorMode>("timerIconColorMode", default: .adaptive)
-    static let timerSolidColor = Key<Color>("timerSolidColor", default: .blue)
+    static let timerIconColorMode = Key<TimerIconColorMode>("timerIconColorMode", default: .solid)
+    static let timerSolidColor = Key<Color>("timerSolidColor", default: Color(.sRGB, red: 0.96, green: 0.96, blue: 0.98, opacity: 1))
     static let timerShowsCountdown = Key<Bool>("timerShowsCountdown", default: true)
     static let timerShowsLabel = Key<Bool>("timerShowsLabel", default: false)
     static let timerShowsProgress = Key<Bool>("timerShowsProgress", default: true)

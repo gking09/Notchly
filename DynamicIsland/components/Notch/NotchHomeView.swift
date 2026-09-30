@@ -217,6 +217,10 @@ struct DynamicIslandArtworkSourceView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(NotchlyTheme.Palette.glassStroke, lineWidth: NotchlyTheme.Stroke.hairline)
+        }
     }
 }
 
@@ -245,7 +249,7 @@ struct LyricsSidePanelView: View {
     private var artistLineColor: Color {
         Defaults[.playerColorTinting]
             ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
-            : .gray
+            : NotchlyTheme.Palette.textSecondary
     }
 
     /// The colour a line has yet to be sung in. Tinted rather than plain grey so
@@ -275,8 +279,8 @@ struct LyricsSidePanelView: View {
             SyncedLyricsList(musicManager: musicManager, style: lyricsStyle)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.black.opacity(0.3))
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .glassSurface(cornerRadius: NotchlyTheme.Radius.md)
+        .clipShape(RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous))
         .onHover { hovering in
             updateSuppression(for: hovering)
         }
@@ -292,7 +296,7 @@ struct LyricsSidePanelView: View {
     /// which is exactly when this button is off screen.
     private var pinButton: some View {
         Button {
-            withAnimation(.smooth) {
+            withAnimation(NotchlyTheme.Motion.spring) {
                 pinLyricsWhenClosed.toggle()
             }
         } label: {
@@ -499,7 +503,7 @@ struct MusicControlsView: View {
                 font: .headline,
                 nsFont: .headline,
                 textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
-                    .ensureMinimumBrightness(factor: 0.6) : .gray,
+                    .ensureMinimumBrightness(factor: 0.6) : NotchlyTheme.Palette.textSecondary,
                 frameWidth: width
             )
             .fontWeight(.medium)
@@ -716,10 +720,6 @@ struct MusicControlsView: View {
         }
     }
 
-    private var brandAccentColor: Color {
-        musicManager.brandAccentColor
-    }
-
     private var repeatIcon: String {
         switch musicManager.repeatMode {
         case .off:
@@ -728,15 +728,6 @@ struct MusicControlsView: View {
             return "repeat"
         case .one:
             return "repeat.1"
-        }
-    }
-
-    private var repeatIconColor: Color {
-        switch musicManager.repeatMode {
-        case .off:
-            return .white
-        case .all, .one:
-            return brandAccentColor
         }
     }
 
@@ -803,16 +794,16 @@ struct MusicControlsView: View {
         case .shuffle:
             HoverButton(
                 icon: "shuffle",
-                iconColor: musicManager.isShuffled ? brandAccentColor : .white,
-                scale: .medium
+                scale: .medium,
+                isActive: musicManager.isShuffled
             ) {
                 MusicManager.shared.toggleShuffle()
             }
         case .repeatMode:
             HoverButton(
                 icon: repeatIcon,
-                iconColor: repeatIconColor,
-                scale: .medium
+                scale: .medium,
+                isActive: musicManager.repeatMode != .off
             ) {
                 MusicManager.shared.toggleRepeat()
             }
@@ -823,8 +814,8 @@ struct MusicControlsView: View {
         case .lyrics:
             HoverButton(
                 icon: enableLyrics ? "quote.bubble.fill" : "quote.bubble",
-                iconColor: enableLyrics ? brandAccentColor : .white,
-                scale: .medium
+                scale: .medium,
+                isActive: enableLyrics
             ) {
                 enableLyrics.toggle()
             }
@@ -832,8 +823,8 @@ struct MusicControlsView: View {
             LikeTrackControl { presentation, toggle in
                 HoverButton(
                     icon: presentation.iconName,
-                    iconColor: presentation.isActive ? brandAccentColor : .white,
-                    scale: .medium
+                    scale: .medium,
+                    isActive: presentation.isActive
                 ) {
                     toggle()
                 }
@@ -1180,15 +1171,13 @@ struct MusicSliderView: View {
                 let trackHeight = restingTrackHeight
                 let filledWidth = max(1, width) * progress
                 ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(.gray.opacity(0.3))
+                    Capsule()
+                        .fill(NotchlyTheme.Palette.track)
                         .frame(height: trackHeight)
-                        .cornerRadius(trackHeight / 2)
                         .transaction { $0.disablesAnimations = true }
-                    Rectangle()
+                    Capsule()
                         .fill(sliderTint)
                         .frame(width: filledWidth, height: trackHeight)
-                        .cornerRadius(trackHeight / 2)
                         .transaction { $0.disablesAnimations = true }
                 }
             }
@@ -1216,7 +1205,7 @@ struct MusicSliderView: View {
         }
         return Defaults[.playerColorTinting]
             ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6)
-            : .gray
+            : NotchlyTheme.Palette.textSecondary
     }
 
     /// Whether the reported duration is one a track could actually have.
@@ -1335,19 +1324,17 @@ struct CustomSlider: View {
                     .offset(y: trackHeight * 0.2)
                     .transaction { $0.disablesAnimations = true }
                 } else {
-                    Rectangle()
-                        .fill(.gray.opacity(0.3))
+                    Capsule()
+                        .fill(NotchlyTheme.Palette.track)
                         .frame(height: trackHeight)
-                        .cornerRadius(trackHeight / 2)
                         .transaction { $0.disablesAnimations = true }
                 }
 
                 // Filled track
                 if !showScrubber {
-                    Rectangle()
+                    Capsule()
                         .fill(color)
                         .frame(width: filledTrackWidth, height: trackHeight)
-                        .cornerRadius(trackHeight / 2)
                         .transaction { $0.disablesAnimations = true }
                 }
             }
@@ -1382,7 +1369,7 @@ struct CustomSlider: View {
             .opacity(trackOpacity)
             .animation(.easeOut(duration: 0.2), value: trackSaturation)
             .animation(.easeOut(duration: 0.2), value: trackOpacity)
-            .animation(.bouncy.speed(1.4), value: dragging)
+            .animation(NotchlyTheme.Motion.snappy, value: dragging)
             .onHover { hovering in
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isHovering = hovering

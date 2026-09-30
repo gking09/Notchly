@@ -52,7 +52,7 @@ struct NetworkConnectivityHUD: View {
 
     @ObservedObject private var manager = NetworkConnectivityManager.shared
 
-    private let accent = Color(red: 0.36, green: 0.88, blue: 0.42)
+    private let accent = NotchlyTheme.Palette.silver
 
     var body: some View {
         if let size = NetworkConnectivityHUDMetrics.size(
@@ -124,15 +124,13 @@ struct NetworkConnectivityHUD: View {
                 connectivityButton(
                     title: "OK",
                     foreground: .white,
-                    background: Color.white.opacity(0.13),
                     action: manager.dismissNoConnection
                 )
                 .accessibilityIdentifier("ConnectivityHUD.OK")
 
                 connectivityButton(
                     title: "Settings",
-                    foreground: Color(red: 0.28, green: 0.58, blue: 1),
-                    background: Color(red: 0.08, green: 0.16, blue: 0.27),
+                    foreground: .white,
                     action: manager.openNetworkSettings
                 )
                 .accessibilityIdentifier("ConnectivityHUD.Settings")
@@ -196,7 +194,6 @@ struct NetworkConnectivityHUD: View {
     private func connectivityButton(
         title: LocalizedStringKey,
         foreground: Color,
-        background: Color,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -204,9 +201,8 @@ struct NetworkConnectivityHUD: View {
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(foreground)
                 .frame(maxWidth: .infinity, minHeight: 35)
-                .background(background)
-                .clipShape(Capsule())
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.notchlyGlass)
     }
 }

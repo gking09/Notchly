@@ -108,8 +108,8 @@ private struct AllDayEventsStrip: View {
             .clipped()
 
             Rectangle()
-                .fill(Color.gray.opacity(0.2))
-                .frame(height: 1)
+                .fill(NotchlyTheme.Palette.divider)
+                .frame(height: 0.5)
                 .padding(.horizontal, 4)
         }
     }
@@ -139,7 +139,7 @@ private struct AllDayEventsStrip: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, AllDayStripMetrics.verticalPadding)
-        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .glassSurface(in: Capsule())
         .contentShape(Capsule())
         .onTapGesture {
             if let url = event.calendarAppURL() {
@@ -285,10 +285,18 @@ struct WheelPicker: View {
             }
             .padding(.vertical, 4)
             .padding(.horizontal, 4)
-            .background(isSelected ? Color.effectiveAccentBackground : Color.clear)
-            .cornerRadius(8)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                        .fill(NotchlyTheme.Palette.glassFillSelected)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                                .strokeBorder(NotchlyTheme.Palette.glassStroke, lineWidth: NotchlyTheme.Stroke.hairline)
+                        }
+                }
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.notchlyPress)
         .id(id)
         .background(GeometryReader { geo in
             Color.clear.preference(key: CellWidthKey.self, value: geo.size.width)
@@ -309,7 +317,7 @@ struct WheelPicker: View {
             Text(date.date)
                 .font(.body)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : Color(white: isToday ? 0.9 : 0.65))
+                .foregroundColor(isToday ? Color.effectiveAccentForeground : (isSelected ? .white : Color(white: 0.65)))
         }
     }
 
@@ -430,7 +438,7 @@ struct CalendarView: View {
             .padding(.top, 2)
             .contentShape(Rectangle())
             .onHover { inside in
-                withAnimation(.easeInOut(duration: 0.18)) {
+                withAnimation(NotchlyTheme.Motion.snappy) {
                     dateExpanded = inside
                 }
             }
@@ -576,7 +584,7 @@ struct StandaloneCalendarView: View {
             }
         }
         .onChange(of: selectedDate) { _, newDate in
-            withAnimation(.smooth(duration: 0.22)) {
+            withAnimation(NotchlyTheme.Motion.spring) {
                 displayedMonth = newDate.startOfMonth
             }
             Task {
@@ -710,7 +718,7 @@ struct StandaloneCalendarView: View {
         let isToday = calendar.isDateInToday(day)
 
         return Button {
-            withAnimation(.smooth(duration: 0.18)) {
+            withAnimation(NotchlyTheme.Motion.snappy) {
                 selectedDate = day
             }
         } label: {
@@ -719,6 +727,7 @@ struct StandaloneCalendarView: View {
                     Circle()
                         .fill(Color.effectiveAccent)
                         .frame(width: 28, height: 28)
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
                 }
 
                 Text(day.formatted(.dateTime.day()))
@@ -732,7 +741,7 @@ struct StandaloneCalendarView: View {
     }
 
     private func dayTextColor(isCurrentMonth: Bool, isSelected: Bool, isToday: Bool) -> Color {
-        if isSelected { return .white }
+        if isSelected { return Color.effectiveAccentForeground }
         if !isCurrentMonth { return Color(white: 0.35) }
         if isToday { return Color.effectiveAccent }
         return .white
@@ -740,7 +749,7 @@ struct StandaloneCalendarView: View {
 
     private func showPreviousMonth() {
         guard let newMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) else { return }
-        withAnimation(.smooth(duration: 0.22)) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             displayedMonth = newMonth.startOfMonth
             selectedDate = newMonth.startOfMonth
         }
@@ -748,7 +757,7 @@ struct StandaloneCalendarView: View {
 
     private func showNextMonth() {
         guard let newMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) else { return }
-        withAnimation(.smooth(duration: 0.22)) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             displayedMonth = newMonth.startOfMonth
             selectedDate = newMonth.startOfMonth
         }
@@ -761,7 +770,7 @@ struct StandaloneCalendarView: View {
     private func centerDatePicker(on target: Date, proxy: ScrollViewProxy) {
         let normalizedTarget = calendar.startOfDay(for: target)
         DispatchQueue.main.async {
-            withAnimation(.smooth(duration: 0.24)) {
+            withAnimation(NotchlyTheme.Motion.spring) {
                 proxy.scrollTo(normalizedTarget, anchor: .center)
             }
             if datePickerScrollTarget == normalizedTarget {
@@ -977,8 +986,12 @@ private struct StandaloneEventCardList: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+            RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+                .overlay {
+                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous)
+                        .strokeBorder(NotchlyTheme.Palette.glassStroke.opacity(0.7), lineWidth: NotchlyTheme.Stroke.hairline)
+                }
         )
         .opacity(isCompleted ? 0.55 : 1)
     }
@@ -1030,8 +1043,12 @@ private struct StandaloneEventCardList: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+            RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+                .overlay {
+                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous)
+                        .strokeBorder(NotchlyTheme.Palette.glassStroke.opacity(0.7), lineWidth: NotchlyTheme.Stroke.hairline)
+                }
         )
         .opacity(event.eventStatus == .ended && Calendar.current.isDateInToday(event.start) ? 0.6 : 1)
     }
@@ -1123,7 +1140,7 @@ struct EventListView: View {
                             .padding(.leading, -5)
                             .buttonStyle(PlainButtonStyle())
                             .listRowSeparator(.automatic)
-                            .listRowSeparatorTint(.gray.opacity(0.2))
+                            .listRowSeparatorTint(NotchlyTheme.Palette.divider)
                             .listRowBackground(Color.clear)
                         }
                     }
@@ -1430,10 +1447,9 @@ struct ConferenceJoinButton: View {
             .foregroundColor(isJoinable ? .white : Color(white: 0.5))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(isJoinable ? provider.color.opacity(0.85) : Color.gray.opacity(0.3))
-            .cornerRadius(6)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.notchlyGlass)
+        .opacity(isJoinable ? 1 : 0.5)
         .disabled(!isJoinable)
         .help(isJoinable ? "Join the meeting" : "Meeting starts at \(event.start.formatted(date: .omitted, time: .shortened))")
     }

@@ -159,7 +159,7 @@ struct ReminderLiveActivity: View {
         if isCritical(for: reminder, now: now) {
             return .red
         }
-        return Color(nsColor: reminder.event.calendar.color).ensureMinimumBrightness(factor: 0.7)
+        return NotchlyTheme.Palette.silver
     }
 
     private var leftWingWidth: CGFloat {

@@ -89,7 +89,7 @@ struct SystemEventIndicatorModifier: View {
             switch eventType {
             case .mic:
                 Text(value > 0 ? "Mic unmuted" : "Mic muted")
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                     .lineLimit(1)
                     .allowsTightening(true)
                     .contentTransition(.numericText())
@@ -163,7 +163,7 @@ struct VolumeProgressSection: View {
                 Text("muted")
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                     .contentTransition(.numericText())
             } else {
                 ProgressSection(value: $value, showPercentages: showPercentages, colorMode: .volume)
@@ -171,7 +171,7 @@ struct VolumeProgressSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(.smooth(duration: 0.2), value: value.isZero)
+        .animation(NotchlyTheme.Motion.snappy, value: value.isZero)
     }
 }
 
@@ -245,7 +245,7 @@ struct DraggableProgressBar: View {
                         // Traditional capsule-based progress bar
                         ZStack(alignment: .leading) {
                             Capsule()
-                                .fill(.tertiary)
+                                .fill(NotchlyTheme.Palette.track)
                             progressFill(width: geo.size.width)
                                 .opacity(value.isZero ? 0 : 1)
                         }
@@ -254,13 +254,13 @@ struct DraggableProgressBar: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { gesture in
-                            withAnimation(.smooth(duration: 0.3)) {
+                            withAnimation(NotchlyTheme.Motion.spring) {
                                 isDragging = true
                                 updateValue(gesture: gesture, in: geo)
                             }
                         }
                         .onEnded { _ in
-                            withAnimation(.smooth(duration: 0.3)) {
+                            withAnimation(NotchlyTheme.Motion.spring) {
                                 isDragging = false
                             }
                         }

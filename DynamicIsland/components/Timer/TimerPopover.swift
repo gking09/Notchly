@@ -55,7 +55,7 @@ struct TimerPopover: View {
                 .padding(.horizontal, -8)
             
             PresetList(presets: timerPresets, activePresetId: timerManager.activePresetId, startAction: startPreset)
-                .animation(.smooth, value: timerManager.activePresetId)
+                .animation(NotchlyTheme.Motion.spring, value: timerManager.activePresetId)
                 .frame(maxHeight: 200)
         }
         .padding(16)
@@ -99,14 +99,14 @@ struct TimerPopover: View {
     private func startCustomTimer() {
         let duration = customDurationInSeconds
         guard duration > 0 else { return }
-        withAnimation(.smooth) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             timerManager.startTimer(duration: duration, name: String(localized: "Custom Timer"))
         }
         dismiss()
     }
     
     private func startPreset(_ preset: TimerPreset) {
-        withAnimation(.smooth) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             timerManager.startTimer(duration: preset.duration, name: preset.name, preset: preset)
         }
         dismiss()
@@ -184,14 +184,13 @@ private struct ActiveTimerSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.white.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .animation(.smooth, value: timerManager.isPaused)
+        .glassSurface(cornerRadius: NotchlyTheme.Radius.md)
+        .animation(NotchlyTheme.Motion.spring, value: timerManager.isPaused)
     }
     
     private func togglePause() {
         guard timerManager.allowsManualInteraction else { return }
-        withAnimation(.smooth) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             if timerManager.isPaused {
                 timerManager.resumeTimer()
             } else {
@@ -205,7 +204,7 @@ private struct ActiveTimerSection: View {
             timerManager.endExternalTimer(triggerSmoothClose: false)
             return
         }
-        withAnimation(.smooth) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             timerManager.stopTimer()
         }
     }
@@ -262,8 +261,7 @@ private struct CustomTimerSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .glassSurface(cornerRadius: NotchlyTheme.Radius.md)
     }
     
     private var formattedDuration: String {
@@ -309,8 +307,7 @@ private struct PresetList: View {
                     .foregroundStyle(.secondary)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .glassSurface(cornerRadius: NotchlyTheme.Radius.md)
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
@@ -335,13 +332,11 @@ private struct TimerPresetRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(preset.color.gradient)
-                    .frame(width: 20, height: 20)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.5), lineWidth: 1)
-                    )
+                Image(systemName: "timer")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(isActive ? 0.95 : 0.7))
+                    .frame(width: 22, height: 22)
+                    .glassSurface(in: Circle())
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(preset.name)
@@ -357,20 +352,19 @@ private struct TimerPresetRow: View {
                 
                 Image(systemName: isActive ? "checkmark" : "play.fill")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? preset.color : Color.secondary)
+                    .foregroundStyle(isActive ? Color.white : Color.secondary)
                     .padding(6)
-                    .background(isActive ? preset.color.opacity(0.2) : Color.clear)
-                    .clipShape(Circle())
+                    .background(Circle().fill(isActive ? NotchlyTheme.Palette.glassFillSelected : Color.clear))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isActive ? preset.color.opacity(0.18) : Color.white.opacity(0.05))
+            .contentShape(RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous))
+            .glassSurface(
+                cornerRadius: NotchlyTheme.Radius.md,
+                fill: isActive ? NotchlyTheme.Palette.glassFillSelected : NotchlyTheme.Palette.glassFill
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.notchlyPress)
     }
 }
 

@@ -62,33 +62,42 @@ struct TabSelectionView: View {
         return tabsArray
     }
     var body: some View {
-        HStack(spacing: 24) {
-            ForEach(Array(tabs.enumerated()), id: \.element.id) { idx, tab in
+        HStack(spacing: NotchlyTheme.Spacing.xs) {
+            ForEach(tabs) { tab in
                 let isSelected = isSelected(tab)
 
-                // Render the tab button
                 TabButton(label: tab.label, icon: tab.icon, selected: isSelected) {
-                    coordinator.currentView = tab.view
-                }
-                .frame(height: 26)
-                .foregroundStyle(isSelected ? Color.white : .gray)
-                .background {
-                    if isSelected {
-                        Capsule()
-                            .fill(Color(nsColor: .secondarySystemFill).opacity(0.25))
-                            .matchedGeometryEffect(id: "capsule", in: animation)
-                    } else {
-                        Capsule()
-                            .fill(Color.clear)
-                            .matchedGeometryEffect(id: "capsule", in: animation)
-                            .hidden()
+                    withAnimation(NotchlyTheme.Motion.spring) {
+                        coordinator.currentView = tab.view
                     }
                 }
-
-                
+                .frame(height: 26)
+                .background {
+                    if isSelected {
+                        // One glass capsule that glides from tab to tab.
+                        Capsule()
+                            .fill(NotchlyTheme.Palette.glassFillSelected)
+                            .overlay {
+                                Capsule().fill(
+                                    LinearGradient(
+                                        colors: [NotchlyTheme.Palette.glassHighlight, .clear],
+                                        startPoint: .top,
+                                        endPoint: UnitPoint(x: 0.5, y: 0.65)
+                                    )
+                                )
+                            }
+                            .overlay {
+                                Capsule().strokeBorder(
+                                    NotchlyTheme.Palette.glassStroke,
+                                    lineWidth: NotchlyTheme.Stroke.hairline
+                                )
+                            }
+                            .matchedGeometryEffect(id: "notchly.tab.highlight", in: animation)
+                    }
+                }
             }
         }
-        .clipShape(Capsule())
+        .animation(NotchlyTheme.Motion.spring, value: coordinator.currentView)
         .onAppear {
             ensureValidSelection(with: tabs)
         }

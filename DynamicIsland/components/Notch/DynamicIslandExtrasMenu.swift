@@ -26,15 +26,34 @@ struct DynamicIslandLargeButtons: View {
         Button (
             action:action,
             label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12.0).fill(.black).frame(width: 70, height: 70)
-                    VStack(spacing: 8) {
-                        icon.resizable()
-                            .aspectRatio(contentMode: .fit).frame(width:20)
-                        Text(title).font(.body)
-                    }
-                }
-            }).buttonStyle(PlainButtonStyle()).shadow(color: .black.opacity(0.5), radius: 10)
+                NotchlyMenuTile(icon: icon, title: title)
+            }).buttonStyle(.notchlyPress)
+    }
+}
+
+/// Glass tile used by the extras menu buttons.
+struct NotchlyMenuTile: View {
+    var icon: Image
+    var title: String
+
+    @State private var isHovering = false
+
+    var body: some View {
+        VStack(spacing: 8) {
+            icon.resizable()
+                .aspectRatio(contentMode: .fit).frame(width: 20)
+            Text(title).font(.body)
+        }
+        .foregroundStyle(NotchlyTheme.Palette.textPrimary)
+        .frame(width: 70, height: 70)
+        .glassSurface(
+            cornerRadius: NotchlyTheme.Radius.md,
+            fill: isHovering ? NotchlyTheme.Palette.glassFillHover : NotchlyTheme.Palette.glassFill
+        )
+        .contentShape(RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous))
+        .onHover { hovering in
+            withAnimation(NotchlyTheme.Motion.snappy) { isHovering = hovering }
+        }
     }
 }
 
@@ -75,16 +94,9 @@ struct DynamicIslandExtrasMenu : View {
         Button(action: {
             SettingsWindowController.shared.showWindow()
         }) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12.0).fill(.black).frame(width: 70, height: 70)
-                VStack(spacing: 8) {
-                    Image(systemName: "gear").resizable()
-                        .aspectRatio(contentMode: .fit).frame(width:20)
-                    Text("Settings").font(.body)
-                }
-            }
+            NotchlyMenuTile(icon: Image(systemName: "gear"), title: "Settings")
         }
-        .buttonStyle(PlainButtonStyle()).shadow(color: .black.opacity(0.5), radius: 10)
+        .buttonStyle(.notchlyPress)
     }
     
     var hide: some View {

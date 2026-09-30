@@ -288,16 +288,9 @@ struct RulerTimerPicker: View {
                     .foregroundStyle(tintColor)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(
-                        Capsule()
-                            .fill(tintColor.opacity(0.18))
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(tintColor.opacity(0.25), lineWidth: 1.5)
-                    )
+                    .contentShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.notchlyGlass)
             .opacity(totalMinutes.rounded() == 0 ? 0.45 : 1.0)
             .disabled(totalMinutes.rounded() == 0)
 

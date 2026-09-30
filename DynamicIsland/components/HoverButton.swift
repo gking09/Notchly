@@ -34,6 +34,9 @@ struct HoverButton: View {
     /// the chevrons march in this direction the way Apple's do, and the button
     /// itself stays put.
     var skipDirection: SkipTrackGlyph.Direction? = nil
+    /// Marks a toggle as on (shuffle, repeat, lyrics, like): keeps a soft glass
+    /// disc behind the glyph so state reads without colour.
+    var isActive: Bool = false
     var action: () -> Void
     
     @State private var isHovering = false
@@ -55,8 +58,15 @@ struct HoverButton: View {
                 .contentShape(Rectangle())
                 .frame(width: size, height: size)
                 .overlay {
-                    Capsule()
-                        .fill(isHovering ? Color.gray.opacity(0.2) : .clear)
+                    Circle()
+                        .fill(glassFill)
+                        .overlay {
+                            Circle().strokeBorder(
+                                NotchlyTheme.Palette.glassStroke,
+                                lineWidth: NotchlyTheme.Stroke.hairline
+                            )
+                            .opacity(showsGlassChrome ? 1 : 0)
+                        }
                         .frame(width: size, height: size)
                         .overlay {
                             if let skipDirection {
@@ -90,11 +100,11 @@ struct HoverButton: View {
                         }
                 }
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.notchlyPress)
         .offset(x: pressOffset)
         .rotationEffect(.degrees(wiggleAngle))
         .onHover { hovering in
-            withAnimation(.smooth(duration: 0.3)) {
+            withAnimation(NotchlyTheme.Motion.snappy) {
                 isHovering = hovering
             }
         }
@@ -114,6 +124,18 @@ struct HoverButton: View {
     /// symbol would otherwise use so it sits like the icon it replaces.
     private var glyphPointSize: CGFloat {
         scale == .large ? HoverButton.largeGlyphPointSize : HoverButton.regularGlyphPointSize
+    }
+
+    /// The large (play/pause) button is always a glass disc; smaller ones only
+    /// show glass on hover or while toggled on.
+    private var showsGlassChrome: Bool {
+        scale == .large || isHovering || isActive
+    }
+
+    private var glassFill: Color {
+        if isHovering { return NotchlyTheme.Palette.glassFillHover }
+        if isActive { return NotchlyTheme.Palette.glassFillSelected }
+        return scale == .large ? NotchlyTheme.Palette.glassFill : .clear
     }
 
     private func triggerPressEffect(override: PressEffect? = nil) {

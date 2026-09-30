@@ -159,7 +159,7 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .general, title: "Show on all displays", keywords: ["multi-display", "external monitor"], highlightID: SettingsTab.general.highlightID(for: "Show on all displays")),
         SettingsSearchEntry(tab: .general, title: "Show on a specific display", keywords: ["preferred screen", "display picker"], highlightID: SettingsTab.general.highlightID(for: "Show on a specific display")),
         SettingsSearchEntry(tab: .general, title: "Automatically switch displays", keywords: ["auto switch", "displays"], highlightID: SettingsTab.general.highlightID(for: "Automatically switch displays")),
-        SettingsSearchEntry(tab: .general, title: "Hide Dynamic Island during screenshots & recordings", keywords: ["privacy", "screenshot", "recording"], highlightID: SettingsTab.general.highlightID(for: "Hide Dynamic Island during screenshots & recordings")),
+        SettingsSearchEntry(tab: .general, title: "Hide Notchly during screenshots & recordings", keywords: ["privacy", "screenshot", "recording"], highlightID: SettingsTab.general.highlightID(for: "Hide Notchly during screenshots & recordings")),
         SettingsSearchEntry(tab: .general, title: "Enable gestures", keywords: ["gestures", "trackpad"], highlightID: SettingsTab.general.highlightID(for: "Enable gestures")),
         SettingsSearchEntry(tab: .general, title: "Close gesture", keywords: ["pinch", "swipe"], highlightID: SettingsTab.general.highlightID(for: "Close gesture")),
         SettingsSearchEntry(tab: .general, title: "Reverse swipe gestures", keywords: ["reverse", "swipe", "media"], highlightID: SettingsTab.general.highlightID(for: "Reverse swipe gestures")),
@@ -248,7 +248,7 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .media, title: "Lyric highlight", keywords: ["lyrics", "highlight", "sweep", "gradient", "solid", "karaoke", "animation"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
         SettingsSearchEntry(tab: .media, title: "Side lyrics width", keywords: ["lyrics", "width", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics width")),
         SettingsSearchEntry(tab: .media, title: "Side lyrics horizontal offset", keywords: ["lyrics", "offset", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics horizontal offset")),
-        SettingsSearchEntry(tab: .media, title: "Show live canvas in Dynamic Island", keywords: ["canvas", "live canvas", "album art", "dynamic island", "spotify canvas"], highlightID: SettingsTab.media.highlightID(for: "Show live canvas in Dynamic Island")),
+        SettingsSearchEntry(tab: .media, title: "Show live canvas in Notchly", keywords: ["canvas", "live canvas", "album art", "dynamic island", "spotify canvas"], highlightID: SettingsTab.media.highlightID(for: "Show live canvas in Notchly")),
         SettingsSearchEntry(tab: .media, title: "Auto-hide inactive notch media player", keywords: ["auto hide", "inactive", "placeholder", "notch media"], highlightID: SettingsTab.media.highlightID(for: "Auto-hide inactive notch media player")),
         SettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
         SettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
@@ -541,28 +541,28 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func sidebarIcon(for tab: SettingsTab) -> some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        tab.tint.opacity(1),
-                        tab.tint.opacity(0.7)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 26, height: 26)
+        // Soft-glass tile: neutral fill and hairline that adapt to light / dark.
+        RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+            .fill(Color.primary.opacity(0.09))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.7)
-                    .blendMode(.plusLighter)
+                RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.12), .clear],
+                            startPoint: .top,
+                            endPoint: UnitPoint(x: 0.5, y: 0.6)
+                        )
+                    )
             }
-            .shadow(color: tab.tint.opacity(0.35), radius: 2, x: 0, y: 1)
+            .overlay {
+                RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.16), lineWidth: NotchlyTheme.Stroke.hairline)
+            }
+            .frame(width: 26, height: 26)
             .overlay {
                 Image(systemName: tab.systemImage)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Color.primary.opacity(0.85))
             }
     }
 
@@ -575,12 +575,13 @@ struct SettingsView: View {
                 Spacer()
                 Text("BETA")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary.opacity(0.8))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
                         Capsule()
-                            .fill(Color.blue)
+                            .fill(Color.primary.opacity(0.1))
+                            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.16), lineWidth: NotchlyTheme.Stroke.hairline))
                     )
             }
         }
@@ -705,7 +706,7 @@ struct SettingsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.08))
+                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: NotchlyTheme.Stroke.hairline)
             )
         }
 
@@ -716,13 +717,17 @@ struct SettingsView: View {
                         selectSuggestion(suggestion)
                     } label: {
                         HStack(spacing: 10) {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(suggestion.tab.tint)
+                            RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                                .fill(Color.primary.opacity(0.09))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(0.16), lineWidth: NotchlyTheme.Stroke.hairline)
+                                }
                                 .frame(width: 28, height: 28)
                                 .overlay {
                                     Image(systemName: suggestion.tab.systemImage)
                                         .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(Color.white)
+                                        .foregroundStyle(Color.primary.opacity(0.85))
                                 }
 
                             VStack(alignment: .leading, spacing: 2) {
@@ -976,9 +981,9 @@ struct GeneralSettings: View {
                 .disabled(showOnAllDisplays)
                 .settingsHighlight(id: highlightID("Automatically switch displays"))
                 Defaults.Toggle(key: .hideDynamicIslandFromScreenCapture) {
-                    Text("Hide Dynamic Island during screenshots & recordings")
+                    Text("Hide Notchly during screenshots & recordings")
                 }
-                .settingsHighlight(id: highlightID("Hide Dynamic Island during screenshots & recordings"))
+                .settingsHighlight(id: highlightID("Hide Notchly during screenshots & recordings"))
             } header: {
                 Text("System features")
             }
@@ -1491,7 +1496,7 @@ struct Downloads: View {
             } header: {
                 Text("Download Detection")
             } footer: {
-                Text("Shows a live activity in the Dynamic Island while a file is downloading. Works with Safari, Firefox, and Chrome and the browsers built on it — Edge, Brave, Arc, Vivaldi and Opera. Only your Downloads folder is watched, so a file saved anywhere else will not appear.")
+                Text("Shows a live activity in the notch while a file is downloading. Works with Safari, Firefox, and Chrome and the browsers built on it — Edge, Brave, Arc, Vivaldi and Opera. Only your Downloads folder is watched, so a file saved anywhere else will not appear.")
             }
         }
         .navigationTitle("Downloads")
@@ -2216,21 +2221,21 @@ private struct ExternalDisplayIntegrationsSection: View {
         switch thirdPartyDDCProvider {
         case .betterDisplay:
             if !betterDisplayManager.isDetected {
-                return "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through Atoll's HUD."
+                return "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through Notchly's HUD."
             }
             if !ddcProviderRunning {
                 return "BetterDisplay is installed but not currently running. Launch BetterDisplay to enable integration."
             }
-            return "BetterDisplay OSD events will be routed through Atoll's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration."
+            return "BetterDisplay OSD events will be routed through Notchly's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration."
         case .lunar:
             if !lunarManager.isDetected {
-                return "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through Atoll's HUD via DDC."
+                return "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through Notchly's HUD via DDC."
             }
             if !ddcProviderRunning {
                 return "Lunar is installed but not currently running. Launch Lunar to enable integration."
             }
             if lunarManager.isConnected {
-                return "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through Atoll's HUD; volume follows when external volume control listener is enabled below."
+                return "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through Notchly's HUD; volume follows when external volume control listener is enabled below."
             }
             return "Lunar is running but the socket connection is not yet established. It will connect automatically."
         }
@@ -2344,8 +2349,8 @@ private struct ExternalDisplayIntegrationsSection: View {
 
                     Text(
                         enableExternalVolumeControlListener
-                        ? "Atoll's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
-                        : "Atoll keeps native volume key interception. External provider volume payloads are ignored while this is off."
+                        ? "Notchly's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
+                        : "Notchly keeps native volume key interception. External provider volume payloads are ignored while this is off."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -2370,13 +2375,13 @@ private struct ExternalDisplayIntegrationsSection: View {
                     }
                     .buttonStyle(.link)
                 } else {
-                    Text("Enable to route BetterDisplay or Lunar display adjustments through Atoll's active HUD style.")
+                    Text("Enable to route BetterDisplay or Lunar display adjustments through Notchly's active HUD style.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } footer: {
                 if enableThirdPartyDDCIntegration {
-                    Text("Atoll always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled.")
+                    Text("Notchly always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled.")
                         .foregroundStyle(.secondary)
                         .font(.caption)
                 }
@@ -2562,7 +2567,7 @@ struct HUD: View {
             if !hasAccessibilityPermission && !enableThirdPartyDDCIntegration {
                 Section {
                     SettingsPermissionCallout(
-                        message: "Accessibility permission lets Dynamic Island replace the native volume, brightness, and keyboard HUDs.",
+                        message: "Accessibility permission lets Notchly replace the native volume, brightness, and keyboard HUDs.",
                         requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
                         openSettingsAction: { accessibilityPermission.openSystemSettings() }
                     )
@@ -2597,7 +2602,7 @@ struct HUD: View {
             } header: {
                 Text("Audio feedback")
             } footer: {
-                Text("Requires Accessibility permission so Dynamic Island can intercept the hardware volume keys.")
+                Text("Requires Accessibility permission so Notchly can intercept the hardware volume keys.")
                     .foregroundStyle(.secondary)
                     .font(.caption)
             }
@@ -2621,7 +2626,7 @@ struct HUD: View {
                 }
                 .settingsHighlight(id: highlightID("Show percentages beside progress bars"))
             } header: {
-                Text("Dynamic Island Progress Bars")
+                Text("Notchly Progress Bars")
             } footer: {
                 if colorCodingDisabled {
                     Text("Color-coded fills and smooth gradients are unavailable in Segmented mode. Switch to Hierarchical or Gradient to adjust these options.")
@@ -2945,10 +2950,10 @@ struct Media: View {
 
             Section {
                 Defaults.Toggle(key: .showStandardMediaControls) {
-                    Text("Show media controls in Dynamic Island")
+                    Text("Show media controls in Notchly")
                 }
                 .disabled(enableMinimalisticUI)
-                .settingsHighlight(id: highlightID("Show media controls in Dynamic Island"))
+                .settingsHighlight(id: highlightID("Show media controls in Notchly"))
 
                 Defaults.Toggle(key: .autoHideInactiveNotchMediaPlayer) {
                     Text("Auto-hide inactive notch media player")
@@ -2970,7 +2975,7 @@ struct Media: View {
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Dynamic Island Visibility")
+                Text("Notchly Visibility")
             }
             Section {
                 Defaults.Toggle(key: .showShuffleAndRepeat) {
@@ -3038,7 +3043,7 @@ struct Media: View {
                     enableMinimalisticUI
                         ? "Disable Minimalistic UI to show lyrics."
                         : !showStandardMediaControls
-                            ? "Enable Dynamic Island media controls to show lyrics."
+                            ? "Enable Notchly media controls to show lyrics."
                             : ""
                 )
                 .settingsHighlight(id: highlightID("Show lyrics"))
@@ -3099,7 +3104,7 @@ struct Media: View {
                         .foregroundStyle(.secondary)
                 }
                 if !showStandardMediaControls {
-                    Text("Enable Dynamic Island media controls to use lyrics.")
+                    Text("Enable Notchly media controls to use lyrics.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -3129,9 +3134,9 @@ struct Media: View {
                         .foregroundStyle(.secondary)
                 }
                 Defaults.Toggle(key: .showLiveCanvasInDynamicIsland) {
-                    Text("Show live canvas in Dynamic Island")
+                    Text("Show live canvas in Notchly")
                 }
-                .settingsHighlight(id: highlightID("Show live canvas in Dynamic Island"))
+                .settingsHighlight(id: highlightID("Show live canvas in Notchly"))
                 .help("Replaces the artwork tile with the live canvas when the current app provides one, and reuses that moving canvas for the surrounding lighting effect.")
                 
                 //Parallax Effect Intensity to control how much parallax is wanted
@@ -3201,7 +3206,7 @@ struct Media: View {
 
             Picker(selection: $hideNotchOption, label:
                     HStack {
-                Text("Hide DynamicIsland Options")
+                Text("Hide Notchly Options")
                 customBadge(text: "Beta")
             }) {
                 Text("Always hide in fullscreen").tag(HideNotchOption.always)
@@ -3563,7 +3568,7 @@ struct About: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 
-                Text("Your support funds software development learning for students in 9th–12th grade.")
+                Text("Donations go to Atoll's original author, Ebullioscopic.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -3610,11 +3615,18 @@ struct About: View {
                 VStack(spacing: 0) {
                     Divider()
                         .padding(.bottom, 5)
-                    Text("Made with ❤️ by Ebullioscopic")
+                    Text("Notchly is a fork of [Atoll](https://github.com/Ebullioscopic/Atoll) by Ebullioscopic (GPL-3.0)")
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 10)
+                        .tint(.white.opacity(0.85))
+                    Text("Atoll builds on [boring.notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                         .padding(.bottom, 7)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 10)
+                        .tint(.white.opacity(0.7))
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -4945,7 +4957,7 @@ private func copyLatestCrashReport() {
         guard let latestCrash = crashFiles.sorted(by: >).first else {
             let alert = NSAlert()
             alert.messageText = String(localized: "No Crash Reports Found")
-            alert.informativeText = String(localized: "No crash reports found for DynamicIsland")
+            alert.informativeText = String(localized: "No crash reports found for Notchly")
             alert.alertStyle = .informational
             alert.runModal()
             return
@@ -5014,7 +5026,7 @@ struct Shortcuts: View {
                 } header: {
                     Text("Navigation")
                 } footer: {
-                    Text("Toggle the Dynamic Island open or closed from anywhere.")
+                    Text("Toggle the notch open or closed from anywhere.")
                         .multilineTextAlignment(.trailing)
                         .foregroundStyle(.secondary)
                         .font(.caption)

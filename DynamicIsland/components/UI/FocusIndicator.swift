@@ -46,7 +46,7 @@ struct FocusIndicator: View {
     }
 
     private var accentColor: Color {
-        focusMode.accentColor
+        NotchlyTheme.Palette.silver
     }
 
     private var accessibilityLabel: String {

@@ -15,7 +15,7 @@ struct RealTimeWaveformScrubberView: View {
             ZStack(alignment: .leading) {
                 // Background (Unplayed portion)
                 WaveformShape(magnitudes: magnitudes, minHeight: minHeight)
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(NotchlyTheme.Palette.track)
                 
                 // Foreground (Played portion)
                 WaveformShape(magnitudes: magnitudes, minHeight: minHeight)

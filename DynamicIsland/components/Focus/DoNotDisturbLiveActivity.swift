@@ -183,7 +183,7 @@ struct DoNotDisturbLiveActivity: View {
     }
 
     private var activeAccentColor: Color {
-        focusMode.accentColor
+        NotchlyTheme.Palette.silver
     }
 
     private var labelText: String {

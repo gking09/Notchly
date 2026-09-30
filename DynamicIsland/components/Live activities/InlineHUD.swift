@@ -333,7 +333,7 @@ struct InlineHUD: View {
             HStack {
                 if (type == .mic) {
                     Text(value.isZero ? "muted" : "unmuted")
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                         .lineLimit(1)
                         .allowsTightening(true)
                         .multilineTextAlignment(.trailing)
@@ -426,7 +426,7 @@ struct InlineHUD: View {
                                     Text("muted")
                                         .font(.caption)
                                         .fontWeight(.medium)
-                                        .foregroundStyle(.gray)
+                                        .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                                         .lineLimit(1)
                                         .allowsTightening(true)
                                         .multilineTextAlignment(.trailing)
@@ -439,7 +439,7 @@ struct InlineHUD: View {
                                     .transition(.opacity.combined(with: .scale))
                                 }
                             }
-                            .animation(.smooth(duration: 0.2), value: value.isZero)
+                            .animation(NotchlyTheme.Motion.snappy, value: value.isZero)
                         } else {
                             HStack(spacing: 6) {
                                 DraggableProgressBar(value: $value)
@@ -484,7 +484,7 @@ struct InlineHUD: View {
         var body: some View {
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.18), lineWidth: 2)
+                    .stroke(NotchlyTheme.Palette.track, lineWidth: 2)
 
                 Circle()
                     .trim(from: 0, to: max(clampedValue, 0.015))
@@ -518,7 +518,7 @@ struct InlineHUD: View {
         var body: some View {
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.18))
+                    .fill(NotchlyTheme.Palette.track)
                     .frame(width: trackWidth, height: trackHeight)
 
                 Capsule()

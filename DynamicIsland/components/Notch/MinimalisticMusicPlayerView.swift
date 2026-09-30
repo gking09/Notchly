@@ -54,10 +54,10 @@ struct MinimalisticMusicPlayerView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "music.note.slash")
                         .font(.system(size: 24, weight: .light))
-                        .foregroundColor(.gray)
+                        .foregroundColor(NotchlyTheme.Palette.textSecondary)
                     Text("Nothing Playing")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.gray)
+                        .foregroundColor(NotchlyTheme.Palette.textSecondary)
                 }
 
                 Spacer(minLength: 0)
@@ -70,7 +70,7 @@ struct MinimalisticMusicPlayerView: View {
             .padding(.vertical, shouldUseDynamicIslandMode(for: vm.screen) ? 14 : 0)
             .frame(maxWidth: .infinity)
             .frame(height: calculateDynamicHeight())
-            .animation(.smooth(duration: 0.3), value: dynamicHeightSignature)
+            .animation(NotchlyTheme.Motion.spring, value: dynamicHeightSignature)
         } else {
             VStack(spacing: 0) {
                 if showMinimalisticBatteryIndicator || shouldUseDynamicIslandMode(for: vm.screen) {
@@ -105,7 +105,7 @@ struct MinimalisticMusicPlayerView: View {
 
                                 Text(musicManager.artistName)
                                     .font(.system(size: 10, weight: .regular))
-                                    .foregroundColor(Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : .gray)
+                                    .foregroundColor(Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : NotchlyTheme.Palette.textSecondary)
                                     .lineLimit(1)
 
                             }
@@ -155,7 +155,7 @@ struct MinimalisticMusicPlayerView: View {
             .padding(.bottom, shouldUseDynamicIslandMode(for: vm.screen) ? 14 : (batteryOffNotchMode ? 10 : ReminderLiveActivityManager.baselineMinimalisticBottomPadding))
             .frame(maxWidth: .infinity)
             .frame(height: calculateDynamicHeight(), alignment: .top)
-            .animation(.smooth(duration: 0.3), value: dynamicHeightSignature)
+            .animation(NotchlyTheme.Motion.spring, value: dynamicHeightSignature)
         }
     }
 
@@ -232,10 +232,6 @@ struct MinimalisticMusicPlayerView: View {
 
     private var shouldShowTimerCountdown: Bool {
         coordinator.timerLiveActivityEnabled && timerManager.isExternalTimerActive
-    }
-
-    private var brandAccentColor: Color {
-        musicManager.brandAccentColor
     }
 
     private var timerCountdownColor: Color {
@@ -381,7 +377,7 @@ struct MinimalisticMusicPlayerView: View {
 
                     Text(musicManager.artistName)
                         .font(.system(size: 10, weight: .regular))
-                        .foregroundColor(Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : .gray)
+                        .foregroundColor(Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : NotchlyTheme.Palette.textSecondary)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -555,7 +551,7 @@ private struct MinimalisticReminderEventRow: View {
                     } label: {
                         Image(systemName: didCopyLink ? "checkmark.circle.fill" : "link")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(didCopyLink ? Color.green : Color.white.opacity(0.85))
+                            .foregroundStyle(didCopyLink ? Color.white : Color.white.opacity(0.85))
                             .symbolRenderingMode(.monochrome)
                             .animation(.easeInOut(duration: 0.2), value: didCopyLink)
                     }
@@ -715,8 +711,12 @@ private struct MinimalisticReminderDetailsView: View {
         .padding(16)
         .frame(minWidth: 220)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: NotchlyTheme.Radius.lg, style: .continuous)
                 .fill(Color.black.opacity(0.92))
+                .overlay {
+                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.lg, style: .continuous)
+                        .strokeBorder(NotchlyTheme.Palette.glassStroke, lineWidth: NotchlyTheme.Stroke.hairline)
+                }
         )
         .onHover { hovering in
             onHoverChanged(hovering)
@@ -756,7 +756,7 @@ private struct MinimalisticReminderDetailsView: View {
     private var visualizer: some View {
         let width = CGFloat(Defaults[.visualizerBarCount]) * 4
         return Rectangle()
-            .fill((Defaults[.coloredSpectrogram] ? Color(nsColor: MusicManager.shared.avgColor) : Color.gray).spectrogramGradient())
+            .fill((Defaults[.coloredSpectrogram] ? Color(nsColor: MusicManager.shared.avgColor) : NotchlyTheme.Palette.silver).spectrogramGradient())
             .mask {
                 AudioVisualizerView(isPlaying: .constant(MusicManager.shared.isPlaying))
                     .frame(width: width, height: 16)
@@ -950,6 +950,7 @@ private struct MinimalisticReminderDetailsView: View {
             frameSize: CGSize(width: 54, height: 54),
             cornerRadius: 22,
             foregroundColor: .white,
+            isProminent: true,
             pressEffect: .none,
             symbolEffectStyle: .replace,
             action: {
@@ -973,7 +974,7 @@ private struct MinimalisticReminderDetailsView: View {
         trigger: SkipTrigger? = nil,
         action: @escaping () -> Void
     ) -> some View {
-        let resolvedActiveColor = activeColor ?? brandAccentColor
+        let resolvedActiveColor = activeColor ?? NotchlyTheme.Palette.textPrimary
         return MinimalisticSquircircleButton(
             icon: icon,
             fontSize: size,
@@ -981,6 +982,7 @@ private struct MinimalisticReminderDetailsView: View {
             frameSize: CGSize(width: 36, height: 36),
             cornerRadius: 14,
             foregroundColor: isActive ? resolvedActiveColor : .white.opacity(0.85),
+            isActive: isActive,
             pressEffect: pressEffect,
             symbolEffectStyle: symbolEffect,
             externalTriggerToken: trigger?.token,
@@ -1062,7 +1064,6 @@ private struct MinimalisticReminderDetailsView: View {
             controlButton(
                 icon: enableLyrics ? "quote.bubble.fill" : "quote.bubble",
                 isActive: enableLyrics,
-                activeColor: brandAccentColor,
                 symbolEffect: .replace
             ) {
                 enableLyrics.toggle()
@@ -1072,7 +1073,6 @@ private struct MinimalisticReminderDetailsView: View {
                 controlButton(
                     icon: presentation.iconName,
                     isActive: presentation.isActive,
-                    activeColor: brandAccentColor,
                     symbolEffect: .replace
                 ) {
                     toggle()
@@ -1311,6 +1311,8 @@ private struct MinimalisticSquircircleButton: View {
     let frameSize: CGSize
     let cornerRadius: CGFloat
     let foregroundColor: Color
+    let isActive: Bool
+    let isProminent: Bool
     let pressEffect: PressEffect
     let symbolEffectStyle: SymbolEffectStyle
     let externalTriggerToken: Int?
@@ -1330,6 +1332,8 @@ private struct MinimalisticSquircircleButton: View {
         frameSize: CGSize,
         cornerRadius: CGFloat,
         foregroundColor: Color,
+        isActive: Bool = false,
+        isProminent: Bool = false,
         pressEffect: PressEffect = .none,
         symbolEffectStyle: SymbolEffectStyle = .none,
         externalTriggerToken: Int? = nil,
@@ -1342,6 +1346,8 @@ private struct MinimalisticSquircircleButton: View {
         self.frameSize = frameSize
         self.cornerRadius = cornerRadius
         self.foregroundColor = foregroundColor
+        self.isActive = isActive
+        self.isProminent = isProminent
         self.pressEffect = pressEffect
         self.symbolEffectStyle = symbolEffectStyle
         self.externalTriggerToken = externalTriggerToken
@@ -1356,17 +1362,25 @@ private struct MinimalisticSquircircleButton: View {
         } label: {
             iconView()
                 .frame(width: frameSize.width, height: frameSize.height)
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(isHovering ? Color.white.opacity(0.18) : .clear)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .background {
+                    // Transport buttons are glass circles: always visible for the
+                    // primary button, on hover / while toggled for the rest.
+                    let showsChrome = isProminent || isHovering || isActive
+                    Circle()
+                        .fill(glassFill)
+                        .overlay {
+                            Circle()
+                                .strokeBorder(NotchlyTheme.Palette.glassStroke, lineWidth: NotchlyTheme.Stroke.hairline)
+                                .opacity(showsChrome ? 1 : 0)
+                        }
+                }
+                .contentShape(Circle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.notchlyPress)
         .offset(x: pressOffset)
         .rotationEffect(.degrees(rotationAngle))
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.18)) {
+            withAnimation(NotchlyTheme.Motion.snappy) {
                 isHovering = hovering
             }
         }
@@ -1375,6 +1389,12 @@ private struct MinimalisticSquircircleButton: View {
             lastExternalTriggerToken = newToken
             triggerPressEffect(override: externalTriggerEffect)
         }
+    }
+
+    private var glassFill: Color {
+        if isHovering { return NotchlyTheme.Palette.glassFillHover }
+        if isActive { return NotchlyTheme.Palette.glassFillSelected }
+        return isProminent ? NotchlyTheme.Palette.glassFill : .clear
     }
 
     private func triggerPressEffect(override: PressEffect? = nil) {

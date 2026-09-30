@@ -110,8 +110,7 @@ struct NotchTimerView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .background(Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .glassSurface(cornerRadius: NotchlyTheme.Radius.md)
             } else {
                 let computedHeight = CGFloat(timerPresets.count) * 60 + 4
                 let listHeight = min(max(0, maxTabContentHeight - 16), computedHeight)
@@ -177,7 +176,6 @@ struct NotchTimerView: View {
                     TimerControlButton(
                         icon: pauseIconName,
                         foreground: .white.opacity(0.95),
-                        background: timerAccentColor.opacity(0.32),
                         accessibilityLabel: pauseAccessibilityLabel,
                         action: togglePauseAction
                     )
@@ -185,7 +183,6 @@ struct NotchTimerView: View {
                     TimerControlButton(
                         icon: "xmark",
                         foreground: .white.opacity(0.95),
-                        background: Color.white.opacity(0.16),
                         accessibilityLabel: String(localized: "Cancel"),
                         action: stopTimerAction
                     )
@@ -193,7 +190,6 @@ struct NotchTimerView: View {
                     TimerControlButton(
                         icon: "stop.fill",
                         foreground: .white.opacity(0.95),
-                        background: Color.white.opacity(0.16),
                         accessibilityLabel: String(localized: "Stop"),
                         action: stopTimerAction
                     )
@@ -248,7 +244,7 @@ struct NotchTimerView: View {
                     .font(.system(size: 36, weight: .black, design: .monospaced))
                     .foregroundStyle(timerManager.isOvertime ? Color.red : .white)
                     .contentTransition(.numericText())
-                    .animation(.smooth(duration: 0.25), value: timerManager.remainingTime)
+                    .animation(NotchlyTheme.Motion.spring, value: timerManager.remainingTime)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
 
@@ -266,14 +262,14 @@ struct NotchTimerView: View {
     private var progressSection: some View {
         if showsProgress && progressStyle == .bar {
             Capsule()
-                .fill(Color.white.opacity(0.12))
+                .fill(NotchlyTheme.Palette.track)
                 .frame(height: 4)
                 .overlay(alignment: .leading) {
                     Capsule()
                         .fill(timerAccentColor)
                         .frame(height: 4)
                         .scaleEffect(x: normalizedProgress, y: 1, anchor: .leading)
-                        .animation(.smooth(duration: 0.25), value: timerManager.progress)
+                        .animation(NotchlyTheme.Motion.spring, value: timerManager.progress)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 6)
@@ -337,8 +333,7 @@ struct NotchTimerView: View {
             }
         }
         .padding(12)
-        .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .glassSurface(cornerRadius: NotchlyTheme.Radius.md)
     }
 
     private var inactiveTimerPlaceholder: some View {
@@ -454,10 +449,6 @@ struct NotchTimerView: View {
         timerManager.isPaused ? String(localized: "Resume") : String(localized: "Pause")
     }
 
-    private var startButtonColor: Color {
-        Color(red: 0.142, green: 0.633, blue: 0.265)
-    }
-
     private var isStartDisabled: Bool {
         customDurationInSeconds == 0
     }
@@ -472,22 +463,14 @@ struct NotchTimerView: View {
         Button(action: startCustomTimer) {
             Label(String(localized: "Start"), systemImage: "play.fill")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Color.black.opacity(0.88))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(startButtonColor.opacity(isStartDisabled ? 0.5 : 1))
-                )
+                .background(Capsule().fill(Color.white.opacity(isStartDisabled ? 0.35 : 0.92)))
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.notchlyPress)
         .frame(maxWidth: .infinity)
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
-        )
-        .opacity(isStartDisabled ? 0.7 : 1)
         .disabled(isStartDisabled)
     }
 
@@ -498,18 +481,10 @@ struct NotchTimerView: View {
                 .foregroundStyle(.white.opacity(0.9))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.white.opacity(0.16))
-                )
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.notchlyGlass)
         .frame(maxWidth: .infinity)
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
     }
 
     private var customDurationInSeconds: TimeInterval {
@@ -517,7 +492,7 @@ struct NotchTimerView: View {
     }
 
     private func startCustomTimer() {
-        withAnimation(.smooth) {
+        withAnimation(NotchlyTheme.Motion.spring) {
             timerManager.startTimer(duration: customDurationInSeconds, name: String(localized: "Custom Timer"))
             if !enableMinimalisticUI {
                 coordinator.currentView = .timer
@@ -526,7 +501,7 @@ struct NotchTimerView: View {
     }
 
     private func resetCustomTimerInputs() {
-        withAnimation(.smooth(duration: 0.2)) {
+        withAnimation(NotchlyTheme.Motion.snappy) {
             customHours = 0
             customMinutes = 0
             customSeconds = 0
@@ -552,11 +527,8 @@ struct NotchTimerView: View {
 private struct TimerControlButton: View {
     let icon: String
     let foreground: Color
-    let background: Color
     let accessibilityLabel: String
     let action: () -> Void
-
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
@@ -564,14 +536,12 @@ private struct TimerControlButton: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(foreground)
                 .frame(width: 46, height: 46)
-                .background(background.opacity(isHovering ? 0.95 : 0.8))
-                .clipShape(Circle())
                 .contentTransition(.symbolEffect(.replace))
+                .contentShape(Circle())
         }
-        .buttonStyle(.plain)
-        .contentShape(Circle())
+        .buttonStyle(.notchlyGlassCircle)
         .help(accessibilityLabel)
-        .onHover { hovering in isHovering = hovering }
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 
@@ -587,13 +557,13 @@ private struct TimerProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.12), lineWidth: 8)
+                .stroke(NotchlyTheme.Palette.track, lineWidth: 8)
 
             Circle()
                 .trim(from: 0, to: clampedProgress)
                 .stroke(tint, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .animation(.smooth(duration: 0.3), value: clampedProgress)
+                .animation(NotchlyTheme.Motion.spring, value: clampedProgress)
 
             Text(timeText)
                 .font(.system(size: 28, weight: .black, design: .monospaced))
@@ -601,7 +571,7 @@ private struct TimerProgressRing: View {
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
                 .contentTransition(.numericText())
-                .animation(.smooth(duration: 0.25), value: remainingTime)
+                .animation(NotchlyTheme.Motion.spring, value: remainingTime)
         }
         .frame(width: 110, height: 110)
     }
@@ -669,8 +639,7 @@ private struct DurationField: View {
                 .foregroundColor(.white)
                 .tint(.white)
                 .frame(width: width, height: 46)
-                .background(Color.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .glassSurface(cornerRadius: NotchlyTheme.Radius.sm)
 
             Text(label)
                 .font(.caption)
@@ -698,41 +667,38 @@ private struct TimerPresetCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(preset.color.gradient)
+                Image(systemName: "timer")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(isActive ? 0.95 : 0.7))
                     .frame(width: 30, height: 30)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                    )
+                    .glassSurface(in: Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(preset.name)
                         .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.white)
                         .lineLimit(1)
                     Text(preset.formattedDuration)
                         .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(NotchlyTheme.Palette.textSecondary)
                 }
-                .foregroundStyle(preset.color)
 
                 Spacer()
 
                 Image(systemName: isActive ? "checkmark" : "play.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(isActive ? preset.color : Color.secondary)
+                    .foregroundStyle(isActive ? Color.white : NotchlyTheme.Palette.textSecondary)
                     .padding(6)
-                    .background(isActive ? preset.color.opacity(0.2) : Color.white.opacity(0.08))
-                    .clipShape(Circle())
+                    .background(Circle().fill(isActive ? NotchlyTheme.Palette.glassFillSelected : NotchlyTheme.Palette.glassFill))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isActive ? preset.color.opacity(0.12) : Color.white.opacity(0.04))
+            .glassSurface(
+                cornerRadius: NotchlyTheme.Radius.md,
+                fill: isActive ? NotchlyTheme.Palette.glassFillSelected : NotchlyTheme.Palette.glassFill
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.notchlyPress)
     }
 }
 

@@ -60,7 +60,7 @@ struct DynamicIslandHeader: View {
     /// The 20pt box clears the largest frame any of these symbols asks for
     /// (19pt), so none of them is clipped — a smaller box
     /// silently cuts the tall ones.
-    private func headerGlyph(_ name: String, color: Color = .white) -> some View {
+    private func headerGlyph(_ name: String, color: Color = NotchlyTheme.Palette.textPrimary.opacity(0.9)) -> some View {
         Image(systemName: name)
             .foregroundColor(color)
             .font(.system(size: Self.headerGlyphSizes[name] ?? 14.4, weight: .medium))
@@ -80,7 +80,7 @@ struct DynamicIslandHeader: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .opacity(vm.notchState == .closed ? 0 : 1)
             .blur(radius: vm.notchState == .closed ? 20 : 0)
-            .animation(.smooth.delay(0.1), value: vm.notchState)
+            .animation(NotchlyTheme.Motion.spring.delay(0.1), value: vm.notchState)
             .zIndex(2)
             .padding(8)
 
@@ -104,30 +104,24 @@ struct DynamicIslandHeader: View {
                         Button(action: {
                             vm.toggleCameraPreview()
                         }) {
-                            Capsule()
-                                .fill(.black)
-                                .frame(width: 30, height: 30)
-                                .overlay {
-                                    headerGlyph("web.camera")
-                                }
+                            headerGlyph("web.camera")
+                            .frame(width: 30, height: 30)
+                            .contentShape(Circle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.notchlyGlassCircle)
                     }
                     
                     if Defaults[.enableTimerFeature] && timerDisplayMode == .popover {
                         Button(action: {
-                            withAnimation(.smooth) {
+                            withAnimation(NotchlyTheme.Motion.spring) {
                                 showTimerPopover.toggle()
                             }
                         }) {
-                            Capsule()
-                                .fill(.black)
-                                .frame(width: 30, height: 30)
-                                .overlay {
-                                    headerGlyph("timer")
-                                }
+                            headerGlyph("timer")
+                            .frame(width: 30, height: 30)
+                            .contentShape(Circle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.notchlyGlassCircle)
                         .popover(isPresented: $showTimerPopover, arrowEdge: .bottom) {
                             TimerPopover()
                         }
@@ -145,14 +139,11 @@ struct DynamicIslandHeader: View {
                         Button(action: {
                             SettingsWindowController.shared.showWindow()
                         }) {
-                            Capsule()
-                                .fill(.black)
-                                .frame(width: 30, height: 30)
-                                .overlay {
-                                    headerGlyph("gearshape")
-                                }
+                            headerGlyph("gearshape")
+                            .frame(width: 30, height: 30)
+                            .contentShape(Circle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.notchlyGlassCircle)
                     }
                     
                     // Screen Recording Indicator
@@ -207,10 +198,10 @@ struct DynamicIslandHeader: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .opacity(vm.notchState == .closed ? 0 : 1)
             .blur(radius: vm.notchState == .closed ? 20 : 0)
-            .animation(.smooth.delay(0.1), value: vm.notchState)
+            .animation(NotchlyTheme.Motion.spring.delay(0.1), value: vm.notchState)
             .zIndex(2)
         }
-        .foregroundColor(.gray)
+        .foregroundColor(NotchlyTheme.Palette.textSecondary)
         .environmentObject(vm)
         .onChange(of: enableTimerFeature) { _, newValue in
             if !newValue {

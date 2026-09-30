@@ -31,7 +31,7 @@ struct PinnedLyricsModifier: ViewModifier {
     private var tint: Color {
         Defaults[.playerColorTinting]
             ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
-            : .gray
+            : NotchlyTheme.Palette.textSecondary
     }
 
     func body(content: Content) -> some View {

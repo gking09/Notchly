@@ -30,6 +30,14 @@ extension Color {
         Defaults[.accentColor]
     }
     
+    /// Legible foreground for text drawn on top of `effectiveAccent`
+    /// (the default accent is a light silver, so the text has to be dark).
+    static var effectiveAccentForeground: Color {
+        let ns = NSColor(Defaults[.accentColor]).usingColorSpace(.sRGB) ?? .white
+        let luminance = 0.2126 * ns.redComponent + 0.7152 * ns.greenComponent + 0.0722 * ns.blueComponent
+        return luminance > 0.6 ? Color.black.opacity(0.88) : Color.white
+    }
+
     /// Returns a subtle background variant of the accent color.
     static var effectiveAccentBackground: Color {
         Defaults[.accentColor].opacity(0.25)

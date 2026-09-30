@@ -40,7 +40,7 @@ struct CiderFavoritingSettingsSection: View {
             Text("Favorite Song in Cider")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Playback needs none of this. The Favorite Song control does, because favouriting is not something macOS Now Playing can carry -- Atoll has to ask Cider itself.")
+                Text("Playback needs none of this. The Favorite Song control does, because favouriting is not something macOS Now Playing can carry -- Notchly has to ask Cider itself.")
 
                 Text("In Cider, open Settings > Connectivity > Manage External Application Access, switch the API on, and paste the token it generates here. If you turn its authentication off instead, leave this empty.")
             }

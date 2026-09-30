@@ -1,159 +1,87 @@
 <p align="center">
-  <img src=".github/assets/atoll-logo.png" alt="Atoll logo" width="120">
+  <img src=".github/assets/notchly-logo.png" alt="Notchly logo" width="120">
 </p>
-<h1 align="center">Atoll - DynamicIsland for macOS</h1>
+<h1 align="center">Notchly</h1>
 <p align="center">
-<a href="https://trendshift.io/repositories/15291" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15291" alt="Ebullioscopic%2FAtoll | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</p>
-<p align="center">
-  <a href="https://github.com/Ebullioscopic/Atoll/stargazers">
-    <img src="https://img.shields.io/github/stars/Ebullioscopic/Atoll?style=social" alt="GitHub stars"/>
-  </a>
-  <a href="https://github.com/Ebullioscopic/Atoll/network/members">
-    <img src="https://img.shields.io/github/forks/Ebullioscopic/Atoll?style=social" alt="GitHub forks"/>
-  </a>
-  <a href="https://github.com/Ebullioscopic/Atoll/releases">
-    <img src="https://img.shields.io/github/downloads/Ebullioscopic/Atoll/total?label=Downloads" alt="GitHub downloads"/>
-  </a>
-  <a href="https://discord.gg/PaqFkRTDF8">
-    <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/PaqFkRTDF8?style=flat" alt="Discord server"/>
-  </a>
+  A soft-glass, monochrome command surface for the MacBook notch.
 </p>
 
-<p align="center">
-  <a href="https://github.com/sponsors/Ebullioscopic">
-    <img src="https://img.shields.io/badge/Sponsor-Ebullioscopic-ff69b4?style=for-the-badge&logo=github" alt="Sponsor Ebullioscopic"/>
-  </a>
-  <a href="https://github.com/Ebullioscopic/Atoll/releases/latest">
-    <img src="https://img.shields.io/badge/Download-Atoll%20for%20macOS-0A84FF?style=for-the-badge&logo=apple" alt="Download Atoll for macOS"/>
-  </a>
-  <a href="https://www.buymeacoffee.com/kryoscopic">
-    <img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-kryoscopic-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=000000" alt="Buy Me a Coffee for kryoscopic"/>
-  </a>
-</p>
+Notchly turns the notch on MacBook Pro and Air models into a small, focused surface for media, system events and quick utilities. It stays out of the way until you need it, then expands with native SwiftUI spring animations. The visual language is deliberately quiet: the notch stays pure black so it melts into the hardware, and everything drawn on it is translucent white or silver glass. Colour is kept only where it carries meaning (battery state, screen recording, camera and microphone privacy).
 
-<p align="center">
-  <a href="https://discord.gg/PaqFkRTDF8">Join our Discord community</a>
-</p>
+Notchly is a **notch-only** app. The non-notch features of the project it was forked from have been removed.
 
-Atoll turns the MacBook notch into a focused command surface for media, system insight, and quick utilities. It stays out of the way until needed, then expands with responsive, native SwiftUI animations.
+> Notchly is a fork of [Atoll](https://github.com/Ebullioscopic/Atoll) by Ebullioscopic (GPL-3.0). See [Credits & License](#credits--license).
 
-<p align="center">
-  <img src="https://i.postimg.cc/t49mW5yN/Screenshot-2026-03-02-at-6-00-22-PM.png" alt="Atoll lock screen" width="920">
-</p>
+## Features
 
+**Music**
+- Media controls and now-playing for Apple Music, Spotify, YouTube Music, Amazon Music, TIDAL, Cider, and any app that reports to macOS Now Playing.
+- Synced lyrics (side panel, line under the notch, or pinned while closed), optional Spotify canvas artwork, waveform scrubber, AirPlay and output picker.
+- Standard layout and a compact minimalistic layout.
 
+**Live activities** (shown in the closed notch)
+- Battery and charging, low-battery and full-battery alerts.
+- Focus / Do Not Disturb.
+- Downloads (beta; Safari, Chrome and Chromium-based browsers, Firefox).
+- Screen recording indicator.
+- Privacy indicators for camera and microphone use.
+- Calendar reminders.
+- Bluetooth device connections, including AirPods battery.
+- Network connectivity (Wi-Fi, hotspot, no connection).
+- Caps Lock indicator.
+- Lock and unlock animation with optional lock sounds.
+- Timer countdown.
 
+**HUD replacements**
+- Volume, brightness and keyboard backlight shown in the notch, or as a vertical, circular or custom OSD.
+- Optional BetterDisplay and Lunar integration for external displays.
 
-
-## Highlights
-- Media controls for Apple Music, Spotify, Cider, and more with inline previews.
-- Live Activities for media playback, Focus, screen recording, privacy indicators, downloads (beta), and battery/charging.
-- Lightweight system insight for CPU, GPU, memory, network, and disk usage.
-- Productivity tools including timers, clipboard history, color picker, and calendar previews.
-- Customization for layouts, animations, hover behavior, and shortcut remapping.
-
-## Other Features
-- Gesture controls for opening/closing the notch and media navigation.
-- Parallax hover interactions with smooth transitions.
-- Lock and unlock live activity with optional lock and fingerprint icons.
-
-<p align="center">
-  <img src="https://i.postimg.cc/HkLGn6yH/846F86A4_A2F9_4CD6_BC84_1D720D377728_1_201_a.jpg" alt="Atoll preview" width="920">
-</p>
+**Tabs and tools**
+- Timer with presets and a ruler-style picker.
+- Calendar with events and reminders.
+- Webcam mirror.
+- Global keyboard shortcuts, gesture controls (swipe to open/close, horizontal swipes to skip), haptics, and per-feature toggles in Settings.
 
 ## Requirements
 - macOS 14.0 or later (optimised for macOS 15+).
-- MacBook with a notch (14/16‑inch MBP across Apple silicon generations).
-- Xcode 15+ to build from source.
-- Permissions as needed: Accessibility, Camera, Calendar, Screen Recording, Music.
+- A MacBook with a notch.
+- Xcode 15 or later to build from source.
+- Permissions as needed: Accessibility, Camera, Calendar and Reminders, Screen Recording, Music / media.
 
-## Installation
-1) Download the latest DMG [here](https://github.com/Ebullioscopic/Atoll/releases/latest).
-2) Open the DMG and drag Atoll into Applications.
-3) Launch Atoll and grant the requested permissions.
-
-## Quick Start
-- Hover near the notch to expand; click to enter controls.
-- Use tabs for Media, Timers, Clipboard, and more.
-- Adjust layout, appearance, and shortcuts from Settings.
-- Add files to Shelf from Terminal: `open -a Atoll /path/to/file`.
-
-## Settings
-- Choose appearance, animation style, and per‑feature toggles.
-- Remap global shortcuts and adjust hover behaviour.
-
-## Gesture Controls
-- Two-finger swipe down to open the notch when hover-to-open is disabled; swipe up to close.
-- Enable horizontal media gestures in **Settings → General → Gesture control** to turn the music pane into a trackpad for previous/next or ±10 second seeks.
-- Pick the gesture skip behaviour (track vs ±10s) independently from the skip button configuration so swipes can scrub while buttons change tracks—or vice versa.
-- Horizontal swipes trigger the same haptics and button animations you see in the notch, keeping visual feedback consistent with tap interactions.
-
-## Troubleshooting (Basics)
-- After granting Accessibility or Screen Recording, quit and relaunch the app.
-- Media not responding: verify player is active and Music permission is granted.
-
-## License
-Atoll is released under the GPL v3 License. Refer to [LICENSE](LICENSE) for the full terms.
-
-## Acknowledgments
-
-Atoll builds upon the work of several open-source projects and draws inspiration from innovative macOS applications:
-
-- [**Boring.Notch**](https://github.com/TheBoredTeam/boring.notch) - foundational codebase that provided the initial media player integration, AirDrop surface implementation, file dock functionality, and calendar event display. Major architectural patterns and notch interaction models were adapted from this project.
-
-- [**Alcove**](https://tryalcove.com) - primary inspiration for the Minimalistic Mode interface design that informed Atoll's compact layout strategy.
-
-- [**SkyLightWindow**](https://github.com/Lakr233/SkyLightWindow) - window rendering for HUD overlays and the lock screen live activity
-
-- [**rtaudio**](https://github.com/ZephyrCodesStuff/rtaudio) - Live music visualizer using C++ was adapted from this project
-
-- [**SwiftTerm**](https://github.com/migueldeicaza/SwiftTerm) - Terminal tab implementation in the standard mode was adapted from this project
-
-- [**DynamicNotch**](https://github.com/jackson-storm/DynamicNotch) - thanks DynamicNotch for letting us use their battery huds
-
-
-
-
-## Contributors
-
-<a href="https://github.com/Ebullioscopic/Atoll/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Ebullioscopic/Atoll" />
-</a>
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Ebullioscopic/Atoll&type=timeline&legend=top-left)](https://www.star-history.com/#Ebullioscopic/Atoll&type=timeline&legend=top-left)
-
-## Updating Existing Clones
-If you previously cloned DynamicIsland, update the remote to track the Atoll repository:
-
+## Build from source
 ```bash
-git remote set-url origin https://github.com/Ebullioscopic/Atoll.git
+# from the root of this repository
+xcodebuild -scheme DynamicIsland -configuration Debug \
+  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ```
+The Xcode target and scheme keep the internal name `DynamicIsland`. Open `DynamicIsland.xcodeproj` in Xcode to run and sign the app with your own team. Swift packages (Defaults, Sparkle, KeyboardShortcuts, LottieUI, Pow, SkyLightWindow, MacroVisionKit, LaunchAtLogin, swiftui-introspect) resolve automatically.
 
-A heartfelt thanks to [TheBoredTeam](https://github.com/TheBoredTeam) for being supportive and being totally awesome, Atoll would not have been possible without Boring.Notch
+## Quick start
+- Hover near the notch to expand it; click to interact.
+- Use the tab selector for Home and Timer.
+- Adjust layout, appearance, HUDs and shortcuts from Settings (gear icon in the expanded notch).
 
----
+## Gesture controls
+- Two-finger swipe down opens the notch when hover-to-open is disabled; swipe up closes it.
+- Enable horizontal media gestures in **Settings > General > Gesture control** to use the music pane as a trackpad for previous/next or 10-second seeks.
 
-<p align="center">
-  <img src=".github/assets/iosdevcentre.jpeg" alt="iOS Development Centre exterior" width="420">
-  <br>
-  <sub>Backed by</sub>
-  <br>
-  <strong>iOS Development Centre</strong>
-  <br>
-  Powered by Apple and Infosys
-  <br>
-  SRM Institute of Science and Technology, Chennai, India
-</p>
+## Troubleshooting
+- After granting Accessibility or Screen Recording, quit and relaunch the app.
+- Media not responding: make sure the player is running and media permission has been granted.
 
-<p align="center">
-  <a href="https://buymeacoffee.com/kryoscopic">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="200" />
-  </a>
-</p>
+## Credits & License
 
-<p align="center">
-  Your support helps fund teaching children software development.
-</p>
+Notchly is licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for the full terms and [NOTICE](NOTICE) for attribution details. Because it is GPL-3.0 software, any distributed modification must remain GPL-3.0 and ship with its source.
+
+**Lineage.** Notchly is a fork of [**Atoll**](https://github.com/Ebullioscopic/Atoll) by Ebullioscopic, which in turn builds on [**boring.notch**](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam. Atoll would not exist without boring.notch, and Notchly would not exist without either of them.
+
+**Acknowledgments** for code and ideas that remain in this project:
+
+- [**boring.notch**](https://github.com/TheBoredTeam/boring.notch) - foundational codebase: media player integration, notch interaction model, calendar display and many architectural patterns.
+- [**Atoll**](https://github.com/Ebullioscopic/Atoll) - the live activities, HUD system, lyrics, timer, Bluetooth, lock screen and settings work this fork is built on.
+- [**Alcove**](https://tryalcove.com) - inspiration for the minimalistic layout.
+- [**SkyLightWindow**](https://github.com/Lakr233/SkyLightWindow) - window rendering for HUD overlays and the lock screen live activity.
+- [**rtaudio**](https://github.com/ZephyrCodesStuff/rtaudio) - the live music visualizer was adapted from this project.
+- [**DynamicNotch**](https://github.com/jackson-storm/DynamicNotch) - battery HUD designs.
+- Sparkle, Defaults, KeyboardShortcuts, LottieUI, Pow, MacroVisionKit and LaunchAtLogin-Modern for the Swift packages the app depends on.
+- The "Fingerprint Scan" Lottie animation by Eddy Gann (Lottie Simple License, see NOTICE).

@@ -198,18 +198,24 @@ private struct FloatingMediaButton: View {
         } label: {
             iconView
                 .frame(width: frameSize.width, height: frameSize.height)
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(isHovering && isEnabled ? Color.white.opacity(0.18) : .clear)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .background {
+                    let hovered = isHovering && isEnabled
+                    Circle()
+                        .fill(hovered ? NotchlyTheme.Palette.glassFillHover : .clear)
+                        .overlay {
+                            Circle()
+                                .strokeBorder(NotchlyTheme.Palette.glassStroke, lineWidth: NotchlyTheme.Stroke.hairline)
+                                .opacity(hovered ? 1 : 0)
+                        }
+                }
+                .contentShape(Circle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.notchlyPress)
         .offset(x: pressOffset)
         .rotationEffect(.degrees(rotationAngle))
         .disabled(!isEnabled)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.18)) {
+            withAnimation(NotchlyTheme.Motion.snappy) {
                 isHovering = hovering
             }
         }

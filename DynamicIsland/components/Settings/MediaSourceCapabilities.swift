@@ -74,7 +74,7 @@ enum MediaSourceCapabilities {
         case .youtubeMusic:
             return .init(name: String(localized: "YouTube Music"),
                          favoriting: .full, shuffle: .full, repeatMode: .full,
-                         note: String(localized: "The th-ch desktop app's local API server, which Atoll is already authenticated with."))
+                         note: String(localized: "The th-ch desktop app's local API server, which Notchly is already authenticated with."))
         case .tidal:
             return .init(name: String(localized: "TIDAL"),
                          favoriting: .readOnly, shuffle: .full, repeatMode: .full,

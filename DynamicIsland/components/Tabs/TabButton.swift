@@ -31,9 +31,14 @@ struct TabButton: View {
     var body: some View {
         Button(action: onClick) {
             Image(systemName: icon)
+                .font(.system(size: 13, weight: .medium))
+                .frame(minWidth: 30)
+                .padding(.horizontal, NotchlyTheme.Spacing.sm)
+                .frame(maxHeight: .infinity)
                 .contentShape(Capsule())
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(NotchlyTabButtonStyle(isSelected: selected))
+        .help(label)
     }
 }
 

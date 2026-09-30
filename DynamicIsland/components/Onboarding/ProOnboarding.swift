@@ -36,7 +36,7 @@ struct ProOnboard: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 100, height: 100)
                         .padding(.bottom, 8)
-                    Text("TheDynamicIsland")
+                    Text("Notchly")
                         .font(.system(.largeTitle, design: .serif))
                     Text("Welcome")
                         .font(.title)
