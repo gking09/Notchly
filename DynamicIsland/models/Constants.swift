@@ -1261,13 +1261,6 @@ extension Defaults.Keys {
     
     // MARK: Stats Feature
     static let enableStatsFeature = Key<Bool>("enableStatsFeature", default: false)
-    static let enableLLMUsageFeature = Key<Bool>("enableLLMUsageFeature", default: false)
-    static let enableClaudeProvider = Key<Bool>("enableClaudeProvider", default: true)
-    static let enableCodexProvider = Key<Bool>("enableCodexProvider", default: true)
-    static let enableCursorProvider = Key<Bool>("enableCursorProvider", default: true)
-    static let enableAntigravityProvider = Key<Bool>("enableAntigravityProvider", default: true)
-    static let enableNewAPIProvider = Key<Bool>("enableNewAPIProvider", default: false)
-    static let newAPIAccounts = Key<[NewAPIAccount]>("newAPIAccounts", default: [])
     static let autoStartStatsMonitoring = Key<Bool>("autoStartStatsMonitoring", default: true)
     static let statsStopWhenNotchCloses = Key<Bool>("statsStopWhenNotchCloses", default: true)
     static let statsUpdateInterval = Key<Double>("statsUpdateInterval", default: 1.0)

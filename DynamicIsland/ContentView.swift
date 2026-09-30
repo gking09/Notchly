@@ -1272,8 +1272,6 @@ struct ContentView: View {
                                   NotchTimerView()
                               case .stats:
                                   NotchStatsView()
-                              case .llmUsage:
-                                  NotchLLMUsageView()
                             case .notes:
                                 NotchNotesView()
                             case .clipboard:
