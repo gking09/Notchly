@@ -138,6 +138,7 @@ struct DynamicIslandHeader: View {
                         // In minimalistic notch mode, show the battery pill only when
                         // showMinimalisticBatteryIndicator is enabled (and not DI mode).
                         if !shouldUseDynamicIslandMode(for: vm.screen) && showMinimalisticBatteryIndicator {
+                            BatteryTimeChip(info: batteryModel.details.time)
                             MinimalisticBatteryView(
                                 levelBattery: batteryModel.levelBattery,
                                 isPluggedIn: batteryModel.isPluggedIn,
@@ -160,6 +161,7 @@ struct DynamicIslandHeader: View {
                             levelBattery: batteryModel.levelBattery,
                             maxCapacity: batteryModel.maxCapacity,
                             timeToFullCharge: batteryModel.timeToFullCharge,
+                            details: batteryModel.details,
                             isForNotification: false
                         )
                     }

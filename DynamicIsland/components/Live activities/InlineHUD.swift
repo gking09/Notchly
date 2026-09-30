@@ -130,6 +130,10 @@ struct InlineHUD: View {
     
     var body: some View {
         let useCircularIndicator = useCircularBluetoothBatteryIndicator
+        // A low-battery alert always spells the number out and tints it red.
+        let lowAlert = type == .bluetoothAudio ? bluetoothManager.activeLowBatteryAlert : nil
+        let showBluetoothPercent = showBluetoothBatteryPercentageText || lowAlert != nil
+        let alertTint: Color? = lowAlert != nil ? .red : nil
         let listeningModeEvent = bluetoothManager.activeListeningModeEvent
         let listeningMode = listeningModeEvent?.mode ?? (type == .bluetoothAudio && value < 0 ? AirPodsListeningMode.fromHUDSymbol(icon) : nil)
         let isListeningModeEvent = type == .bluetoothAudio && listeningMode != nil
@@ -190,10 +194,10 @@ struct InlineHUD: View {
                 }
 
                 if useCircularIndicator {
-                    return showBluetoothBatteryPercentageText ? (enableMinimalisticUI ? 92 : 112) : (enableMinimalisticUI ? 64 : 76)
+                    return showBluetoothPercent ? (enableMinimalisticUI ? 92 : 112) : (enableMinimalisticUI ? 64 : 76)
                 }
 
-                return showBluetoothBatteryPercentageText ? (enableMinimalisticUI ? 100 : 128) : (enableMinimalisticUI ? 84 : 100)
+                return showBluetoothPercent ? (enableMinimalisticUI ? 100 : 128) : (enableMinimalisticUI ? 84 : 100)
             }
 
             if type == .capsLock {
@@ -218,10 +222,10 @@ struct InlineHUD: View {
                     }
 
                     if useCircularIndicator {
-                        return showBluetoothBatteryPercentageText ? (enableMinimalisticUI ? 80 : 102) : (enableMinimalisticUI ? 48 : 64)
+                        return showBluetoothPercent ? (enableMinimalisticUI ? 80 : 102) : (enableMinimalisticUI ? 48 : 64)
                     }
 
-                    return showBluetoothBatteryPercentageText ? (enableMinimalisticUI ? 88 : 112) : (enableMinimalisticUI ? 64 : 82)
+                    return showBluetoothPercent ? (enableMinimalisticUI ? 88 : 112) : (enableMinimalisticUI ? 64 : 82)
                 }
 
                 if type == .capsLock {
@@ -272,6 +276,7 @@ struct InlineHUD: View {
                                     .contentTransition(.interpolate)
                                     .frame(width: 20, height: 15, alignment: .center)
                             } else if useBluetoothHUD3DIcon,
+                               lowAlert == nil,
                                let deviceType = bluetoothManager.lastConnectedDevice?.deviceType,
                                let url = deviceType.inlineHUDAnimationURL {
                                 LoopingVideoIcon(url: url, size: CGSize(width: 20, height: 20))
@@ -281,6 +286,7 @@ struct InlineHUD: View {
                                     .symbolRenderingMode(.hierarchical)
                                     .contentTransition(.interpolate)
                                     .frame(width: 20, height: 15, alignment: .center)
+                                    .symbolEffect(.pulse, options: .repeating, isActive: lowAlert != nil && !NotchlyTheme.Motion.reduceMotion)
                             }
                         case .capsLock:
                             Image(systemName: "capslock.fill")
@@ -308,6 +314,12 @@ struct InlineHUD: View {
                             minDuration: 0.2,
                             frameWidth: infoWidth
                         )
+                    } else if lowAlert != nil {
+                        Text("Low")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.red)
+                            .lineLimit(1)
+                            .transition(.opacity)
                     }
                 } else if type != .capsLock {
                     Text(Type2Name(type))
@@ -372,15 +384,16 @@ struct InlineHUD: View {
                     } else if hasBatteryLevel {
                         let indicatorSpacing: CGFloat = {
                             if useCircularIndicator {
-                                return showBluetoothBatteryPercentageText ? 8 : 2
+                                return showBluetoothPercent ? 8 : 2
                             }
-                            return showBluetoothBatteryPercentageText ? 6 : 4
+                            return showBluetoothPercent ? 6 : 4
                         }()
 
                         HStack(spacing: indicatorSpacing) {
                             if useCircularIndicator {
                                 CircularBatteryIndicator(
                                     value: value,
+                                    tint: alertTint,
                                     useColorCoding: useColorCodedBatteryDisplay && progressBarStyle != .segmented,
                                     smoothGradient: useSmoothColorGradient
                                 )
@@ -388,18 +401,20 @@ struct InlineHUD: View {
                             } else {
                                 LinearBatteryIndicator(
                                     value: value,
+                                    tint: alertTint,
                                     useColorCoding: useColorCodedBatteryDisplay && progressBarStyle != .segmented,
                                     smoothGradient: useSmoothColorGradient
                                 )
                                 .allowsHitTesting(false)
                             }
 
-                            if showBluetoothBatteryPercentageText {
+                            if showBluetoothPercent {
                                 Text("\(Int(value * 100))%")
                                     .font(.caption)
                                     .fontWeight(.medium)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(alertTint ?? .white)
                                     .lineLimit(1)
+                                    .contentTransition(.numericText(value: Double(value)))
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -442,18 +457,22 @@ struct InlineHUD: View {
         }
         .frame(height: vm.closedNotchSize.height + (hoverAnimation ? 8 : 0), alignment: .center)
         .onAppear {
-            displayName = Type2Name(type)
+            displayName = resolvedDisplayName
         }
         .onChange(of: type) { _, _ in
-            displayName = Type2Name(type)
+            displayName = resolvedDisplayName
         }
         .onChange(of: bluetoothManager.lastConnectedDevice?.name) { _, _ in
-            displayName = Type2Name(type)
+            displayName = resolvedDisplayName
+        }
+        .onChange(of: bluetoothManager.activeLowBatteryAlert) { _, _ in
+            displayName = resolvedDisplayName
         }
     }
     
     private struct CircularBatteryIndicator: View {
         let value: CGFloat
+        var tint: Color? = nil
         let useColorCoding: Bool
         let smoothGradient: Bool
 
@@ -462,6 +481,7 @@ struct InlineHUD: View {
         }
 
         private var indicatorColor: Color {
+            if let tint { return tint }
             if useColorCoding {
                 return ColorCodedProgressBar.paletteColor(for: clampedValue, mode: .battery, smoothGradient: smoothGradient)
             }
@@ -479,12 +499,13 @@ struct InlineHUD: View {
                     .stroke(indicatorColor, style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
             }
             .frame(width: 16, height: 16)
-            .animation(.smooth(duration: 0.18), value: clampedValue)
+            .animation(NotchlyTheme.Motion.spring, value: clampedValue)
         }
     }
 
     private struct LinearBatteryIndicator: View {
         let value: CGFloat
+        var tint: Color? = nil
         let useColorCoding: Bool
         let smoothGradient: Bool
 
@@ -496,6 +517,7 @@ struct InlineHUD: View {
         }
 
         private var fillColor: Color {
+            if let tint { return tint }
             if useColorCoding {
                 return ColorCodedProgressBar.paletteColor(for: clampedValue, mode: .battery, smoothGradient: smoothGradient)
             }
@@ -513,7 +535,7 @@ struct InlineHUD: View {
                     .frame(width: trackWidth * clampedValue, height: trackHeight)
             }
             .frame(width: trackWidth, height: trackHeight)
-            .animation(.smooth(duration: 0.18), value: clampedValue)
+            .animation(NotchlyTheme.Motion.spring, value: clampedValue)
         }
     }
 
@@ -550,6 +572,14 @@ struct InlineHUD: View {
         return "light.min"
     }
     
+    /// The device a low-battery alert is about, otherwise the usual label.
+    private var resolvedDisplayName: String {
+        if type == .bluetoothAudio, let alert = bluetoothManager.activeLowBatteryAlert {
+            return alert.deviceName
+        }
+        return Type2Name(type)
+    }
+
     func Type2Name(_ type: SneakContentType) -> String {
         switch(type) {
             case .volume:

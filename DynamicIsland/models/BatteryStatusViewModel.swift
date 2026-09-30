@@ -32,6 +32,31 @@ enum BatteryTemporaryHUDKind: Equatable {
     case fullBattery
 }
 
+/// Which variant of a temporary battery HUD is showing. The low-battery kind
+/// also carries the critical alert, and the full-battery kind carries the
+/// "charging held at N%" alert, so the layout code has one set of sizes.
+enum BatteryHUDFlavor: Equatable {
+    case standard
+    case critical
+    case chargeHeld
+}
+
+/// Extra lines the HUD may show. Every field is nil unless IOKit actually
+/// reported the data and the matching setting is on.
+struct BatteryHUDExtras: Equatable {
+    var flavor: BatteryHUDFlavor = .standard
+    /// "Charging", "Fast charging"... only for the charging HUD.
+    var statusTitle: String?
+    /// "1h 12m to full" / "45m left" / "Calculating…".
+    var timeText: String?
+    /// "67W" adapter rating.
+    var wattsText: String?
+    var isFastCharging = false
+    var heldAtPercent: Int?
+
+    static let none = BatteryHUDExtras()
+}
+
 /// A view model that manages and monitors the battery status of the device
 class BatteryStatusViewModel: ObservableObject {
 
@@ -40,6 +65,8 @@ class BatteryStatusViewModel: ObservableObject {
     private var runLoopSource: Unmanaged<CFRunLoopSource>?
     var animations: DynamicIslandAnimations = DynamicIslandAnimations()
     private let lowBatteryAlertSoundPlayer = AudioPlayer()
+    private var alertMachine = BatteryAlertStateMachine()
+    private var detailsTimer: Timer?
 
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
 
@@ -51,7 +78,10 @@ class BatteryStatusViewModel: ObservableObject {
     @Published private(set) var isInitial: Bool = false
     @Published private(set) var timeToFullCharge: Int = 0
     @Published private(set) var statusText: String = ""
+    /// Time estimate, charger wattage, charging state, health and cycles.
+    @Published private(set) var details: BatteryDetails = .empty
     @Published private(set) var activeTemporaryHUDKind: BatteryTemporaryHUDKind?
+    @Published private(set) var activeTemporaryHUDFlavor: BatteryHUDFlavor = .standard
     @Published private(set) var activeTemporaryHUDToken: UUID = UUID()
     @Published private(set) var activeTemporaryHUDTargetScreenName: String?
     @Published private(set) var activeTemporaryHUDLevelOverride: Int?
@@ -67,6 +97,72 @@ class BatteryStatusViewModel: ObservableObject {
     private init() {
         setupPowerStatus()
         setupMonitor()
+        setupDetailsRefresh()
+    }
+
+    // MARK: - Details
+
+    /// IOPS only pushes changes to the level and the charging flags; the time
+    /// estimate and charge power drift on their own, so refresh on a slow timer
+    /// as well as on every battery event.
+    private func setupDetailsRefresh() {
+        guard details.level != nil else { return }
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            self?.refreshDetails()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        detailsTimer = timer
+    }
+
+    func refreshDetails() {
+        let fresh = MacBatteryManager.shared.currentDetails()
+        guard fresh != details else { return }
+        withAnimation(NotchlyTheme.Motion.spring) {
+            details = fresh
+        }
+        evaluateAlerts()
+    }
+
+    /// What the temporary HUD should add to its base layout.
+    var activeTemporaryHUDExtras: BatteryHUDExtras {
+        guard let kind = activeTemporaryHUDKind else { return .none }
+        return hudExtras(for: kind, flavor: activeTemporaryHUDFlavor)
+    }
+
+    func hudExtras(for kind: BatteryTemporaryHUDKind, flavor: BatteryHUDFlavor) -> BatteryHUDExtras {
+        var extras = BatteryHUDExtras(flavor: flavor)
+        switch kind {
+        case .charging:
+            if Defaults[.showBatteryTimeRemaining], let time = details.time, time.kind == .toFull {
+                extras.timeText = time.captionText
+            }
+            if Defaults[.showChargerWattage], let watts = details.adapterWatts {
+                extras.wattsText = "\(watts)W"
+            }
+            if Defaults[.showChargingStatusText] {
+                switch details.state {
+                case .fastCharging:
+                    extras.statusTitle = String(localized: "Fast charging")
+                    extras.isFastCharging = true
+                case .slowCharging:
+                    extras.statusTitle = String(localized: "Charging slowly")
+                case .held(let percent):
+                    extras.statusTitle = String(localized: "Held at \(percent)%")
+                    extras.heldAtPercent = percent
+                default:
+                    break
+                }
+            }
+        case .lowBattery:
+            if Defaults[.showBatteryTimeRemaining], let time = details.time, time.kind == .remaining {
+                extras.timeText = time.captionText
+            }
+        case .fullBattery:
+            if flavor == .chargeHeld {
+                extras.heldAtPercent = Int(levelBattery.rounded())
+            }
+        }
+        return extras
     }
 
     /// Sets up the initial power status by fetching battery information
@@ -100,12 +196,9 @@ class BatteryStatusViewModel: ObservableObject {
 
         case .batteryLevelChanged(let level):
             print("🔋 Battery level: \(Int(level))%")
-            let previousLevel = self.levelBattery
             withAnimation {
                 self.levelBattery = level
             }
-            self.handleLowBatteryAlertIfNeeded(previousLevel: previousLevel, newLevel: level)
-            self.handleFullBatteryAlertIfNeeded(previousLevel: previousLevel, newLevel: level)
 
         case .lowPowerModeChanged(let isEnabled):
             print("⚡ Low power mode: \(isEnabled ? "Enabled" : "Disabled")")
@@ -145,6 +238,9 @@ class BatteryStatusViewModel: ObservableObject {
         case .error(let description):
             print("⚠️ Error: \(description)")
         }
+
+        refreshDetails()
+        evaluateAlerts()
     }
 
     /// Updates the battery information with the given BatteryInfo instance
@@ -159,26 +255,33 @@ class BatteryStatusViewModel: ObservableObject {
             self.maxCapacity = batteryInfo.maxCapacity
             self.statusText = batteryInfo.isPluggedIn ? String(localized: "Plugged In") : String(localized: "Unplugged")
         }
+        self.details = MacBatteryManager.shared.currentDetails()
+        evaluateAlerts()
     }
 
     private func presentTemporaryBatteryHUDIfNeeded(kind: BatteryTemporaryHUDKind) {
         presentTemporaryBatteryHUDIfNeeded(kind: kind, force: false)
     }
 
-    func triggerTestHUD(kind: BatteryTemporaryHUDKind) {
+    func triggerTestHUD(kind: BatteryTemporaryHUDKind, flavor: BatteryHUDFlavor = .standard) {
         let previewLevel: Int
 
-        switch kind {
-        case .charging:
+        switch (kind, flavor) {
+        case (.charging, _):
             previewLevel = max(12, min(95, Int(levelBattery.rounded())))
-        case .lowBattery:
+        case (.lowBattery, .critical):
+            previewLevel = max(1, min(Defaults[.criticalBatteryHUDThreshold], 15))
+        case (.lowBattery, _):
             previewLevel = max(5, min(20, Defaults[.lowBatteryHUDThreshold]))
-        case .fullBattery:
+        case (.fullBattery, .chargeHeld):
+            previewLevel = details.level ?? 80
+        case (.fullBattery, _):
             previewLevel = 100
         }
 
         presentTemporaryBatteryHUDIfNeeded(
             kind: kind,
+            flavor: flavor,
             force: true,
             levelOverride: previewLevel,
             lowPowerModeOverride: kind == .lowBattery ? isInLowPowerMode : nil
@@ -187,6 +290,7 @@ class BatteryStatusViewModel: ObservableObject {
 
     private func presentTemporaryBatteryHUDIfNeeded(
         kind: BatteryTemporaryHUDKind,
+        flavor: BatteryHUDFlavor = .standard,
         force: Bool,
         levelOverride: Int? = nil,
         lowPowerModeOverride: Bool? = nil
@@ -196,14 +300,21 @@ class BatteryStatusViewModel: ObservableObject {
         let duration: Int
         let isEnabled: Bool
 
-        switch kind {
-        case .charging:
+        switch (kind, flavor) {
+        case (.charging, _):
             duration = Defaults[.chargingBatteryHUDDuration]
             isEnabled = Defaults[.showChargingBatteryHUD]
-        case .lowBattery:
+        case (.lowBattery, .critical):
+            // The critical alert lingers a little longer than an ordinary low one.
+            duration = Defaults[.lowBatteryHUDDuration] + 2
+            isEnabled = Defaults[.showCriticalBatteryHUD]
+        case (.lowBattery, _):
             duration = Defaults[.lowBatteryHUDDuration]
             isEnabled = Defaults[.showLowBatteryHUD]
-        case .fullBattery:
+        case (.fullBattery, .chargeHeld):
+            duration = Defaults[.fullBatteryHUDDuration]
+            isEnabled = Defaults[.showChargeHeldHUD]
+        case (.fullBattery, _):
             duration = Defaults[.fullBatteryHUDDuration]
             isEnabled = Defaults[.showFullBatteryHUD]
         }
@@ -211,6 +322,7 @@ class BatteryStatusViewModel: ObservableObject {
         guard force || isEnabled else { return }
 
         activeTemporaryHUDKind = kind
+        activeTemporaryHUDFlavor = flavor
         activeTemporaryHUDToken = UUID()
         activeTemporaryHUDTargetScreenName = resolvedTemporaryHUDTargetScreenName()
         activeTemporaryHUDLevelOverride = levelOverride
@@ -264,26 +376,52 @@ class BatteryStatusViewModel: ObservableObject {
         return nil
     }
 
-    private func handleLowBatteryAlertIfNeeded(previousLevel: Float, newLevel: Float) {
-        guard !isPluggedIn, !isCharging else { return }
-        guard newLevel < previousLevel else { return }
-        let threshold = Float(Defaults[.lowBatteryHUDThreshold])
-        guard previousLevel > threshold && newLevel <= threshold else { return }
+    // MARK: - Alerts
 
-        self.statusText = String(localized: "Low battery")
-        presentTemporaryBatteryHUDIfNeeded(kind: .lowBattery)
-        if Defaults[.playLowBatteryAlertSound] {
-            playLowBatteryAlertSound()
+    /// Low, critical, full and "charging held" alerts, all decided by
+    /// `BatteryAlertStateMachine`. Runs after every battery event and every
+    /// detail refresh.
+    private func evaluateAlerts() {
+        // No internal battery (desktop Mac): nothing to alert about.
+        guard details.level != nil else { return }
+
+        let isHeld: Bool = {
+            if case .held = details.state { return true }
+            return false
+        }()
+        let reading = BatteryAlertReading(
+            level: Int(levelBattery.rounded()),
+            isPluggedIn: isPluggedIn,
+            isHeld: isHeld
+        )
+        let config = BatteryAlertConfig(
+            lowEnabled: Defaults[.showLowBatteryHUD],
+            lowThreshold: Defaults[.lowBatteryHUDThreshold],
+            criticalEnabled: Defaults[.showCriticalBatteryHUD],
+            criticalThreshold: min(Defaults[.criticalBatteryHUDThreshold], Defaults[.lowBatteryHUDThreshold] - 1),
+            fullEnabled: Defaults[.showFullBatteryHUD],
+            fullThreshold: Defaults[.fullBatteryHUDThreshold],
+            chargeHeldEnabled: Defaults[.showChargeHeldHUD]
+        )
+
+        guard let alert = alertMachine.update(reading, config: config) else { return }
+
+        switch alert {
+        case .low:
+            statusText = String(localized: "Low battery")
+            presentTemporaryBatteryHUDIfNeeded(kind: .lowBattery, flavor: .standard, force: false)
+            if Defaults[.playLowBatteryAlertSound] { playLowBatteryAlertSound() }
+        case .critical:
+            statusText = String(localized: "Critical battery")
+            presentTemporaryBatteryHUDIfNeeded(kind: .lowBattery, flavor: .critical, force: false)
+            if Defaults[.playLowBatteryAlertSound] { playLowBatteryAlertSound() }
+        case .full:
+            statusText = String(localized: "Full charge")
+            presentTemporaryBatteryHUDIfNeeded(kind: .fullBattery, flavor: .standard, force: false)
+        case .chargeHeld:
+            statusText = String(localized: "Charging held")
+            presentTemporaryBatteryHUDIfNeeded(kind: .fullBattery, flavor: .chargeHeld, force: false)
         }
-    }
-
-    private func handleFullBatteryAlertIfNeeded(previousLevel: Float, newLevel: Float) {
-        guard newLevel > previousLevel else { return }
-        let threshold = Float(Defaults[.fullBatteryHUDThreshold])
-        guard previousLevel < threshold && newLevel >= threshold else { return }
-
-        self.statusText = String(localized: "Full charge")
-        presentTemporaryBatteryHUDIfNeeded(kind: .fullBattery)
     }
 
     private func playLowBatteryAlertSound() {
@@ -291,6 +429,7 @@ class BatteryStatusViewModel: ObservableObject {
     }
 
     deinit {
+        detailsTimer?.invalidate()
         print("🔌 Cleaning up battery monitoring...")
         if let managerBatteryId: Int = managerBatteryId {
             managerBattery.removeObserver(byId: managerBatteryId)

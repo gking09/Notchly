@@ -203,6 +203,17 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .battery, title: "Low battery threshold", keywords: ["battery", "threshold", "percent"], highlightID: SettingsTab.battery.highlightID(for: "Low battery threshold")),
         SettingsSearchEntry(tab: .battery, title: "Full battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Full battery style")),
         SettingsSearchEntry(tab: .battery, title: "Full charge threshold", keywords: ["battery", "threshold", "full"], highlightID: SettingsTab.battery.highlightID(for: "Full charge threshold")),
+        SettingsSearchEntry(tab: .battery, title: "Show time remaining", keywords: ["battery","time remaining","time to full","eta"], highlightID: SettingsTab.battery.highlightID(for: "Show time remaining")),
+        SettingsSearchEntry(tab: .battery, title: "Show charger wattage", keywords: ["battery","charger","watts","adapter"], highlightID: SettingsTab.battery.highlightID(for: "Show charger wattage")),
+        SettingsSearchEntry(tab: .battery, title: "Show charging status", keywords: ["battery","fast charging","optimized","held"], highlightID: SettingsTab.battery.highlightID(for: "Show charging status")),
+        SettingsSearchEntry(tab: .battery, title: "Show battery health", keywords: ["battery","health","cycle count","capacity"], highlightID: SettingsTab.battery.highlightID(for: "Show battery health")),
+        SettingsSearchEntry(tab: .battery, title: "Critical battery HUD", keywords: ["battery","critical","alert"], highlightID: SettingsTab.battery.highlightID(for: "Critical battery HUD")),
+        SettingsSearchEntry(tab: .battery, title: "Charge limit reached HUD", keywords: ["battery","charge limit","optimized","held"], highlightID: SettingsTab.battery.highlightID(for: "Charge limit reached HUD")),
+        SettingsSearchEntry(tab: .battery, title: "Critical battery threshold", keywords: ["battery","critical","threshold","percent"], highlightID: SettingsTab.battery.highlightID(for: "Critical battery threshold")),
+        SettingsSearchEntry(tab: .battery, title: "Bluetooth low battery alert", keywords: ["bluetooth","airpods","mouse","keyboard","low battery"], highlightID: SettingsTab.battery.highlightID(for: "Bluetooth low battery alert")),
+        SettingsSearchEntry(tab: .battery, title: "Bluetooth low battery threshold", keywords: ["bluetooth","threshold","low battery","percent"], highlightID: SettingsTab.battery.highlightID(for: "Bluetooth low battery threshold")),
+        SettingsSearchEntry(tab: .battery, title: "Test critical battery HUD", keywords: ["battery", "test", "critical", "preview"], highlightID: nil),
+        SettingsSearchEntry(tab: .battery, title: "Test charge limit HUD", keywords: ["battery", "test", "charge limit", "preview"], highlightID: nil),
 
         // HUDs
         SettingsSearchEntry(tab: .devices, title: "Show Bluetooth device connections", keywords: ["bluetooth", "hud"], highlightID: SettingsTab.devices.highlightID(for: "Show Bluetooth device connections")),
@@ -1196,6 +1207,25 @@ struct Charge: View {
     @Default(.fullBatteryHUDThreshold) private var fullBatteryHUDThreshold
     @Default(.lowBatteryHUDStyle) private var lowBatteryHUDStyle
     @Default(.fullBatteryHUDStyle) private var fullBatteryHUDStyle
+    @Default(.showCriticalBatteryHUD) private var showCriticalBatteryHUD
+    @Default(.criticalBatteryHUDThreshold) private var criticalBatteryHUDThreshold
+    @Default(.showChargeHeldHUD) private var showChargeHeldHUD
+    @Default(.showBluetoothLowBatteryAlert) private var showBluetoothLowBatteryAlert
+    @Default(.bluetoothLowBatteryThreshold) private var bluetoothLowBatteryThreshold
+
+    private var criticalBatteryThresholdBinding: Binding<Double> {
+        Binding(
+            get: { Double(criticalBatteryHUDThreshold) },
+            set: { criticalBatteryHUDThreshold = Int($0.rounded()) }
+        )
+    }
+
+    private var bluetoothLowBatteryThresholdBinding: Binding<Double> {
+        Binding(
+            get: { Double(bluetoothLowBatteryThreshold) },
+            set: { bluetoothLowBatteryThreshold = Int($0.rounded()) }
+        )
+    }
 
     private func highlightID(_ title: String) -> String {
         SettingsTab.battery.highlightID(for: title)
@@ -1272,6 +1302,28 @@ struct Charge: View {
                     Text("Battery Information")
                 }
                 Section {
+                    Defaults.Toggle(key: .showBatteryTimeRemaining) {
+                        Text("Show time remaining / time to full")
+                    }
+                    .settingsHighlight(id: highlightID("Show time remaining"))
+                    Defaults.Toggle(key: .showChargerWattage) {
+                        Text("Show charger wattage")
+                    }
+                    .settingsHighlight(id: highlightID("Show charger wattage"))
+                    Defaults.Toggle(key: .showChargingStatusText) {
+                        Text("Show fast / held charging status")
+                    }
+                    .settingsHighlight(id: highlightID("Show charging status"))
+                    Defaults.Toggle(key: .showBatteryHealthDetail) {
+                        Text("Show battery health and cycle count")
+                    }
+                    .settingsHighlight(id: highlightID("Show battery health"))
+                } header: {
+                    Text("Charging Details")
+                } footer: {
+                    Text("Each line appears only when macOS reports the data. Click the battery in the open notch for health and cycle count.")
+                }
+                Section {
                     Defaults.Toggle(key: .showChargingBatteryHUD) {
                         Text("Charging HUD")
                     }
@@ -1286,6 +1338,16 @@ struct Charge: View {
                         Text("Fully charged HUD")
                     }
                     .settingsHighlight(id: highlightID("Fully charged HUD"))
+
+                    Defaults.Toggle(key: .showCriticalBatteryHUD) {
+                        Text("Critical battery HUD")
+                    }
+                    .settingsHighlight(id: highlightID("Critical battery HUD"))
+
+                    Defaults.Toggle(key: .showChargeHeldHUD) {
+                        Text("Charge limit reached HUD")
+                    }
+                    .settingsHighlight(id: highlightID("Charge limit reached HUD"))
                 } header: {
                     Text("Battery HUDs")
                 } footer: {
@@ -1349,11 +1411,25 @@ struct Charge: View {
                     .disabled(!showPowerStatusNotifications || !showLowBatteryHUD)
 
                     Button {
+                        batteryStatusViewModel.triggerTestHUD(kind: .lowBattery, flavor: .critical)
+                    } label: {
+                        Label("Test critical battery HUD", systemImage: "exclamationmark.triangle.fill")
+                    }
+                    .disabled(!showPowerStatusNotifications || !showCriticalBatteryHUD)
+
+                    Button {
                         batteryStatusViewModel.triggerTestHUD(kind: .fullBattery)
                     } label: {
                         Label("Test full battery HUD", systemImage: "battery.100")
                     }
                     .disabled(!showPowerStatusNotifications || !showFullBatteryHUD)
+
+                    Button {
+                        batteryStatusViewModel.triggerTestHUD(kind: .fullBattery, flavor: .chargeHeld)
+                    } label: {
+                        Label("Test charge limit HUD", systemImage: "pause.circle")
+                    }
+                    .disabled(!showPowerStatusNotifications || !showChargeHeldHUD)
                 } header: {
                     Text("HUD Tests")
                 } footer: {
@@ -1390,6 +1466,25 @@ struct Charge: View {
                 .opacity(sectionOpacity(showPowerStatusNotifications && showLowBatteryHUD))
 
                 Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Critical battery threshold")
+                            Spacer()
+                            Text("\(criticalBatteryHUDThreshold)%")
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(value: criticalBatteryThresholdBinding, in: 3...15, step: 1)
+                    }
+                    .settingsHighlight(id: highlightID("Critical battery threshold"))
+                } header: {
+                    Text("Critical Battery")
+                } footer: {
+                    Text("A second, stronger alert below the low-battery level. It is always kept below the low-battery threshold.")
+                }
+                .disabled(!showPowerStatusNotifications || !showCriticalBatteryHUD)
+                .opacity(sectionOpacity(showPowerStatusNotifications && showCriticalBatteryHUD))
+
+                Section {
                     VStack(alignment: .leading, spacing: 10) {
                         SettingsSegmentedPicker(
                             "Full battery style",
@@ -1415,9 +1510,34 @@ struct Charge: View {
                     .settingsHighlight(id: highlightID("Full charge threshold"))
                 } header: {
                     Text("Full Battery")
+                } footer: {
+                    Text("Set this to your charge limit. If macOS holds charging below 100% (Optimized Battery Charging or a charge limit), the charge limit HUD tells you once per plug-in.")
                 }
                 .disabled(!showPowerStatusNotifications || !showFullBatteryHUD)
                 .opacity(sectionOpacity(showPowerStatusNotifications && showFullBatteryHUD))
+                Section {
+                    Defaults.Toggle(key: .showBluetoothLowBatteryAlert) {
+                        Text("Low battery alert")
+                    }
+                    .settingsHighlight(id: highlightID("Bluetooth low battery alert"))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Alert at or below")
+                            Spacer()
+                            Text("\(bluetoothLowBatteryThreshold)%")
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(value: bluetoothLowBatteryThresholdBinding, in: 5...40, step: 5)
+                    }
+                    .settingsHighlight(id: highlightID("Bluetooth low battery threshold"))
+                    .disabled(!showBluetoothLowBatteryAlert)
+                    .opacity(sectionOpacity(showBluetoothLowBatteryAlert))
+                } header: {
+                    Text("Bluetooth Devices")
+                } footer: {
+                    Text("AirPods, headphones, mice, keyboards and trackpads that report a battery level. Each device alerts once per connection.")
+                }
             } else {
                 ContentUnavailableView {
                     VStack(spacing: 16) {

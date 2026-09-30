@@ -34,12 +34,19 @@ class BluetoothAudioManager: ObservableObject {
     @Published var connectedDevices: [BluetoothAudioDevice] = []
     @Published var isBluetoothAudioConnected: Bool = false
     @Published private(set) var activeListeningModeEvent: AirPodsListeningModeEvent?
+    /// Set while a low-battery alert for a Bluetooth device is on screen.
+    @Published private(set) var activeLowBatteryAlert: BluetoothLowBatteryAlert?
     
     // MARK: - Private Properties
     private var observers: [NSObjectProtocol] = []
     private var cancellables = Set<AnyCancellable>()
     private let coordinator = DynamicIslandViewCoordinator.shared
     private var pollingTimer: Timer?
+    private var lowBatteryTimer: Timer?
+    private var lowBatteryTracker = BluetoothLowBatteryTracker()
+    private var pendingLowBatteryAlerts: [BluetoothLowBatteryAlert] = []
+    private var lowBatteryClearTask: Task<Void, Never>?
+    private var lowBatteryTickCount = 0
     private let bluetoothPreferencesSuite = "/Library/Preferences/com.apple.Bluetooth"
     private let batteryReader = BluetoothLEBatteryReader()
     private var isLiveBatteryRefreshInFlight = false
@@ -132,6 +139,7 @@ class BluetoothAudioManager: ObservableObject {
         setupAirPodsListeningModeObservers()
         setupAirPodsListeningModeLogObserver()
         startPollingForChanges()
+        startLowBatteryMonitoring()
 
         // Deliberately deferred rather than called here.
         //
@@ -882,6 +890,7 @@ class BluetoothAudioManager: ObservableObject {
     private func applyConnectedDeviceBatteryLevels(triggerPmsetFallback: Bool = true) {
         guard !connectedDevices.isEmpty else {
             lastConnectedDevice = nil
+            evaluateLowBatteryAlerts()
             return
         }
 
@@ -907,6 +916,8 @@ class BluetoothAudioManager: ObservableObject {
            updatedDevices.contains(where: { $0.batteryLevel == nil }) {
             requestPmsetFallback(reason: "missing battery after refresh")
         }
+
+        evaluateLowBatteryAlerts()
     }
 
     private func bestBatteryLevel(for device: BluetoothAudioDevice) -> Int? {
@@ -1950,14 +1961,208 @@ class BluetoothAudioManager: ObservableObject {
         HUDSuppressionCoordinator.shared.suppressVolumeHUD(for: 1.5)
 
         Task { @MainActor in
+            // A device that connects already low gets the low-battery treatment
+            // instead of a plain connect HUD, so it is not announced twice.
+            var duration: TimeInterval = 2.5
+            let deviceID = normalizeBluetoothIdentifier(device.address)
+            if batteryLevel != nil {
+                if activeLowBatteryAlert?.deviceID == deviceID {
+                    duration = Self.lowBatteryAlertDuration
+                } else if let reading = evaluateLowBatteryAlerts(deferring: deviceID) {
+                    beginLowBatteryAlert(BluetoothLowBatteryAlert(reading: reading), showHUD: false)
+                    duration = Self.lowBatteryAlertDuration
+                }
+            }
+
             coordinator.toggleSneakPeek(
                 status: true,
                 type: .bluetoothAudio,
-                duration: 2.5,
+                duration: duration,
                 value: batteryValue,
                 icon: device.deviceType.sfSymbol
             )
         }
+    }
+
+    // MARK: - Low battery alerts
+
+    static let lowBatteryAlertDuration: TimeInterval = 4
+
+    private func startLowBatteryMonitoring() {
+        let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
+            self?.lowBatteryTick()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        lowBatteryTimer = timer
+    }
+
+    /// Every minute re-read the devices' levels from the cheap in-process
+    /// sources, and every fifth minute pay for the full refresh (subprocesses
+    /// included). Devices that are not audio devices (mice, keyboards,
+    /// trackpads) are read straight from the registry on every evaluation.
+    private func lowBatteryTick() {
+        guard Defaults[.showBluetoothLowBatteryAlert] else { return }
+        lowBatteryTickCount += 1
+        if !connectedDevices.isEmpty {
+            if lowBatteryTickCount % 5 == 0 {
+                refreshBatteryLevelsForConnectedDevices()
+            } else {
+                publishBatteryStatuses()
+                applyConnectedDeviceBatteryLevels(triggerPmsetFallback: false)
+            }
+        } else {
+            evaluateLowBatteryAlerts()
+        }
+    }
+
+    /// Runs the once-per-session tracker over every connected device that has a
+    /// battery reading: audio devices from the manager's own list, plus HID
+    /// devices (mice, keyboards, trackpads) from the registry.
+    ///
+    /// Alerts are presented (queued if one is already showing) except for
+    /// `deferredID`, which is handed back so the connect HUD can present it.
+    @discardableResult
+    private func evaluateLowBatteryAlerts(deferring deferredID: String? = nil) -> BluetoothBatteryReading? {
+        var readings: [BluetoothBatteryReading] = []
+        var ids = Set<String>()
+        var audioNames = Set<String>()
+
+        for device in connectedDevices {
+            let id = normalizeBluetoothIdentifier(device.address)
+            guard !id.isEmpty else { continue }
+            ids.insert(id)
+            audioNames.insert(normalizeProductName(device.name))
+            if let level = bestBatteryLevel(for: device) {
+                readings.append(
+                    BluetoothBatteryReading(id: id, name: device.name, level: level, symbol: device.deviceType.sfSymbol)
+                )
+            }
+        }
+
+        for reading in collectRegistryHIDBatteryReadings() {
+            guard !ids.contains(reading.id),
+                  !audioNames.contains(normalizeProductName(reading.name)) else { continue }
+            ids.insert(reading.id)
+            readings.append(reading)
+        }
+
+        let fresh = lowBatteryTracker.update(
+            connectedIDs: ids,
+            readings: readings,
+            threshold: Defaults[.bluetoothLowBatteryThreshold],
+            enabled: Defaults[.showBluetoothLowBatteryAlert]
+        )
+
+        var deferred: BluetoothBatteryReading?
+        for reading in fresh {
+            if reading.id == deferredID {
+                deferred = reading
+            } else {
+                beginLowBatteryAlert(BluetoothLowBatteryAlert(reading: reading), showHUD: true)
+            }
+        }
+        return deferred
+    }
+
+    /// Shows the alert now, or queues it behind the one on screen.
+    private func beginLowBatteryAlert(_ alert: BluetoothLowBatteryAlert, showHUD: Bool) {
+        if activeLowBatteryAlert != nil && showHUD {
+            pendingLowBatteryAlerts.append(alert)
+            return
+        }
+
+        print("🎧 [BluetoothAudioManager] 🪫 Low battery: \(alert.deviceName) at \(alert.level)%")
+        withAnimation(.smooth(duration: 0.3)) {
+            activeLowBatteryAlert = alert
+        }
+
+        if showHUD {
+            coordinator.toggleSneakPeek(
+                status: true,
+                type: .bluetoothAudio,
+                duration: Self.lowBatteryAlertDuration,
+                value: CGFloat(alert.level) / 100.0,
+                icon: alert.symbol
+            )
+        }
+
+        lowBatteryClearTask?.cancel()
+        lowBatteryClearTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.lowBatteryAlertDuration + 0.3))
+            guard let self, !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.smooth(duration: 0.3)) {
+                    self.activeLowBatteryAlert = nil
+                }
+                if !self.pendingLowBatteryAlerts.isEmpty {
+                    let next = self.pendingLowBatteryAlerts.removeFirst()
+                    self.beginLowBatteryAlert(next, showHUD: true)
+                }
+            }
+        }
+    }
+
+    /// Bluetooth HID devices (Magic Mouse / Keyboard / Trackpad and third party)
+    /// that publish `BatteryPercent`: the same registry class and key the level
+    /// lookup above already reads.
+    private func collectRegistryHIDBatteryReadings() -> [BluetoothBatteryReading] {
+        var readings: [BluetoothBatteryReading] = []
+        var iterator = io_iterator_t()
+        let result = IOServiceGetMatchingServices(
+            kIOMainPortDefault,
+            IOServiceMatching("AppleDeviceManagementHIDEventService"),
+            &iterator
+        )
+        guard result == KERN_SUCCESS else { return [] }
+        defer { IOObjectRelease(iterator) }
+
+        var entry = IOIteratorNext(iterator)
+        while entry != 0 {
+            defer {
+                IOObjectRelease(entry)
+                entry = IOIteratorNext(iterator)
+            }
+
+            guard let percent = IORegistryEntryCreateCFProperty(entry, "BatteryPercent" as CFString, kCFAllocatorDefault, 0)?
+                .takeRetainedValue() as? Int else { continue }
+
+            if let builtIn = IORegistryEntryCreateCFProperty(entry, "Built-In" as CFString, kCFAllocatorDefault, 0)?
+                .takeRetainedValue() as? Bool, builtIn {
+                continue
+            }
+            // A wired Magic Keyboard also reports a level; only Bluetooth counts.
+            if let transport = stringValue(forKey: "Transport", entry: entry),
+               !transport.lowercased().contains("bluetooth") {
+                continue
+            }
+
+            let name = stringValue(forKey: "Product", entry: entry)
+                ?? stringValue(forKey: "ProductName", entry: entry)
+                ?? String(localized: "Bluetooth Device")
+            let rawID = stringValue(forKey: "DeviceAddress", entry: entry)
+                ?? stringValue(forKey: "SerialNumber", entry: entry)
+                ?? name
+            let id = normalizeBluetoothIdentifier(rawID)
+            guard !id.isEmpty else { continue }
+
+            readings.append(
+                BluetoothBatteryReading(
+                    id: id,
+                    name: name,
+                    level: clampBatteryPercentage(percent),
+                    symbol: Self.hidSymbol(forProductName: name)
+                )
+            )
+        }
+        return readings
+    }
+
+    private static func hidSymbol(forProductName name: String) -> String {
+        let lowered = name.lowercased()
+        if lowered.contains("mouse") { return "computermouse.fill" }
+        if lowered.contains("keyboard") { return "keyboard.fill" }
+        if lowered.contains("trackpad") { return "rectangle.and.hand.point.up.left.fill" }
+        return "dot.radiowaves.left.and.right"
     }
 
     private func scheduleEventDrivenListeningModeRefresh(reason: String) {
@@ -2147,6 +2352,9 @@ class BluetoothAudioManager: ObservableObject {
         
         pollingTimer?.invalidate()
         pollingTimer = nil
+        lowBatteryTimer?.invalidate()
+        lowBatteryTimer = nil
+        lowBatteryClearTask?.cancel()
         
         let dnc = DistributedNotificationCenter.default()
         dnc.removeObserver(self)
@@ -2546,6 +2754,21 @@ struct BluetoothAudioDevice: Identifiable {
         self.address = address
         self.batteryLevel = batteryLevel
         self.deviceType = deviceType
+    }
+}
+
+struct BluetoothLowBatteryAlert: Identifiable, Equatable {
+    let id = UUID()
+    let deviceID: String
+    let deviceName: String
+    let level: Int
+    let symbol: String
+
+    init(reading: BluetoothBatteryReading) {
+        deviceID = reading.id
+        deviceName = reading.name
+        level = reading.level
+        symbol = reading.symbol ?? "dot.radiowaves.left.and.right"
     }
 }
 

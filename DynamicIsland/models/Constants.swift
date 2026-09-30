@@ -688,6 +688,17 @@ extension Defaults.Keys {
     static let lowBatteryHUDStyle = Key<BatteryNotificationStyle>("lowBatteryHUDStyle", default: .standard)
     static let fullBatteryHUDStyle = Key<BatteryNotificationStyle>("fullBatteryHUDStyle", default: .standard)
 
+        // MARK: Battery extras
+    static let showBatteryTimeRemaining = Key<Bool>("showBatteryTimeRemaining", default: true)
+    static let showChargerWattage = Key<Bool>("showChargerWattage", default: true)
+    static let showChargingStatusText = Key<Bool>("showChargingStatusText", default: true)
+    static let showBatteryHealthDetail = Key<Bool>("showBatteryHealthDetail", default: true)
+    static let showCriticalBatteryHUD = Key<Bool>("showCriticalBatteryHUD", default: true)
+    static let criticalBatteryHUDThreshold = Key<Int>("criticalBatteryHUDThreshold", default: 10)
+    static let showChargeHeldHUD = Key<Bool>("showChargeHeldHUD", default: true)
+    static let showBluetoothLowBatteryAlert = Key<Bool>("showBluetoothLowBatteryAlert", default: true)
+    static let bluetoothLowBatteryThreshold = Key<Int>("bluetoothLowBatteryThreshold", default: 20)
+
     
         // MARK: Downloads
     static let enableDownloadListener = Key<Bool>("enableDownloadListener", default: true)

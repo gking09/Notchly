@@ -109,6 +109,7 @@ struct BatteryView: View {
                     if let statusSymbol {
                         Image(systemName: statusSymbol)
                             .font(.system(size: height * 0.42, weight: .bold))
+                            .symbolEffect(.pulse, options: .repeating, isActive: isCharging && !NotchlyTheme.Motion.reduceMotion)
                     }
                 }
                 .foregroundStyle(Color.black.opacity(0.82))
@@ -278,6 +279,9 @@ struct MinimalisticBatteryView: View {
 }
 
 /// A view that displays detailed battery information and settings.
+///
+/// Every row beyond the level is shown only when IOKit actually reported the
+/// data behind it and the matching setting is on.
 struct BatteryMenuView: View {
     
     var isPluggedIn: Bool
@@ -286,12 +290,37 @@ struct BatteryMenuView: View {
     var maxCapacity: Float
     var timeToFullCharge: Int
     var isInLowPowerMode: Bool
+    var details: BatteryDetails = .empty
     var onDismiss: () -> Void
+
+    @Default(.showBatteryTimeRemaining) private var showTimeRemaining
+    @Default(.showChargerWattage) private var showWattage
+    @Default(.showChargingStatusText) private var showStatusText
+    @Default(.showBatteryHealthDetail) private var showHealth
 
     @Environment(\.openURL) private var openURL
 
+    private var statusRow: (text: String, symbol: String)? {
+        switch details.state {
+        case .onBattery:
+            return nil
+        case .charging:
+            return (String(localized: "Charging"), "bolt.fill")
+        case .fastCharging:
+            return showStatusText ? (String(localized: "Fast charging"), "bolt.fill") : (String(localized: "Charging"), "bolt.fill")
+        case .slowCharging:
+            return showStatusText ? (String(localized: "Charging slowly"), "bolt.fill") : (String(localized: "Charging"), "bolt.fill")
+        case .held(let percent):
+            return (String(localized: "Charging held at \(percent)%"), "pause.circle")
+        case .full:
+            return (String(localized: "Fully charged"), "battery.100percent")
+        case .pluggedNotCharging:
+            return (String(localized: "Plugged in, not charging"), "powerplug.fill")
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
 
             HStack {
                 Text("Battery Status")
@@ -301,40 +330,78 @@ struct BatteryMenuView: View {
                 Text("\(Int(levelBattery))%")
                     .font(.headline)
                     .fontWeight(.semibold)
+                    .contentTransition(.numericText(value: Double(levelBattery)))
             }
             
             VStack(alignment: .leading, spacing: 8) {
-                Text("Max Capacity: \(Int(maxCapacity))%")
-                    .font(.subheadline)
-                    .fontWeight(.regular)
                 if isInLowPowerMode {
                     Label("Low Power Mode", systemImage: "bolt.circle")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
-                if isCharging {
-                    Label("Charging", systemImage: "bolt.fill")
+                if let statusRow {
+                    Label(statusRow.text, systemImage: statusRow.symbol)
                         .font(.subheadline)
                         .fontWeight(.regular)
-                }
-                if isPluggedIn {
+                } else if isPluggedIn {
                     Label("Plugged In", systemImage: "powerplug.fill")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
-                if timeToFullCharge > 0 {
-                    Label("Time to Full Charge: \(timeToFullCharge) min", systemImage: "clock")
+                if showTimeRemaining, let time = details.time {
+                    Label {
+                        Text(time.captionText)
+                            .contentTransition(.numericText())
+                    } icon: {
+                        Image(systemName: "clock")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.regular)
+                }
+                if showWattage, let watts = details.adapterWatts {
+                    Label("\(watts)W power adapter", systemImage: "powerplug")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
-                if !isCharging && isPluggedIn && levelBattery >= 80 {
-                    Label("Charging on Hold: Desktop Mode", systemImage: "desktopcomputer")
+                if showWattage, let power = details.chargingPowerWatts {
+                    Label("Charging at \(Int(power.rounded()))W", systemImage: "gauge.with.dots.needle.33percent")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
-                    
             }
-            .padding(.vertical, 8)
+            .animation(NotchlyTheme.Motion.spring, value: details)
+            .padding(.vertical, 4)
+
+            if showHealth, details.healthPercent != nil || details.cycleCount != nil {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    if let health = details.healthPercent {
+                        HStack {
+                            Text("Maximum capacity")
+                            Spacer()
+                            Text("\(health)%")
+                                .contentTransition(.numericText(value: Double(health)))
+                        }
+                        .font(.subheadline)
+
+                        NotchlyProgressBar(progress: Double(health) / 100, height: 4)
+                            .animation(NotchlyTheme.Motion.spring, value: health)
+                    }
+                    if let cycles = details.cycleCount {
+                        HStack {
+                            Text("Cycle count")
+                            Spacer()
+                            if let design = details.designCycleCount, design > 0 {
+                                Text("\(cycles) of \(design)")
+                            } else {
+                                Text("\(cycles)")
+                            }
+                        }
+                        .font(.subheadline)
+                    }
+                }
+            }
 
             Divider()
 
@@ -344,7 +411,7 @@ struct BatteryMenuView: View {
             }
             .frame(maxWidth: .infinity)
             .buttonStyle(.plain)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
         .padding()
         .frame(width: 280)
@@ -360,6 +427,36 @@ struct BatteryMenuView: View {
 }
 
 
+/// Small "1h 12m" chip shown beside the battery in the open notch header.
+/// Renders nothing unless the setting is on and macOS supplied an estimate.
+struct BatteryTimeChip: View {
+    let info: BatteryTimeInfo?
+    @Default(.showBatteryTimeRemaining) private var showTimeRemaining
+
+    var body: some View {
+        Group {
+            if showTimeRemaining, let info {
+                HStack(spacing: 3) {
+                    Image(systemName: info.kind == .toFull ? "bolt.fill" : "clock")
+                        .font(.system(size: 9, weight: .bold))
+                    Text(info.isCalculating ? String(localized: "Calculating…") : info.compactText)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                }
+                .foregroundStyle(NotchlyTheme.Palette.textSecondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .glassSurface(in: Capsule())
+                .help(info.captionText)
+                .transition(.opacity.combined(with: .scale(scale: 0.85)))
+            }
+        }
+        .animation(NotchlyTheme.Motion.spring, value: info)
+    }
+}
+
 /// A view that displays the battery status and allows interaction to show detailed information.
 struct DynamicIslandBatteryView: View {
     
@@ -372,6 +469,7 @@ struct DynamicIslandBatteryView: View {
     var levelBattery: Float = 0
     var maxCapacity: Float = 0
     var timeToFullCharge: Int = 0
+    var details: BatteryDetails = .empty
     @State var isForNotification: Bool = false
     
     @State private var showPopupMenu: Bool = false
@@ -382,6 +480,8 @@ struct DynamicIslandBatteryView: View {
 
     var body: some View {
         HStack {
+            BatteryTimeChip(info: details.time)
+
             // The number goes in one place or the other, never both.
             if showBatteryPercentage && !showBatteryPercentInside {
                 ZStack(alignment: .trailing) {
@@ -393,6 +493,7 @@ struct DynamicIslandBatteryView: View {
                         .font(.callout)
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                        .contentTransition(.numericText(value: Double(levelBattery)))
                 }
                 .fixedSize(horizontal: true, vertical: false)
             }
@@ -432,6 +533,7 @@ struct DynamicIslandBatteryView: View {
                 maxCapacity: maxCapacity,
                 timeToFullCharge: timeToFullCharge,
                 isInLowPowerMode: isInLowPowerMode,
+                details: details,
                 onDismiss: { 
                     showPopupMenu = false
                 }
@@ -496,23 +598,89 @@ private extension BatteryTemporaryHUDKind {
     }
 }
 
+/// The compact battery HUD. Content sits in the two wings either side of the
+/// hardware notch (`wingWidth` each); the middle is left empty so nothing is
+/// hidden behind the notch. With enough height each wing gets a second line:
+/// left carries the adapter wattage, right the time estimate.
 private struct BatteryCompactStatusRow: View {
     let title: String
+    let subtitle: String?
+    let caption: String?
+    let glyph: String?
+    let glyphPulseDuration: Double
     let batteryLevel: Int
     let tint: Color
+    let wingWidth: CGFloat
+    let notchWidth: CGFloat
+    let twoLine: Bool
+
+    @State private var shownLevel = 0
+    @State private var glyphPulse = false
 
     var body: some View {
-        HStack {
-            Text(verbatim: title)
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.8))
+        HStack(spacing: 0) {
+            leadingWing
+                .frame(width: wingWidth, alignment: .leading)
 
-            Spacer()
+            Color.clear
+                .frame(width: notchWidth)
 
+            trailingWing
+                .frame(width: wingWidth, alignment: .trailing)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
+                shownLevel = batteryLevel
+            }
+            guard glyph != nil, !NotchlyTheme.Motion.reduceMotion else { return }
+            withAnimation(.easeInOut(duration: glyphPulseDuration).repeatForever(autoreverses: true)) {
+                glyphPulse = true
+            }
+        }
+        .onChange(of: batteryLevel) { _, newValue in
+            withAnimation(NotchlyTheme.Motion.spring) { shownLevel = newValue }
+        }
+    }
+
+    private var leadingWing: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 4) {
+                if let glyph {
+                    Image(systemName: glyph)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(tint)
+                        .opacity(glyphPulse ? 1 : 0.55)
+                        .scaleEffect(glyphPulse ? 1.08 : 0.94)
+                }
+                Text(verbatim: title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(NotchlyTheme.Palette.textPrimary.opacity(0.85))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .contentTransition(.interpolate)
+            }
+            if twoLine, let subtitle {
+                Text(verbatim: subtitle)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(NotchlyTheme.Palette.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .contentTransition(.numericText())
+            }
+        }
+        .padding(.leading, 14)
+        .animation(NotchlyTheme.Motion.spring, value: title)
+        .animation(NotchlyTheme.Motion.spring, value: subtitle)
+    }
+
+    private var trailingWing: some View {
+        VStack(alignment: .trailing, spacing: 0) {
             HStack(spacing: 6) {
-                Text("\(batteryLevel)%")
-                    .font(.system(size: 14))
-                    .foregroundColor(tint)
+                Text("\(shownLevel)%")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(tint)
+                    .contentTransition(.numericText(value: Double(shownLevel)))
 
                 HStack(spacing: 1.5) {
                     ZStack(alignment: .leading) {
@@ -520,7 +688,7 @@ private struct BatteryCompactStatusRow: View {
                             .fill(tint.opacity(0.3))
 
                         GeometryReader { geo in
-                            let clamped = max(0, min(batteryLevel, 100))
+                            let clamped = max(0, min(shownLevel, 100))
                             let width = CGFloat(clamped) / 100 * geo.size.width
                             Rectangle()
                                 .fill(tint.gradient)
@@ -531,12 +699,21 @@ private struct BatteryCompactStatusRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
                     RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(batteryLevel == 100 ? tint.gradient : tint.opacity(0.3).gradient)
+                        .fill(shownLevel >= 100 ? tint.gradient : tint.opacity(0.3).gradient)
                         .frame(width: 2, height: 6)
                 }
             }
+            if twoLine, let caption {
+                Text(verbatim: caption)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(NotchlyTheme.Palette.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .contentTransition(.numericText())
+            }
         }
-        .padding(.horizontal, 16)
+        .padding(.trailing, 14)
+        .animation(NotchlyTheme.Motion.spring, value: caption)
     }
 }
 
@@ -551,6 +728,9 @@ struct BatteryTemporaryActivityView: View {
     @Default(.lowBatteryHUDStyle) var lowBatteryHUDStyle
     @Default(.fullBatteryHUDStyle) var fullBatteryHUDStyle
     var styleOverride: BatteryNotificationStyle? = nil
+    var extras: BatteryHUDExtras = .none
+
+    private var flavor: BatteryHUDFlavor { extras.flavor }
 
     @State private var pulse = false
     @State private var showBatteryIndicator = false
@@ -591,8 +771,11 @@ struct BatteryTemporaryActivityView: View {
             }
             return .green
         case .lowBattery:
+            if flavor == .critical { return .red }
             return isLowPowerMode ? .yellow : .red
         case .fullBattery:
+            // Held below 100% is neither "full" nor a problem, so it stays neutral.
+            if flavor == .chargeHeld { return NotchlyTheme.Palette.silver }
             return isLowPowerMode ? .yellow : .green
         }
     }
@@ -620,8 +803,15 @@ struct BatteryTemporaryActivityView: View {
         if style == .compact {
             BatteryCompactStatusRow(
                 title: compactTitle,
+                subtitle: kind == .charging ? extras.wattsText : nil,
+                caption: extras.timeText,
+                glyph: compactGlyph,
+                glyphPulseDuration: flavor == .critical ? 0.5 : 0.9,
                 batteryLevel: batteryLevel,
-                tint: batteryTint
+                tint: batteryTint,
+                wingWidth: max((metrics.width - closedNotchWidth) / 2, 0),
+                notchWidth: closedNotchWidth,
+                twoLine: baseHeight >= 32
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         } else {
@@ -648,25 +838,50 @@ struct BatteryTemporaryActivityView: View {
     private var compactTitle: String {
         switch kind {
         case .charging:
-            return String(localized: "Charging")
+            return extras.statusTitle ?? String(localized: "Charging")
         case .lowBattery:
-            return String(localized: "Low Battery")
+            return flavor == .critical ? String(localized: "Critical") : String(localized: "Low Battery")
         case .fullBattery:
-            return String(localized: "Full Battery")
+            return flavor == .chargeHeld ? String(localized: "Charge held") : String(localized: "Full Battery")
+        }
+    }
+
+    /// The pulsing glyph beside the title: the charging bolt, or a warning
+    /// triangle for a critical level. Nothing for a held charge.
+    private var compactGlyph: String? {
+        switch kind {
+        case .charging:
+            return extras.heldAtPercent == nil ? "bolt.fill" : nil
+        case .lowBattery:
+            return flavor == .critical ? "exclamationmark.triangle.fill" : nil
+        case .fullBattery:
+            return nil
         }
     }
 
     @ViewBuilder
     private var standardTitle: some View {
         HStack(spacing: 5) {
-            Text(verbatim: kind == .lowBattery ? String(localized: "Battery Low") : String(localized: "Full Battery"))
-                .font(.system(size: kind == .lowBattery ? 13 : 13, weight: .semibold))
+            Text(verbatim: standardTitleText)
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.82))
                 .lineLimit(1)
 
             Text("\(batteryLevel)%")
                 .font(.system(size: kind == .lowBattery ? 12 : 13, weight: .semibold))
                 .foregroundStyle(batteryTint)
+                .contentTransition(.numericText(value: Double(batteryLevel)))
+        }
+    }
+
+    private var standardTitleText: String {
+        switch kind {
+        case .lowBattery:
+            return flavor == .critical ? String(localized: "Battery Critical") : String(localized: "Battery Low")
+        case .fullBattery:
+            return flavor == .chargeHeld ? String(localized: "Charge Limit") : String(localized: "Full Battery")
+        case .charging:
+            return String(localized: "Charging")
         }
     }
 
@@ -675,6 +890,29 @@ struct BatteryTemporaryActivityView: View {
         switch kind {
         case .charging:
             EmptyView()
+        case .lowBattery where flavor == .critical:
+            VStack(alignment: .leading, spacing: 2) {
+                if let timeText = extras.timeText {
+                    Text(verbatim: timeText)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.red.opacity(0.9))
+                        .contentTransition(.numericText())
+                }
+                Text(verbatim: String(localized: "Plug in now to avoid\nshutting down."))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.gray.opacity(0.6))
+                    .lineLimit(2)
+            }
+        case .lowBattery where extras.timeText != nil && !isLowPowerMode:
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: extras.timeText ?? "")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .contentTransition(.numericText())
+                Text(verbatim: String(localized: "Plug in soon."))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.gray.opacity(0.6))
+            }
         case .lowBattery:
             if isLowPowerMode {
                 (
@@ -692,6 +930,12 @@ struct BatteryTemporaryActivityView: View {
                     .foregroundStyle(.gray.opacity(0.6))
                     .lineLimit(2)
             }
+        case .fullBattery where flavor == .chargeHeld:
+            Text(verbatim: String(localized: "Charging held at \(extras.heldAtPercent ?? batteryLevel)%."))
+                .font(.system(size: 10))
+                .foregroundStyle(.gray.opacity(0.6))
+                .fontWeight(.medium)
+                .lineLimit(1)
         case .fullBattery:
             Text(verbatim: String(localized: "Your Mac is fully charged."))
                 .font(.system(size: 10))
@@ -707,11 +951,13 @@ struct BatteryTemporaryActivityView: View {
         case .charging:
             EmptyView()
         case .lowBattery:
-            if isLowPowerMode {
+            if isLowPowerMode && flavor != .critical {
                 yellowLowIndicator
             } else {
                 redLowIndicator
             }
+        case .fullBattery where flavor == .chargeHeld:
+            heldIndicator
         case .fullBattery:
             if showBatteryIndicator {
                 if isLowPowerMode {
@@ -756,6 +1002,32 @@ struct BatteryTemporaryActivityView: View {
                 .frame(width: pulse ? 8 : 30, height: pulse ? 14 : 32)
                 .offset(x: -15)
                 .opacity(pulse ? 0.3 : 1)
+        }
+    }
+
+    /// Battery shape filled to the level it is being held at.
+    private var heldIndicator: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 30)
+                .fill(.white.opacity(0.1))
+                .frame(width: 70, height: 40)
+
+            HStack(spacing: 2) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.white.opacity(0.22))
+                    .frame(width: 44, height: 24)
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(NotchlyTheme.Palette.silver.gradient)
+                            .frame(width: 34 * CGFloat(min(max(batteryLevel, 0), 100)) / 100, height: 14)
+                            .padding(.leading, 5)
+                            .opacity(pulse ? 1 : 0.6)
+                    }
+
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.white.opacity(0.22))
+                    .frame(width: 3, height: 8)
+            }
         }
     }
 
@@ -856,19 +1128,23 @@ struct BatteryTemporaryActivityView: View {
 
     private func prepareAnimations() {
         pulse = false
-        showBatteryIndicator = kind == .fullBattery && style == .standard
+        showBatteryIndicator = kind == .fullBattery && style == .standard && flavor != .chargeHeld
         changeBatteryIndicator = true
 
-        guard style == .standard else { return }
+        guard style == .standard, !NotchlyTheme.Motion.reduceMotion else { return }
 
         switch kind {
         case .charging:
             break
         case .lowBattery:
-            if !isLowPowerMode {
-                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
+            if !isLowPowerMode || flavor == .critical {
+                withAnimation(.easeInOut(duration: flavor == .critical ? 0.5 : 1).repeatForever(autoreverses: true)) {
                     pulse = true
                 }
+            }
+        case .fullBattery where flavor == .chargeHeld:
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                pulse = true
             }
         case .fullBattery:
             withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {

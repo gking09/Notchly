@@ -17,6 +17,7 @@
  */
 
 import Foundation
+import IOKit
 import IOKit.ps
 
 /// Lightweight helper for querying macOS battery charging status and ETA.
@@ -71,13 +72,49 @@ final class MacBatteryManager {
         guard status.isCharging, let minutes = status.timeRemainingMinutes, minutes > 0 else {
             return nil
         }
+        return BatteryTimeFormatter.format(minutes: minutes)
+    }
 
-        let hours = minutes / 60
-        let remainingMinutes = minutes % 60
+    // MARK: - Detail snapshot
 
-        if hours > 0 {
-            return "\(hours)h \(remainingMinutes)m"
+    /// One read of everything the battery extras show: IOPS for level, charging
+    /// flags and the OS time estimates, AppleSmartBattery for health, cycles,
+    /// charger data and the adapter, and `IOPSCopyExternalPowerAdapterDetails`
+    /// for the rated wattage. Interpretation lives in `BatteryDetailsInterpreter`.
+    func currentDetails() -> BatteryDetails {
+        guard let powerSource = internalBatteryDescription() else { return .empty }
+        let adapter = IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any]
+        return BatteryDetailsInterpreter.interpret(
+            powerSource: powerSource,
+            smartBattery: smartBatteryProperties(),
+            adapter: adapter,
+            estimateSeconds: IOPSGetTimeRemainingEstimate()
+        )
+    }
+
+    private func internalBatteryDescription() -> [String: Any]? {
+        guard let sourcesInfo = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let sourcesList = IOPSCopyPowerSourcesList(sourcesInfo)?.takeRetainedValue() as? [CFTypeRef] else {
+            return nil
         }
-        return "\(remainingMinutes)m"
+        for source in sourcesList {
+            guard let description = IOPSGetPowerSourceDescription(sourcesInfo, source)?.takeUnretainedValue() as? [String: Any],
+                  description[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
+            return description
+        }
+        return nil
+    }
+
+    private func smartBatteryProperties() -> [String: Any] {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
+        guard service != 0 else { return [:] }
+        defer { IOObjectRelease(service) }
+
+        var properties: Unmanaged<CFMutableDictionary>?
+        guard IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0) == KERN_SUCCESS,
+              let dictionary = properties?.takeRetainedValue() as? [String: Any] else {
+            return [:]
+        }
+        return dictionary
     }
 }

@@ -990,7 +990,8 @@ struct ContentView: View {
                             baseHeight: vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0),
                             isDynamicIslandMode: isDynamicIslandMode,
                             topCornerRadius: activeCornerRadiusInsets.closed.top,
-                            styleOverride: batteryModel.activeTemporaryHUDKind.map { resolvedBatteryNotificationStyle(for: $0) }
+                            styleOverride: batteryModel.activeTemporaryHUDKind.map { resolvedBatteryNotificationStyle(for: $0) },
+                            extras: batteryModel.activeTemporaryHUDExtras
                         )
                         .id(batteryModel.activeTemporaryHUDToken)
                       } else if isSneakPeekVisibleOnCurrentScreen && (Defaults[.inlineHUD] || isAirPodsListeningModeSneak) && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .reminder) && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {

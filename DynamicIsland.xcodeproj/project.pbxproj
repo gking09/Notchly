@@ -11,6 +11,7 @@
 		6B8DE5BE065E4BFE9E531A74 /* MarqueeTextMeasurementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC2ACF06B40405DB1A8F99E /* MarqueeTextMeasurementTests.swift */; };
 		738C4EBB63E3449B923997D0 /* MenuBarClearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */; };
 		A1C0DE0000000000000000A1 /* TimerClockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE0000000000000000B1 /* TimerClockTests.swift */; };
+		A1C0DE00000000000000BA01 /* BatteryExtrasTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */; };
 		A1C0DE0000000000000000A2 /* QuickActionsLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */; };
 		7E1ADF1D2EA209B1001DA867 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7E61181E2E24071E0050006C /* SkyLightWindow */; };
 		7E6118142E24071E0050006C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 14D032192C68F32E0096E6A1 /* LaunchAtLogin */; };
@@ -78,6 +79,7 @@
 		2137D0F9431A495AA62ACE96 /* NowPlayingPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingPayloadTests.swift; sourceTree = "<group>"; };
 		2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarClearanceTests.swift; sourceTree = "<group>"; };
 		A1C0DE0000000000000000B1 /* TimerClockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerClockTests.swift; sourceTree = "<group>"; };
+		A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryExtrasTests.swift; sourceTree = "<group>"; };
 		A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsLayoutTests.swift; sourceTree = "<group>"; };
 		47C39E67B09152F6665ED683 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		54078F29304A9DBBEFBDF932 /* DynamicIslandUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DynamicIslandUITests.swift; sourceTree = "<group>"; };
@@ -214,6 +216,7 @@
 				C1DE0FAV0001000000000002 /* CiderFavoritingTests.swift */,
 				2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */,
 				A1C0DE0000000000000000B1 /* TimerClockTests.swift */,
+				A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */,
 				A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */,
 				A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */,
 				A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */,
@@ -491,6 +494,7 @@
 				C1DE0FAV0001000000000001 /* CiderFavoritingTests.swift in Sources */,
 				738C4EBB63E3449B923997D0 /* MenuBarClearanceTests.swift in Sources */,
 				A1C0DE0000000000000000A1 /* TimerClockTests.swift in Sources */,
+				A1C0DE00000000000000BA01 /* BatteryExtrasTests.swift in Sources */,
 				A1C0DE0000000000000000A2 /* QuickActionsLayoutTests.swift in Sources */,
 				A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */,
 				A1B2C3D40000000000000003 /* NetEaseLyricsTests.swift in Sources */,
