@@ -63,7 +63,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case downloads
     case shelf
     case shortcuts
-    case notes
     case about
 
     var id: String { rawValue }
@@ -74,7 +73,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general, .appearance:                                          return .core
         case .media, .liveActivities, .lockScreen, .devices:                 return .mediaAndDisplay
         case .hudAndOSD, .battery:                                           return .system
-        case .timer, .calendar, .notes:                                      return .productivity
+        case .timer, .calendar:                                             return .productivity
         case .clipboard, .screenAssistant, .shelf,
              .downloads, .shortcuts:                                         return .utilities
         case .stats:                                                        return .developer
@@ -102,7 +101,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return String(localized: "Downloads")
         case .shelf: return String(localized: "Shelf")
         case .shortcuts: return String(localized: "Shortcuts")
-        case .notes: return String(localized: "Notes")
         case .about: return String(localized: "About")
         }
     }
@@ -126,7 +124,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return "square.and.arrow.down"
         case .shelf: return "books.vertical"
         case .shortcuts: return "keyboard"
-        case .notes: return "note.text"
         case .about: return "info.circle"
         }
     }
@@ -150,7 +147,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return .gray
         case .shelf: return .brown
         case .shortcuts: return .orange
-        case .notes: return Color(red: 0.979, green: 0.716, blue: 0.153, opacity: 1.000)
         case .about: return .secondary
         }
     }
@@ -770,7 +766,6 @@ struct SettingsView: View {
             // Productivity
             .timer,
             .calendar,
-            .notes,
             // Utilities
             .clipboard,
             .screenAssistant,
@@ -971,7 +966,7 @@ struct SettingsView: View {
 
     private func isTabVisible(_ tab: SettingsTab) -> Bool {
         switch tab {
-        case .timer, .stats, .clipboard, .screenAssistant, .shelf, .notes:
+        case .timer, .stats, .clipboard, .screenAssistant, .shelf:
             return !enableMinimalisticUI
         default:
             return true
@@ -1048,10 +1043,6 @@ struct SettingsView: View {
         case .shortcuts:
             SettingsForm(tab: .shortcuts) {
                 Shortcuts()
-            }
-        case .notes:
-            SettingsForm(tab: .notes) {
-                NotesSettingsView()
             }
         case .about:
             if let controller = updaterController {
@@ -8196,7 +8187,7 @@ struct ClipboardSettings: View {
                     case .panel:
                         Text("Panel mode shows clipboard in a floating window near the notch.")
                     case .separateTab:
-                        Text("Separate Tab mode integrates Copied Items and Notes into a single view. If both are enabled, Notes appear on the right and Clipboard on the left.")
+                        Text("Separate Tab mode shows clipboard in its own tab inside the notch.")
                     case .notchTab:
                         Text("Notch Tab mode shows clipboard in its own tab inside the notch. Drag text, image, or single-file items straight out to Finder or another app.")
                     }
@@ -8719,103 +8710,6 @@ struct SettingsPermissionCallout: View {
 
 #Preview {
     HUD()
-}
-
-struct NotesSettingsView: View {
-    @EnvironmentObject var vm: DynamicIslandViewModel
-    @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @ObservedObject private var appleNotesSync = AppleNotesSyncManager.shared
-    @Default(.enableNotes) private var enableNotes
-    @Default(.enableAppleNotesSync) private var enableAppleNotesSync
-    @Default(.appleNotesLastSyncDate) private var appleNotesLastSyncDate
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.notes.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableNotes) {
-                    Text("Enable Notes")
-                }
-                if enableNotes {
-                    Defaults.Toggle(key: .enableNotePinning) {
-                        Text("Enable Note Pinning")
-                    }
-                    Defaults.Toggle(key: .enableNoteSearch) {
-                        Text("Enable Note Search")
-                    }
-                    Defaults.Toggle(key: .enableNoteColorFiltering) {
-                        Text("Enable Color Filtering")
-                    }
-                    Defaults.Toggle(key: .enableCreateFromClipboard) {
-                        Text("Enable Create from Clipboard")
-                    }
-                    Defaults.Toggle(key: .enableNoteCharCount) {
-                        Text("Show Character Count")
-                    }
-                }
-            } header: {
-                Text("General")
-            } footer: {
-                Text("Customize how you organize and create notes. Enabling color filtering and search helps manage large lists.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if enableNotes {
-                Section {
-                    Defaults.Toggle(key: .enableAppleNotesSync) {
-                        Text("Sync with Apple Notes")
-                    }
-                    .settingsHighlight(id: highlightID("Sync with Apple Notes"))
-
-                    if enableAppleNotesSync {
-                        Button {
-                            Task {
-                                let notes = Defaults[.savedNotes]
-                                if let merged = await appleNotesSync.sync(localNotes: notes) {
-                                    Defaults[.savedNotes] = merged
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text("Sync Now")
-                                Spacer()
-                                if appleNotesSync.isSyncing {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                            }
-                        }
-                        .disabled(appleNotesSync.isSyncing)
-                        .settingsHighlight(id: highlightID("Sync Now"))
-
-                        if let lastSync = appleNotesLastSyncDate {
-                            LabeledContent("Last synced") {
-                                Text(lastSync, style: .relative)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if let error = appleNotesSync.lastError {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        }
-                    }
-                } header: {
-                    Text("Apple Notes")
-                } footer: {
-                    Text("Two-way sync with the macOS Notes app. Notes created in Atoll appear in the Atoll folder in Notes, and your existing Apple Notes are imported into the notch. Grant Automation permission for Notes when prompted.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .navigationTitle("Notes")
-    }
 }
 
 // MARK: - Reusable App Icon View

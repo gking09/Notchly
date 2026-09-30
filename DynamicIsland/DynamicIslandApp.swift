@@ -567,12 +567,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Use a consistent height for different view types
         if coordinator.currentView == .timer {
             baseSize.height = 250 // Extra space for timer presets
-        } else if coordinator.currentView == .notes {
-            let preferredHeight = coordinator.notesLayoutState.preferredHeight
-            baseSize.height = max(baseSize.height, preferredHeight)
         } else if coordinator.currentView == .clipboard {
-            // Clipboard has its own fixed height source; don't inherit the notes layout state.
-            baseSize.height = max(baseSize.height, NotesLayoutState.list.preferredHeight)
+            baseSize.height = max(baseSize.height, NotchClipboardView.preferredHeight)
         }
         
         baseSize = inlineLyricsAdjustedNotchSize(
@@ -825,13 +821,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        coordinator.$notesLayoutState
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.updateWindowSizeIfNeeded()
-            }
-            .store(in: &cancellables)
-        
         // Observe stats settings changes - use debounced updates
         Defaults.publisher(.enableStatsFeature, options: []).sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()
@@ -1400,12 +1389,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             case .separateTab:
                 if vm.notchState == .closed {
                     vm.open()
-                    coordinator.currentView = .notes
+                    coordinator.currentView = .clipboard
                 } else {
-                    if coordinator.currentView == .notes {
+                    if coordinator.currentView == .clipboard {
                         vm.close()
                     } else {
-                        coordinator.currentView = .notes
+                        coordinator.currentView = .clipboard
                     }
                 }
             case .notchTab:

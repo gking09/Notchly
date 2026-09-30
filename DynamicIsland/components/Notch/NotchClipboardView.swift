@@ -26,6 +26,9 @@ import Defaults
 /// grid fills whatever width it is given (more columns in the full notch tab, fewer
 /// in the narrow split panel).
 struct NotchClipboardView: View {
+    /// Fixed notch content height used whenever the clipboard tab is showing.
+    static let preferredHeight: CGFloat = 240
+
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var clipboardManager = ClipboardManager.shared
     @State private var hoveredItemId: UUID?

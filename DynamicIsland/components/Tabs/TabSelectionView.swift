@@ -81,10 +81,8 @@ struct TabSelectionView: View {
             tabsArray.append(TabModel(label: "Stats", icon: "chart.xyaxis.line", view: .stats))
         }
 
-        if Defaults[.enableNotes] || (Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .separateTab) {
-            let label = Defaults[.enableNotes] ? "Notes" : "Clipboard"
-            let icon = Defaults[.enableNotes] ? "note.text" : "doc.on.clipboard"
-            tabsArray.append(TabModel(label: label, icon: icon, view: .notes))
+        if Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .separateTab {
+            tabsArray.append(TabModel(label: "Clipboard", icon: "doc.on.clipboard", view: .clipboard))
         }
         if extensionTabsEnabled {
             for payload in extensionTabPayloads {
