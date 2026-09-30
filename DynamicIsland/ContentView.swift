@@ -60,9 +60,7 @@ struct ContentView: View {
     @ObservedObject var capsLockManager = CapsLockManager.shared
     @ObservedObject var extensionLiveActivityManager = ExtensionLiveActivityManager.shared
     @ObservedObject var extensionNotchExperienceManager = ExtensionNotchExperienceManager.shared
-    @ObservedObject var localSendService = LocalSendService.shared
     @State private var downloadManager = DownloadManager.shared
-    @ObservedObject var shelfState = ShelfStateViewModel.shared
     
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableTimerFeature) var enableTimerFeature
@@ -429,19 +427,6 @@ struct ContentView: View {
         shouldHideUntilHover && !lockScreenManager.isLocked
     }
     
-    /// Whether the LocalSend live activity should be shown
-    private var localSendLiveActivityActive: Bool {
-        localSendService.isSending || 
-        localSendService.transferState == .completed ||
-        isLocalSendFailedOrRejected
-    }
-    
-    private var isLocalSendFailedOrRejected: Bool {
-        if case .failed = localSendService.transferState { return true }
-        if case .rejected = localSendService.transferState { return true }
-        return false
-    }
-
     /// Pill shape for Dynamic Island mode with animated corner radius transitions.
     private var currentPillShape: DynamicIslandPillShape {
         let radius: CGFloat
@@ -798,7 +783,6 @@ struct ContentView: View {
         .animation(nil, value: vm.notchState)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environmentObject(privacyManager)
-        .background(dragDetector)
         .environmentObject(vm)
         .environmentObject(webcamManager)
     }
@@ -1022,8 +1006,6 @@ struct ContentView: View {
                               return false
                           case .extensionPayload:
                               return false
-                          case .shelf:
-                              return false
                           }
                       }()
                       let canShowMusicDuringExpansion = !isCurrentScreenExpansionVisible
@@ -1072,9 +1054,6 @@ struct ContentView: View {
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .download) && vm.notchState == .closed && downloadManager.isDownloading && Defaults[.enableDownloadListener] && !vm.hideOnClosed {
                           DownloadLiveActivity()
                               .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
-                      } else if !isCurrentScreenExpansionVisible && vm.notchState == .closed && localSendLiveActivityActive && !vm.hideOnClosed {
-                          LocalSendLiveActivity()
-                              .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .doNotDisturb) && vm.notchState == .closed && Defaults[.enableDoNotDisturbDetection] && Defaults[.showDoNotDisturbIndicator] && (doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing) && !vm.hideOnClosed && !lockScreenManager.isLocked {
                           DoNotDisturbLiveActivity()
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
@@ -1090,9 +1069,6 @@ struct ContentView: View {
                               layout: layout,
                               isHovering: isHovering
                           )
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && !shelfState.isEmpty && !vm.hideOnClosed && !lockScreenManager.isLocked && !enableMinimalisticUI {
-                          ShelfInlineLiveActivity()
-                              .transition(.opacity.animation(.smooth(duration: 0.25)))
                       } else if !isCurrentScreenExpansionVisible && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
                           DynamicIslandFaceAnimation().animation(.interactiveSpring, value: musicManager.isPlayerIdle)
                       } else if vm.notchState == .open {
@@ -1215,8 +1191,6 @@ struct ContentView: View {
                           switch coordinator.currentView {
                               case .home:
                                   NotchHomeView(albumArtNamespace: albumArtNamespace)
-                              case .shelf:
-                                  NotchShelfView()
                               case .timer:
                                   NotchTimerView()
                             case .clipboard:
@@ -1464,11 +1438,6 @@ struct ContentView: View {
             return .extensionPayload(extensionPayload)
         }
 
-        // Shelf: show file count as lowest-priority secondary
-        if !shelfState.isEmpty && !lockScreenManager.isLocked && !enableMinimalisticUI {
-            return .shelf(count: shelfState.items.count)
-        }
-
         return nil
     }
 
@@ -1489,8 +1458,6 @@ struct ContentView: View {
         case .extensionPayload(let payload):
             let maxWidth = baseWidth + centerBaseWidth * 0.6
             return ExtensionLayoutMetrics.trailingWidth(for: payload, baseWidth: baseWidth, maxWidth: maxWidth)
-        case .shelf:
-            return baseWidth
         }
     }
 
@@ -1593,10 +1560,6 @@ struct ContentView: View {
                         accent: payload.descriptor.accentColor.swiftUIColor,
                         size: badgeSize
                     )
-                case .shelf:
-                    Image(systemName: "tray.and.arrow.down.fill")
-                        .font(.system(size: badgeSize * 0.50, weight: .semibold))
-                        .foregroundStyle(.white)
                 }
             }
             .frame(width: badgeSize, height: badgeSize)
@@ -1655,14 +1618,6 @@ struct ContentView: View {
             spectrumView(forceSpectrum: true, trailingInset: 6)
         case .extensionPayload(let payload):
             ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: trailingWidth)
-        case .shelf(let count):
-            // File count badge: bold white number, like a minimal pill
-            Text("\(count)")
-                .font(.system(.callout, design: .rounded, weight: .bold))
-                .foregroundStyle(.white)
-                .contentTransition(.numericText(countsDown: false))
-                .animation(.smooth(duration: 0.3), value: count)
-                .frame(alignment: .center)
         case .none:
             spectrumView(
                 forceSpectrum: false,
@@ -1982,36 +1937,6 @@ struct ContentView: View {
         }
     }
     
-    @ViewBuilder
-    var dragDetector: some View {
-        if lockScreenManager.isLocked {
-            EmptyView()
-        } else if Defaults[.dynamicShelf] && !Defaults[.enableMinimalisticUI] {
-            Color.clear
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .onDrop(of: [.data], isTargeted: $vm.dragDetectorTargeting) { _ in true }
-                .onChange(of: vm.anyDropZoneTargeting) { _, isTargeted in
-                    if isTargeted, vm.notchState == .closed {
-                        coordinator.currentView = .shelf
-                        openNotch()
-                    } else if !isTargeted {
-                        if vm.dropEvent {
-                            vm.dropEvent = false
-                            return
-                        }
-
-                        vm.dropEvent = false
-                        if !shouldPreventAutoClose() {
-                            vm.close()
-                        }
-                    }
-                }
-        } else {
-            EmptyView()
-        }
-    }
-
     // MARK: - Private Methods
     private func openNotch() {
         vm.open()
@@ -2341,11 +2266,8 @@ struct ContentView: View {
     }
 
     private func shouldPreventAutoClose() -> Bool {
-        // Dragging a shelf item out necessarily takes the cursor off the notch.
-        // Without this, the hover-exit timer closes the panel mid-drag, tearing
-        // down the NSView that is acting as the drag source and cancelling the
-        // session — an independent second cause of "drag-out doesn't work".
-        coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || ShelfSelectionModel.shared.isDragging || ClipboardManager.shared.isDraggingItem || SharingStateManager.shared.preventNotchClose
+        // Dragging a clipboard item out necessarily takes the cursor off the notch.
+        coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || ClipboardManager.shared.isDraggingItem || SharingStateManager.shared.preventNotchClose
     }
     
     // Helper to prevent rapid haptic feedback
@@ -2861,7 +2783,6 @@ private enum MusicSecondaryLiveActivity: Equatable {
     case focus(FocusModeType)
     case capsLock(showLabel: Bool)
     case extensionPayload(ExtensionLiveActivityPayload)
-    case shelf(count: Int)
 
     var id: String {
         switch self {
@@ -2877,8 +2798,6 @@ private enum MusicSecondaryLiveActivity: Equatable {
             return showLabel ? "caps-lock-label" : "caps-lock-icon"
         case .extensionPayload(let payload):
             return "extension-\(payload.id)"
-        case .shelf(let count):
-            return "shelf-\(count)"
         }
     }
 }

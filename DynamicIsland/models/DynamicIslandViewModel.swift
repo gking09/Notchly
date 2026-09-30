@@ -31,10 +31,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var contentType: ContentType = .normal
     @Published private(set) var notchState: NotchState = .closed
 
-    @Published var dragDetectorTargeting: Bool = false
-    @Published var dropZoneTargeting: Bool = false
-    @Published var dropEvent: Bool = false
-    @Published var anyDropZoneTargeting: Bool = false
     var cancellables: Set<AnyCancellable> = []
 
     /// Teardown hook ContentView registers in `onAppear`; the window-cleanup path
@@ -158,13 +154,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         notchSize = getClosedNotchSize(screen: screen)
         closedNotchSize = notchSize
 
-        Publishers.CombineLatest($dropZoneTargeting, $dragDetectorTargeting)
-            .map { value1, value2 in
-                value1 || value2
-            }
-            .assign(to: \.anyDropZoneTargeting, on: self)
-            .store(in: &cancellables)
-        
         setupDetectorObserver()
 
         ReminderLiveActivityManager.shared.$activeWindowReminders
@@ -399,11 +388,8 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         resetScrollGestureSuppression()
         resetAutoCloseSuppression()
 
-        // Set the current view to shelf if it contains files and the user enables openShelfByDefault
-        // Otherwise, if the user has not enabled openLastShelfByDefault, set the view to home
-        if !ShelfStateViewModel.shared.isEmpty && Defaults[.openShelfByDefault] && !Defaults[.enableMinimalisticUI] {
-            coordinator.currentView = .shelf
-        } else if !coordinator.openLastTabByDefault {
+        // Unless the user wants the last tab restored, go back to home
+        if !coordinator.openLastTabByDefault {
             coordinator.currentView = .home
         }
     }

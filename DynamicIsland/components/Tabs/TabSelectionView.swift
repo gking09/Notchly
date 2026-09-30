@@ -46,9 +46,6 @@ struct TabModel: Identifiable {
 struct TabSelectionView: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject private var extensionNotchExperienceManager = ExtensionNotchExperienceManager.shared
-    @StateObject private var quickShareService = QuickShareService.shared
-    @Default(.quickShareProvider) private var quickShareProvider
-    @State private var showQuickSharePopover = false
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.enableThirdPartyExtensions) private var enableThirdPartyExtensions
@@ -67,10 +64,6 @@ struct TabSelectionView: View {
             tabsArray.append(TabModel(label: "Home", icon: "house.fill", view: .home))
         }
 
-        if Defaults[.dynamicShelf] {
-            tabsArray.append(TabModel(label: "Shelf", icon: "tray.fill", view: .shelf))
-        }
-        
         if enableTimerFeature && timerDisplayMode == .tab {
             tabsArray.append(TabModel(label: "Timer", icon: "timer", view: .timer))
         }

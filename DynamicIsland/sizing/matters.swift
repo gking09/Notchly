@@ -106,11 +106,6 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
-    // Shelf tab
-    if Defaults[.dynamicShelf] {
-        count += 1
-    }
-
     // Timer tab (only in .tab display mode)
     if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab {
         count += 1

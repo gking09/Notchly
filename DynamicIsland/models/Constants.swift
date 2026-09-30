@@ -1060,20 +1060,6 @@ extension Defaults.Keys {
     static let systemEventIndicatorUseAccent = Key<Bool>("systemEventIndicatorUseAccent", default: false)
     static let showProgressPercentages = Key<Bool>("showProgressPercentages", default: true)
     
-        // MARK: Shelf
-    static let dynamicShelf = Key<Bool>("dynamicShelf", default: true)
-    static let openShelfByDefault = Key<Bool>("openShelfByDefault", default: true)
-        static let quickShareProvider = Key<String>("quickShareProvider", default: "AirDrop")
-        static let localSendSelectedDeviceID = Key<String>("localSendSelectedDeviceID", default: "")
-        static let localSendDevicePickerGlassMode = Key<LockScreenGlassCustomizationMode>("localSendDevicePickerGlassMode", default: .standard)
-        static let localSendDevicePickerLiquidGlassVariant = Key<LiquidGlassVariant>("localSendDevicePickerLiquidGlassVariant", default: .v11)
-        static let copyOnDrag = Key<Bool>("copyOnDrag", default: false)
-        // Off by default: offering `.move` to another app lets Finder move the
-        // original out from under the user when the destination is on the same
-        // volume, which reads as data loss.
-        static let allowMoveOnDrag = Key<Bool>("allowMoveOnDrag", default: false)
-        static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
-        static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
     
         // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
