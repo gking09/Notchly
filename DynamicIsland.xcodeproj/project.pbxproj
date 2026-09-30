@@ -30,7 +30,6 @@
 		7EE1D73D2E6B1E0B00997219 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EE1D73C2E6B1E0B00997219 /* ApplicationServices.framework */; };
 		7EE1D73F2E6B1E1200997219 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EE1D73E2E6B1E1200997219 /* IOKit.framework */; };
 		7EF10C122F817ECF004229A0 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EF10C112F817ECF004229A0 /* Accelerate.framework */; };
-		7EF19C172F577040005B9929 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7EF19C162F577040005B9929 /* SwiftTerm */; };
 		8C9E422544384A70B829EDE7 /* NowPlayingPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2137D0F9431A495AA62ACE96 /* NowPlayingPayloadTests.swift */; };
 		9A7D1A012F90000200A71001 /* AudioTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7D1A022F90000200A71002 /* AudioTapTests.swift */; };
 		A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */; };
@@ -184,7 +183,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7EF19C172F577040005B9929 /* SwiftTerm in Frameworks */,
 				7EF10C122F817ECF004229A0 /* Accelerate.framework in Frameworks */,
 				7E1ADF1D2EA209B1001DA867 /* SkyLightWindow in Frameworks */,
 				7EE1D73F2E6B1E1200997219 /* IOKit.framework in Frameworks */,
@@ -388,7 +386,6 @@
 				146BC4362D366E9B0047C66A /* MacroVisionKit */,
 				7E61181E2E24071E0050006C /* SkyLightWindow */,
 				7E288D112F1659EF0020C117 /* AtollExtensionKit */,
-				7EF19C162F577040005B9929 /* SwiftTerm */,
 			);
 			productName = DynamicIsland;
 			productReference = F54406E72CD4987A00C7AFD9 /* Atoll.app */;
@@ -436,7 +433,6 @@
 				7E61181F2E24071E0050006C /* XCRemoteSwiftPackageReference "SkyLightWindow" */,
 				7E09D5962EB7B497005AF41D /* XCRemoteSwiftPackageReference "open-meteo" */,
 				7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */,
-				7EF19C152F577040005B9929 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F54406E82CD4987A00C7AFD9 /* Products */;
@@ -1013,14 +1009,6 @@
 				kind = branch;
 			};
 		};
-		7EF19C152F577040005B9929 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.5.0;
-			};
-		};
 		9A987A112C73CAA1005CA465 /* XCRemoteSwiftPackageReference "Pow" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/EmergeTools/Pow";
@@ -1096,11 +1084,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7E61181F2E24071E0050006C /* XCRemoteSwiftPackageReference "SkyLightWindow" */;
 			productName = SkyLightWindow;
-		};
-		7EF19C162F577040005B9929 /* SwiftTerm */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7EF19C152F577040005B9929 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
-			productName = SwiftTerm;
 		};
 		9A987A0F2C73CA8D005CA465 /* Collections */ = {
 			isa = XCSwiftPackageProductDependency;
