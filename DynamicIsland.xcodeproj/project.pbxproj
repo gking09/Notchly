@@ -11,7 +11,6 @@
 		6B8DE5BE065E4BFE9E531A74 /* MarqueeTextMeasurementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC2ACF06B40405DB1A8F99E /* MarqueeTextMeasurementTests.swift */; };
 		738C4EBB63E3449B923997D0 /* MenuBarClearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */; };
 		7E1ADF1D2EA209B1001DA867 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7E61181E2E24071E0050006C /* SkyLightWindow */; };
-		7E288D122F1659EF0020C117 /* AtollExtensionKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7E288D112F1659EF0020C117 /* AtollExtensionKit */; };
 		7E6118142E24071E0050006C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 14D032192C68F32E0096E6A1 /* LaunchAtLogin */; };
 		7E6118152E24071E0050006C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 14D0321C2C68F3350096E6A1 /* Sparkle */; };
 		7E6118162E24071E0050006C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = B18654382C6F4990000B926A /* KeyboardShortcuts */; };
@@ -33,7 +32,6 @@
 		9A7D1A012F90000200A71001 /* AudioTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7D1A022F90000200A71002 /* AudioTapTests.swift */; };
 		A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */; };
 		A1B2C3D40000000000000003 /* NetEaseLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */; };
-		A1B2C3D4E5F60718293A4B5C /* ExtensionRPCServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* ExtensionRPCServerTests.swift */; };
 		A1C0FFEE0003000000000001 /* PinnedLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */; };
 		A1C0FFEE0004000000000001 /* UnsyncedLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */; };
 		A3C83CAF84544DCE386C3BB8 /* DynamicIslandUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54078F29304A9DBBEFBDF932 /* DynamicIslandUITests.swift */; };
@@ -97,7 +95,6 @@
 		A058D80A7EF44593B0F24EB7 /* DynamicIslandUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DynamicIslandUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LyricsMetadataTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NetEaseLyricsTests.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60718293A4B5D /* ExtensionRPCServerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExtensionRPCServerTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinnedLyricsTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnsyncedLyricsTests.swift; sourceTree = "<group>"; };
 		A4B5C6D7E8F90123456789AC /* AppleMusicControllerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleMusicControllerTests.swift; sourceTree = "<group>"; };
@@ -182,7 +179,6 @@
 				7E6118192E24071E0050006C /* Defaults in Frameworks */,
 				7E6118162E24071E0050006C /* KeyboardShortcuts in Frameworks */,
 				7E6118152E24071E0050006C /* Sparkle in Frameworks */,
-				7E288D122F1659EF0020C117 /* AtollExtensionKit in Frameworks */,
 				7E6118142E24071E0050006C /* LaunchAtLogin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -215,7 +211,6 @@
 				2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */,
 				A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */,
 				A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */,
-				A1B2C3D4E5F60718293A4B5D /* ExtensionRPCServerTests.swift */,
 				D1A2B3C4D5E6F70819AB2C4E /* SystemHUDPlacementTests.swift */,
 				B1C2D3E4F5061728394A5B6D /* PartialDownloadTests.swift */,
 				957599910322B546D91E6F96 /* Info.plist */,
@@ -367,7 +362,6 @@
 				B194240A2CD10017003E5DC2 /* LottieUI */,
 				146BC4362D366E9B0047C66A /* MacroVisionKit */,
 				7E61181E2E24071E0050006C /* SkyLightWindow */,
-				7E288D112F1659EF0020C117 /* AtollExtensionKit */,
 			);
 			productName = DynamicIsland;
 			productReference = F54406E72CD4987A00C7AFD9 /* Atoll.app */;
@@ -412,7 +406,6 @@
 				B19424072CD0DB52003E5DC2 /* XCRemoteSwiftPackageReference "LottieUI" */,
 				146BC4352D366E9B0047C66A /* XCRemoteSwiftPackageReference "MacroVisionKit" */,
 				7E61181F2E24071E0050006C /* XCRemoteSwiftPackageReference "SkyLightWindow" */,
-				7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F54406E82CD4987A00C7AFD9 /* Products */;
@@ -493,7 +486,6 @@
 				738C4EBB63E3449B923997D0 /* MenuBarClearanceTests.swift in Sources */,
 				A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */,
 				A1B2C3D40000000000000003 /* NetEaseLyricsTests.swift in Sources */,
-				A1B2C3D4E5F60718293A4B5C /* ExtensionRPCServerTests.swift in Sources */,
 				D1A2B3C4D5E6F70819AB2C4D /* SystemHUDPlacementTests.swift in Sources */,
 				C0DECAFE1234567890ABCDEF /* FlyoutFrameCalculatorTests.swift in Sources */,
 				B1C2D3E4F5A60718293A4B01 /* MediaKeyTapRetryPolicyTests.swift in Sources */,
@@ -950,14 +942,6 @@
 				minimumVersion = 2.6.4;
 			};
 		};
-		7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Ebullioscopic/AtollExtensionKit";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 		7E61181F2E24071E0050006C /* XCRemoteSwiftPackageReference "SkyLightWindow" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Lakr233/SkyLightWindow";
@@ -1023,11 +1007,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 14D0321B2C68F3350096E6A1 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
-		};
-		7E288D112F1659EF0020C117 /* AtollExtensionKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */;
-			productName = AtollExtensionKit;
 		};
 		7E61181E2E24071E0050006C /* SkyLightWindow */ = {
 			isa = XCSwiftPackageProductDependency;

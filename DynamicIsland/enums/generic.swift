@@ -73,7 +73,6 @@ public enum NotchState {
 public enum NotchViews {
     case home
     case timer
-    case extensionExperience
 }
 
 enum SettingsEnum {
@@ -83,7 +82,6 @@ enum SettingsEnum {
     case download
     case mediaPlayback
     case hud
-    case extensions
 }
 
 enum DownloadIndicatorStyle: String, Defaults.Serializable {

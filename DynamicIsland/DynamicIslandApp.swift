@@ -117,8 +117,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let downloadManager = DownloadManager.shared  // NEW: browser downloads detection
     let mediaControlsStateCoordinator = MediaControlsStateCoordinator.shared
     let systemTimerBridge = SystemTimerBridge.shared
-    let extensionXPCServiceHost = ExtensionXPCServiceHost.shared
-    let extensionRPCServer = ExtensionRPCServer.shared
     var closeNotchWorkItem: DispatchWorkItem?
     private var previousScreens: [NSScreen]?
     private var onboardingWindowController: NSWindowController?
@@ -255,16 +253,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        let userInfo: [String: Any] = [
-            AtollDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
-        ]
-        DistributedNotificationCenter.default().postNotificationName(
-            AtollDistributedNotifications.didBecomeIdle,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
-        )
-
         // Guarantee the native OSD is usable after we exit: if we were
         // suppressing it, OSDUIHelper is SIGSTOP-frozen and the async restore in
         // enableSystemHUD() would not finish before the process dies. Resume it
@@ -274,8 +262,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Cancel any pending window size updates
         windowSizeUpdateWorkItem?.cancel()
         NotificationCenter.default.removeObserver(self)
-        extensionXPCServiceHost.stop()
-        extensionRPCServer.stop()
         networkConnectivityManager.stopMonitoring()
         
         // Stop AudioTap capture
@@ -655,20 +641,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let userInfo: [String: Any] = [
-            AtollDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
-        ]
-        DistributedNotificationCenter.default().postNotificationName(
-            AtollDistributedNotifications.didBecomeActive,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
-        )
-
         LockScreenLiveActivityWindowManager.shared.configure(viewModel: vm)
         LockScreenManager.shared.configure(viewModel: vm)
-        extensionXPCServiceHost.start()
-        extensionRPCServer.start()
         
         // Migrate legacy progress bar settings
         Defaults.Keys.migrateProgressBarStyle()

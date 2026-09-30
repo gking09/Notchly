@@ -892,7 +892,6 @@ struct NotchHomeView: View {
     @ObservedObject var webcamManager = WebcamManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @ObservedObject private var extensionNotchExperienceManager = ExtensionNotchExperienceManager.shared
     @ObservedObject private var musicManager = MusicManager.shared
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
@@ -945,14 +944,7 @@ struct NotchHomeView: View {
     private var mainContent: some View {
         Group {
             if Defaults[.enableMinimalisticUI] {
-                if let overridePayload = minimalisticOverridePayload {
-                    ExtensionMinimalisticExperienceView(
-                        payload: overridePayload,
-                        albumArtNamespace: albumArtNamespace
-                    )
-                } else {
-                    MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
-                }
+                MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
             } else if shouldShowSideLyrics {
                 sideLyricsContent
             } else {
@@ -1017,10 +1009,6 @@ struct NotchHomeView: View {
             .scaledToFit()
             .opacity(vm.notchState == .closed ? 0 : 1)
             .blur(radius: vm.notchState == .closed ? 20 : 0)
-    }
-
-    private var minimalisticOverridePayload: ExtensionNotchExperiencePayload? {
-        extensionNotchExperienceManager.minimalisticReplacementPayload()
     }
 }
 
