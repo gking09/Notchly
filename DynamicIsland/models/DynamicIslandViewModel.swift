@@ -41,7 +41,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var hideOnClosed: Bool = true
     @Published var isHoveringCalendar: Bool = false
     @Published var isBatteryPopoverActive: Bool = false
-    @Published var isClipboardPopoverActive: Bool = false
     @Published var isReminderPopoverActive: Bool = false
     /// Whether any output picker popover is open.
     ///
@@ -76,7 +75,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     private var scrollGestureSuppressionTokens: Set<UUID> = []
     @Published private(set) var isAutoCloseSuppressed: Bool = false
     private var autoCloseSuppressionTokens: Set<UUID> = []
-    private let clipboardFocusWindow: TimeInterval = 10
 
     func setScrollGestureSuppression(_ active: Bool, token: UUID) {
         if active {
@@ -112,18 +110,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         isAutoCloseSuppressed = false
     }
 
-    private func focusClipboardTabIfNeeded() {
-        guard !Defaults[.enableMinimalisticUI] else { return }
-        guard Defaults[.enableClipboardManager] else { return }
-        guard Defaults[.clipboardDisplayMode] == .separateTab else { return }
-        guard let lastCopyDate = ClipboardManager.shared.lastCopiedItemDate else { return }
-        guard Date().timeIntervalSince(lastCopyDate) <= clipboardFocusWindow else { return }
-        guard coordinator.currentView != .clipboard else { return }
-        withAnimation(.smooth) {
-            coordinator.currentView = .clipboard
-        }
-    }
-    
     let webcamManager = WebcamManager.shared
     @Published var isCameraExpanded: Bool = false
     @Published var isRequestingAuthorization: Bool = false
@@ -359,18 +345,11 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
 
         // Force music information update when notch is opened
         MusicManager.shared.forceUpdate()
-        focusClipboardTabIfNeeded()
     }
     
     private func calculateDynamicNotchSize() -> CGSize {
         let baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize(isDynamicIslandMode: shouldUseDynamicIslandMode(for: screen)) : openNotchSize
         var adjustedSize = baseSize
-
-        if coordinator.currentView == .clipboard {
-            let preferred = NotchClipboardView.preferredHeight
-            adjustedSize.height = max(adjustedSize.height, preferred)
-            return adjustedSize
-        }
 
         adjustedSize = inlineLyricsAdjustedNotchSize(
             from: adjustedSize,

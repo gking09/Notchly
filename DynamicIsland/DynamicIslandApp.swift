@@ -544,8 +544,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Use a consistent height for different view types
         if coordinator.currentView == .timer {
             baseSize.height = 250 // Extra space for timer presets
-        } else if coordinator.currentView == .clipboard {
-            baseSize.height = max(baseSize.height, NotchClipboardView.preferredHeight)
         }
         
         baseSize = inlineLyricsAdjustedNotchSize(
@@ -679,7 +677,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Defaults.Keys.migrateMusicControlSlots()
         Defaults.Keys.migrateCapsLockTintMode()
         Defaults.Keys.migrateThirdPartyDDCIntegration()
-        Defaults.Keys.migrateClipboardShortcutToV()
 
         Defaults.publisher(.enableThirdPartyDDCIntegration, options: [])
             .receive(on: DispatchQueue.main)
@@ -717,10 +714,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Setup Lunar integration
         LunarManager.shared.configure(coordinator: coordinator)
         
-        // Honour "Save History Across Restarts" before anything can read the
-        // stored history back.
-        ClipboardManager.purgeStoredHistoryIfPersistenceDisabled()
-
         // Setup ScreenRecording Manager
         if Defaults[.enableScreenRecordingDetection] && !AppRuntimeEnvironment.isUITesting {
             ScreenRecordingManager.shared.startMonitoring()
@@ -821,12 +814,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }.store(in: &cancellables)
 
         Defaults.publisher(.enableTimerFeature, options: []).sink { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateFeatureShortcutAvailability()
-            }
-        }.store(in: &cancellables)
-
-        Defaults.publisher(.enableClipboardManager, options: []).sink { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.updateFeatureShortcutAvailability()
             }
@@ -1294,14 +1281,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // Cancel the auto-close armed by `toggleNotchOpen`. Switching to the clipboard tab
-    // from the header only changes `coordinator.currentView`, so without this the notch
-    // can close mid-copy/drag a few seconds after it was opened.
-    func cancelPendingNotchAutoClose() {
-        closeNotchWorkItem?.cancel()
-        closeNotchWorkItem = nil
-    }
-
     private func registerOptionalShortcutHandlers() {
         guard !optionalShortcutHandlersRegistered else { return }
         optionalShortcutHandlersRegistered = true
@@ -1309,67 +1288,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.onKeyDown(for: .startDemoTimer) {
             guard Defaults[.enableShortcuts], Defaults[.enableTimerFeature] else { return }
             TimerManager.shared.startDemoTimer(duration: 300)
-        }
-
-        KeyboardShortcuts.onKeyDown(for: .clipboardHistoryPanel) { [weak self] in
-            guard let self else { return }
-            guard Defaults[.enableShortcuts], Defaults[.enableClipboardManager] else { return }
-
-            if !ClipboardManager.shared.isMonitoring {
-                ClipboardManager.shared.startMonitoring()
-            }
-
-            switch Defaults[.clipboardDisplayMode] {
-            case .panel:
-                ClipboardPanelManager.shared.toggleClipboardPanel()
-            case .popover:
-                if vm.notchState == .closed {
-                    vm.open()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        NotificationCenter.default.post(name: NSNotification.Name("ToggleClipboardPopover"), object: nil)
-                    }
-                } else {
-                    NotificationCenter.default.post(name: NSNotification.Name("ToggleClipboardPopover"), object: nil)
-                }
-            case .separateTab:
-                if vm.notchState == .closed {
-                    vm.open()
-                    coordinator.currentView = .clipboard
-                } else {
-                    if coordinator.currentView == .clipboard {
-                        vm.close()
-                    } else {
-                        coordinator.currentView = .clipboard
-                    }
-                }
-            case .notchTab:
-                // Act on the notch under the cursor, matching toggleNotchOpen: with
-                // showOnAllDisplays the rendered windows use viewModels[screen], so mutating
-                // the primary vm could flip currentView without opening a visible notch.
-                var activeVM = vm
-                if Defaults[.showOnAllDisplays] {
-                    let mouseLocation = NSEvent.mouseLocation
-                    for screen in NSScreen.screens where screen.frame.contains(mouseLocation) {
-                        if let screenViewModel = viewModels[screen] {
-                            activeVM = screenViewModel
-                            break
-                        }
-                    }
-                }
-                // Cancel any pending auto-close armed by toggleNotchOpen, so it can't fire
-                // and close the notch a few seconds after this shortcut opens/switches to it.
-                cancelPendingNotchAutoClose()
-                if activeVM.notchState == .closed {
-                    activeVM.open()
-                    coordinator.currentView = .clipboard
-                } else {
-                    if coordinator.currentView == .clipboard {
-                        activeVM.close()
-                    } else {
-                        coordinator.currentView = .clipboard
-                    }
-                }
-            }
         }
 
         KeyboardShortcuts.onKeyDown(for: .screenAssistantPanel) { [weak self] in
@@ -1395,7 +1313,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func updateFeatureShortcutAvailability() {
         updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
-        updateShortcut(.clipboardHistoryPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableClipboardManager])
         updateShortcut(.screenAssistantPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableScreenAssistant])
     }
 

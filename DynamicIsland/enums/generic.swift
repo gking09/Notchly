@@ -73,7 +73,6 @@ public enum NotchState {
 public enum NotchViews {
     case home
     case timer
-    case clipboard
     case extensionExperience
 }
 

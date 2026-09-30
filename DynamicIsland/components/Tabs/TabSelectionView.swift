@@ -68,9 +68,6 @@ struct TabSelectionView: View {
             tabsArray.append(TabModel(label: "Timer", icon: "timer", view: .timer))
         }
 
-        if Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .separateTab {
-            tabsArray.append(TabModel(label: "Clipboard", icon: "doc.on.clipboard", view: .clipboard))
-        }
         if extensionTabsEnabled {
             for payload in extensionTabPayloads {
                 guard let tab = payload.descriptor.tab else { continue }

@@ -179,11 +179,6 @@ struct ContentView: View {
             return CGSize(width: baseSize.width, height: 250) // Extra height for timer presets
         }
         
-        if coordinator.currentView == .clipboard {
-            let resolvedHeight = max(baseSize.height, NotchClipboardView.preferredHeight)
-            return CGSize(width: baseSize.width, height: resolvedHeight)
-        }
-
         if coordinator.currentView == .extensionExperience {
             if let preferredHeight = extensionTabPreferredHeight(baseSize: baseSize) {
                 return CGSize(width: baseSize.width, height: preferredHeight)
@@ -1193,12 +1188,6 @@ struct ContentView: View {
                                   NotchHomeView(albumArtNamespace: albumArtNamespace)
                               case .timer:
                                   NotchTimerView()
-                            case .clipboard:
-                                if Defaults[.clipboardDisplayMode] == .separateTab {
-                                    NotchClipboardView(fixedColumns: 2)
-                                } else {
-                                    NotchClipboardView()
-                                }
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)
@@ -2258,7 +2247,6 @@ struct ContentView: View {
     // Helper function to check if any popovers are active
     private func hasAnyActivePopovers() -> Bool {
      return vm.isBatteryPopoverActive || 
-         vm.isClipboardPopoverActive || 
          vm.isTimerPopoverActive ||
          vm.isPerAppVolumePopoverActive ||
          vm.isMediaOutputPopoverActive ||
@@ -2266,8 +2254,7 @@ struct ContentView: View {
     }
 
     private func shouldPreventAutoClose() -> Bool {
-        // Dragging a clipboard item out necessarily takes the cursor off the notch.
-        coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || ClipboardManager.shared.isDraggingItem || SharingStateManager.shared.preventNotchClose
+        coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || SharingStateManager.shared.preventNotchClose
     }
     
     // Helper to prevent rapid haptic feedback

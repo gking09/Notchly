@@ -1456,8 +1456,8 @@ private struct MediaOutputPickerButton: View {
         // the popover raced the notch's own hover tracking: the popover is a
         // separate window, so moving into it reads as leaving the notch, and any
         // moment before the popover reported the pointer let the auto-close timer
-        // shut the notch and take the popover with it. This is what the stats,
-        // timer and clipboard popovers already do.
+        // shut the notch and take the popover with it. This is what the stats and
+        // timer popovers already do.
         vm.setMediaOutputPopoverActive(isPopoverPresented, token: popoverToken)
     }
 }
@@ -1520,8 +1520,8 @@ private struct AirPlayPickerButton: View {
         // the popover raced the notch's own hover tracking: the popover is a
         // separate window, so moving into it reads as leaving the notch, and any
         // moment before the popover reported the pointer let the auto-close timer
-        // shut the notch and take the popover with it. This is what the stats,
-        // timer and clipboard popovers already do.
+        // shut the notch and take the popover with it. This is what the stats and
+        // timer popovers already do.
         vm.setMediaOutputPopoverActive(isPopoverPresented, token: popoverToken)
     }
 }
