@@ -17,6 +17,7 @@
  */
 
 import AppKit
+import Defaults
 import SwiftUI
 
 // MARK: - Wing layout (pure)
@@ -99,6 +100,25 @@ struct NotchWingLayout: Equatable {
         value.isFinite ? max(0, value) : 0
     }
 
+    /// How much narrower than the notch the idle closed-notch content is drawn
+    /// (`closedNotchSize.width - 20`), so an arriving activity can start exactly
+    /// where the idle notch already is.
+    static let idleContentInset: CGFloat = 20
+
+    /// The layout an activity arrives from: no wings, and a gap as wide as the
+    /// idle closed-notch content. The wings then grow outward from the notch
+    /// centre as the layout springs to its real size.
+    var arrival: NotchWingLayout {
+        NotchWingLayout(
+            notchWidth: notchWidth,
+            centerGap: max(0, centerGap - Self.idleContentInset),
+            leftWing: 0,
+            rightWing: 0,
+            innerClearance: 0,
+            isConstrained: false
+        )
+    }
+
     /// The widest closed-notch content that keeps clear of the screen edges and,
     /// when known, of the frontmost app's menus.
     ///
@@ -141,15 +161,79 @@ struct NotchWingLayout: Equatable {
 /// frontmost app's menus.
 @MainActor
 enum ClosedNotchMetrics {
-    /// Widest closed-notch content allowed on `screenName` right now.
+    /// Widest closed-notch content allowed on `screenName` right now: what the
+    /// screen leaves, what the frontmost app's menus leave, and what the notch
+    /// window itself is wide enough to draw (the minimalistic notch's window is
+    /// only 420pt, and anything wider would be cut off at its edge).
     static func maximumContentWidth(screenName: String?) -> CGFloat? {
         guard let frame = getScreenFrame(screenName) else { return nil }
-        return NotchWingLayout.availableContentWidth(
+        let shapePadding = cornerRadiusInsets.closed.bottom
+        let byScreenAndMenus = NotchWingLayout.availableContentWidth(
             screenFrame: frame,
             menusRightEdge: MenuBarLayout.shared.appMenusRightEdge,
             menuGap: MenuBarLayout.clearanceGap,
-            shapePadding: cornerRadiusInsets.closed.bottom
+            shapePadding: shapePadding
         )
+        let windowWidth = Defaults[.enableMinimalisticUI]
+            ? minimalisticOpenNotchSize(isDynamicIslandMode: shouldUseDynamicIslandMode(for: screenName)).width
+            : openNotchSize.width
+        return min(byScreenAndMenus, max(0, windowWidth - 2 * shapePadding))
+    }
+
+    /// The standard wing layout for a closed-notch live activity: symmetric
+    /// wings sized to the wider content, the hover flap in the gap, and the
+    /// whole thing narrowed to keep clear of the screen edges and app menus.
+    static func wingLayout(
+        notchWidth: CGFloat,
+        screenName: String?,
+        leftContent: CGFloat,
+        rightContent: CGFloat,
+        minimumWing: CGFloat = 0,
+        isHovering: Bool = false,
+        innerClearance: CGFloat = NotchWingLayout.innerClearance,
+        widthBudget: CGFloat? = nil
+    ) -> NotchWingLayout {
+        // The activity's own budget (what the notch's outer frame reserves for
+        // it) can only tighten the screen limit, never loosen it.
+        var limit = maximumContentWidth(screenName: screenName)
+        if let widthBudget {
+            limit = min(limit ?? widthBudget, widthBudget)
+        }
+        return NotchWingLayout.make(
+            notchWidth: notchWidth,
+            leftContent: leftContent,
+            rightContent: rightContent,
+            minimumWing: minimumWing,
+            centerExtra: isHovering ? 8 : 0,
+            innerClearance: innerClearance,
+            maximumTotalWidth: limit
+        )
+    }
+}
+
+// MARK: - Notch state clock
+
+/// When the notch last opened or closed, so views that appear as a *result* of
+/// that can tell they are returning rather than arriving.
+@MainActor
+enum NotchStateClock {
+    private(set) static var lastChange: Date = .distantPast
+
+    /// How long after an open / close a newly appearing activity still counts
+    /// as part of it.
+    nonisolated static let window: TimeInterval = 0.7
+
+    static func noteChange(at date: Date = Date()) {
+        lastChange = date
+    }
+
+    nonisolated static func isRecent(now: Date, lastChange: Date) -> Bool {
+        let elapsed = now.timeIntervalSince(lastChange)
+        return elapsed >= 0 && elapsed < window
+    }
+
+    static var changedRecently: Bool {
+        isRecent(now: Date(), lastChange: lastChange)
     }
 }
 
@@ -159,29 +243,97 @@ enum ClosedNotchMetrics {
 ///
 /// Each wing is clipped to its own frame, so anything that slides, scales or
 /// marquees inside it can never spill into the cut-out or the opposite wing.
+///
+/// On arrival the wings start at zero width and spring outward from the notch
+/// centre; the content fades in a beat later and, while the wings grow, is
+/// laid out at its final width so text never reflows or truncates mid-growth.
+/// Under Reduce Motion the wings are simply there.
 struct NotchWings<Left: View, Right: View>: View {
     let layout: NotchWingLayout
     let height: CGFloat
-    var leftAlignment: Alignment = .leading
-    var rightAlignment: Alignment = .trailing
-    @ViewBuilder var left: () -> Left
-    @ViewBuilder var right: () -> Right
+    let leftAlignment: Alignment
+    let rightAlignment: Alignment
+    let left: () -> Left
+    let right: () -> Right
+
+    private enum Phase {
+        /// First frame: no wings yet.
+        case arriving
+        /// Wings growing; content laid out at its final width.
+        case growing
+        /// At rest: content tracks the wing frames directly.
+        case settled
+    }
+
+    @State private var phase: Phase
+    @State private var contentShown: Bool
+
+    init(
+        layout: NotchWingLayout,
+        height: CGFloat,
+        leftAlignment: Alignment = .leading,
+        rightAlignment: Alignment = .trailing,
+        @ViewBuilder left: @escaping () -> Left,
+        @ViewBuilder right: @escaping () -> Right
+    ) {
+        self.layout = layout
+        self.height = height
+        self.leftAlignment = leftAlignment
+        self.rightAlignment = rightAlignment
+        self.left = left
+        self.right = right
+        // Wings that appear because the notch has just closed are returning to
+        // their place (the artwork flies back to it), not arriving, so they skip
+        // the grow-from-centre.
+        let skipsArrival = NotchlyTheme.Motion.reduceMotion || NotchStateClock.changedRecently
+        _phase = State(initialValue: skipsArrival ? .settled : .arriving)
+        _contentShown = State(initialValue: skipsArrival)
+    }
+
+    private var shown: NotchWingLayout {
+        phase == .arriving ? layout.arrival : layout
+    }
 
     var body: some View {
+        let shown = self.shown
+        let pinned = phase != .settled
+        let reduce = NotchlyTheme.Motion.reduceMotion
+
         HStack(spacing: 0) {
             left()
+                .opacity(contentShown ? 1 : 0)
+                .blur(radius: contentShown || reduce ? 0 : 4)
                 .padding(.trailing, layout.innerClearance)
-                .frame(width: layout.leftWing, height: height, alignment: leftAlignment)
+                .frame(width: pinned ? layout.leftWing : shown.leftWing, height: height, alignment: leftAlignment)
+                // Anchored on the notch side, so growth reveals the content
+                // from the notch outward instead of sliding it.
+                .frame(width: shown.leftWing, height: height, alignment: .trailing)
                 .clipped()
             Color.clear
-                .frame(width: layout.centerGap, height: height)
+                .frame(width: shown.centerGap, height: height)
             right()
+                .opacity(contentShown ? 1 : 0)
+                .blur(radius: contentShown || reduce ? 0 : 4)
                 .padding(.leading, layout.innerClearance)
-                .frame(width: layout.rightWing, height: height, alignment: rightAlignment)
+                .frame(width: pinned ? layout.rightWing : shown.rightWing, height: height, alignment: rightAlignment)
+                .frame(width: shown.rightWing, height: height, alignment: .leading)
                 .clipped()
         }
         .frame(height: height)
         // The wings grow and shrink together, so the gap never moves off the notch.
-        .animation(NotchlyTheme.Motion.spring, value: layout)
+        .animation(NotchlyTheme.Motion.spring, value: shown)
+        .onAppear(perform: arrive)
+    }
+
+    private func arrive() {
+        guard phase == .arriving else { return }
+        phase = .growing
+        withAnimation(NotchlyTheme.Motion.spring(delay: 0.1)) {
+            contentShown = true
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            phase = .settled
+        }
     }
 }

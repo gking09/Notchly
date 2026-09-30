@@ -82,7 +82,7 @@ struct QuickActionsBar: View {
 
     private var row: some View {
         HStack(spacing: 10) {
-            ForEach(visibleActions) { action in
+            ForEach(Array(visibleActions.enumerated()), id: \.element) { index, action in
                 QuickActionButton(
                     action: action,
                     isActive: actions.isActive(action),
@@ -94,6 +94,7 @@ struct QuickActionsBar: View {
                         }
                     }
                 }
+                .popIn(index: index)
             }
         }
         .frame(maxWidth: .infinity)

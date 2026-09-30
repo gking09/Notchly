@@ -612,21 +612,22 @@ private struct BatteryCompactStatusRow: View {
     let tint: Color
     let wingWidth: CGFloat
     let notchWidth: CGFloat
+    let height: CGFloat
     let twoLine: Bool
 
     @State private var shownLevel = 0
     @State private var glyphPulse = false
 
+    /// Wings of equal width (the HUD's budget) either side of the notch-sized gap.
+    private var layout: NotchWingLayout {
+        NotchWingLayout.make(notchWidth: notchWidth, leftContent: wingWidth, rightContent: wingWidth)
+    }
+
     var body: some View {
-        HStack(spacing: 0) {
+        NotchWings(layout: layout, height: height) {
             leadingWing
-                .frame(width: wingWidth, alignment: .leading)
-
-            Color.clear
-                .frame(width: notchWidth)
-
+        } right: {
             trailingWing
-                .frame(width: wingWidth, alignment: .trailing)
         }
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
@@ -644,20 +645,14 @@ private struct BatteryCompactStatusRow: View {
 
     private var leadingWing: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 4) {
-                if let glyph {
-                    Image(systemName: glyph)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(tint)
-                        .opacity(glyphPulse ? 1 : 0.55)
-                        .scaleEffect(glyphPulse ? 1.08 : 0.94)
+            // When menus (or a small screen) narrow the wing, the glyph is the
+            // first thing to go, then the title scales down.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 4) {
+                    if let glyph { glyphView(glyph) }
+                    titleText.fixedSize(horizontal: true, vertical: false)
                 }
-                Text(verbatim: title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(NotchlyTheme.Palette.textPrimary.opacity(0.85))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .contentTransition(.interpolate)
+                titleText
             }
             if twoLine, let subtitle {
                 Text(verbatim: subtitle)
@@ -673,35 +668,42 @@ private struct BatteryCompactStatusRow: View {
         .animation(NotchlyTheme.Motion.spring, value: subtitle)
     }
 
+    private func glyphView(_ glyph: String) -> some View {
+        Image(systemName: glyph)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(tint)
+            .opacity(glyphPulse ? 1 : 0.55)
+            .scaleEffect(glyphPulse ? 1.08 : 0.94)
+            .contentTransition(.symbolEffect(.replace))
+    }
+
+    private var titleText: some View {
+        Text(verbatim: title)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(NotchlyTheme.Palette.textPrimary.opacity(0.85))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .contentTransition(.interpolate)
+    }
+
+    private var percentText: some View {
+        Text("\(shownLevel)%")
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .contentTransition(.numericText(value: Double(shownLevel)))
+    }
+
     private var trailingWing: some View {
         VStack(alignment: .trailing, spacing: 0) {
-            HStack(spacing: 6) {
-                Text("\(shownLevel)%")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(tint)
-                    .contentTransition(.numericText(value: Double(shownLevel)))
-
-                HStack(spacing: 1.5) {
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(tint.opacity(0.3))
-
-                        GeometryReader { geo in
-                            let clamped = max(0, min(shownLevel, 100))
-                            let width = CGFloat(clamped) / 100 * geo.size.width
-                            Rectangle()
-                                .fill(tint.gradient)
-                                .frame(width: max(0, width))
-                        }
-                    }
-                    .frame(width: 28, height: 16)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-
-                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(shownLevel >= 100 ? tint.gradient : tint.opacity(0.3).gradient)
-                        .frame(width: 2, height: 6)
+            // The battery glyph drops out before the percentage ever clips.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    percentText
+                    batteryGlyph
                 }
+                percentText
             }
             if twoLine, let caption {
                 Text(verbatim: caption)
@@ -715,9 +717,33 @@ private struct BatteryCompactStatusRow: View {
         .padding(.trailing, 14)
         .animation(NotchlyTheme.Motion.spring, value: caption)
     }
+
+    private var batteryGlyph: some View {
+        HStack(spacing: 1.5) {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(tint.opacity(0.3))
+
+                GeometryReader { geo in
+                    let clamped = max(0, min(shownLevel, 100))
+                    let width = CGFloat(clamped) / 100 * geo.size.width
+                    Rectangle()
+                        .fill(tint.gradient)
+                        .frame(width: max(0, width))
+                }
+            }
+            .frame(width: 28, height: 16)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+
+            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                .fill(shownLevel >= 100 ? tint.gradient : tint.opacity(0.3).gradient)
+                .frame(width: 2, height: 6)
+        }
+    }
 }
 
 struct BatteryTemporaryActivityView: View {
+    @EnvironmentObject private var vm: DynamicIslandViewModel
     let kind: BatteryTemporaryHUDKind
     let batteryLevel: Int
     let isLowPowerMode: Bool
@@ -754,10 +780,21 @@ struct BatteryTemporaryActivityView: View {
     }
 
     private var metrics: BatteryTemporaryHUDMetrics {
-        kind.metrics(
+        let base = kind.metrics(
             style: style,
             closedNotchWidth: closedNotchWidth,
             baseHeight: baseHeight
+        )
+        // The compact HUD is all wings, so like every other closed-notch
+        // activity it narrows (rather than slides) to clear the app menus and
+        // the screen edges. The tall standard panels have no wings to narrow.
+        guard style == .compact,
+              let limit = ClosedNotchMetrics.maximumContentWidth(screenName: vm.screen) else { return base }
+        return BatteryTemporaryHUDMetrics(
+            width: max(closedNotchWidth, min(base.width, limit)),
+            height: base.height,
+            topRadius: base.topRadius,
+            bottomRadius: base.bottomRadius
         )
     }
 
@@ -811,6 +848,7 @@ struct BatteryTemporaryActivityView: View {
                 tint: batteryTint,
                 wingWidth: max((metrics.width - closedNotchWidth) / 2, 0),
                 notchWidth: closedNotchWidth,
+                height: baseHeight,
                 twoLine: baseHeight >= 32
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

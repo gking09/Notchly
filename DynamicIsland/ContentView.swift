@@ -254,17 +254,7 @@ struct ContentView: View {
     // MARK: - Tab switch direction for smooth transitions
     
     private var tabSwitchTransition: AnyTransition {
-        if coordinator.tabSwitchForward {
-            return .asymmetric(
-                insertion: .move(edge: .trailing).combined(with: .opacity),
-                removal: .move(edge: .leading).combined(with: .opacity)
-            )
-        } else {
-            return .asymmetric(
-                insertion: .move(edge: .leading).combined(with: .opacity),
-                removal: .move(edge: .trailing).combined(with: .opacity)
-            )
-        }
+        .tabSlide(forward: coordinator.tabSwitchForward)
     }
     
     private var standardMediaControlsActive: Bool {
@@ -324,17 +314,13 @@ struct ContentView: View {
         )
     }
 
+    /// How every closed-notch live activity arrives and leaves. The wings grow
+    /// out of the notch centre themselves (see `NotchWings`); this adds the
+    /// squeeze-and-fade on the way in and out.
     private var closedLiveActivitySwapTransition: AnyTransition {
-        .asymmetric(
-            insertion: .opacity
-                .combined(with: .scale(scale: 0.965, anchor: .center))
-                .animation(.spring(response: 0.34, dampingFraction: 0.88)),
-            removal: .opacity
-                .combined(with: .scale(scale: 0.92, anchor: .center))
-                .animation(.smooth(duration: 0.22))
-        )
+        .closedActivity
     }
-    
+
     // Use minimalistic corner radius ONLY when opened, keep normal when closed
     private var activeCornerRadiusInsets: (opened: (top: CGFloat, bottom: CGFloat), closed: (top: CGFloat, bottom: CGFloat)) {
         if enableMinimalisticUI {
@@ -623,8 +609,8 @@ struct ContentView: View {
     private var configuredMainLayout: some View {
         mainLayoutBase
             .conditionalModifier(!useModernCloseAnimation) { view in
-                let hoverAnimation = Animation.bouncy.speed(1.2)
-                let notchStateAnimation = Animation.spring(response: 0.42, dampingFraction: 1.0, blendDuration: 0)
+                let hoverAnimation = NotchlyTheme.Motion.hover
+                let notchStateAnimation = NotchlyTheme.Motion.notchClose
                 return view
                     .animation(hoverAnimation, value: isHovering)
                     .animation(notchStateAnimation, value: vm.notchState)
@@ -632,10 +618,8 @@ struct ContentView: View {
                     .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
             }
             .conditionalModifier(useModernCloseAnimation) { view in
-                let hoverAnimation = Animation.bouncy.speed(1.2)
-                let openAnimation = Animation.spring(response: 0.42, dampingFraction: 1.0, blendDuration: 0)
-                let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
-                let notchAnimation = vm.notchState == .open ? openAnimation : closeAnimation
+                let hoverAnimation = NotchlyTheme.Motion.hover
+                let notchAnimation = vm.notchState == .open ? NotchlyTheme.Motion.notchOpen : NotchlyTheme.Motion.notchClose
                 return view
                     .animation(hoverAnimation, value: isHovering)
                     .animation(notchAnimation, value: vm.notchState)
@@ -946,32 +930,78 @@ struct ContentView: View {
         )
     }
 
-    /// True while the closed notch shows an activity built from `NotchWings`
-    /// (the inline HUDs and the music activity).
+    /// True while the closed notch shows only activities built from `NotchWings`
+    /// -- which is all of them except the tall panels.
     ///
-    /// Those keep their two wings the same width with the notch-sized gap dead
-    /// centre, and stay clear of the frontmost app's menus by narrowing the
-    /// wings (see `ClosedNotchMetrics`). Sliding them sideways, as the offset
-    /// does for other activities, would carry the gap off the hardware cut-out:
-    /// the left wing would slide under the notch and the right wing would be
-    /// clipped by the surface.
+    /// Wings keep the same width on both sides with the notch-sized gap dead
+    /// centre, and stay clear of the frontmost app's menus by narrowing (see
+    /// `ClosedNotchMetrics`). Sliding them sideways, as the offset does, would
+    /// carry the gap off the hardware cut-out: the left wing would slide under
+    /// the notch and the right wing would be clipped by the surface.
+    ///
+    /// The exceptions are the panels that hang *below* the menu bar -- the
+    /// recording hover panel, the standard-style low/full battery alerts and
+    /// the standard-style HUD line. They have no wings to narrow, so they still
+    /// step aside instead.
     private var closedActivityKeepsWingsCentred: Bool {
         guard vm.notchState == .closed else { return false }
-        if currentScreenExpansionType == .battery && isBatteryHUDVisibleOnCurrentScreen { return false }
+        if recordingHUDDefaultExpandedOnHover { return false }
+        if currentScreenExpansionType == .battery,
+           isBatteryHUDVisibleOnCurrentScreen,
+           let kind = batteryModel.activeTemporaryHUDKind {
+            return kind == .charging || resolvedBatteryNotificationStyle(for: kind) == .compact
+        }
+        return !standardSneakPeekPanelVisible
+            || closedMusicPairingEligible(hasActiveMusicSnapshot: hasActiveMusicSnapshotForClosedPairing)
+    }
 
-        let sneakType = coordinator.sneakPeek.type
-        let isAirPodsListeningModeSneak = sneakType == .bluetoothAudio
+    /// A standard-style (non-inline) HUD or sneak peek is showing its line under
+    /// the notch row.
+    private var standardSneakPeekPanelVisible: Bool {
+        guard isSneakPeekVisibleOnCurrentScreen else { return false }
+        let type = coordinator.sneakPeek.type
+        if type == .capsLock || type == .battery { return false }
+        let isAirPodsListeningModeSneak = type == .bluetoothAudio
             && coordinator.sneakPeek.value < 0
             && AirPodsListeningMode.fromHUDSymbol(coordinator.sneakPeek.icon) != nil
-        if isSneakPeekVisibleOnCurrentScreen
-            && (Defaults[.inlineHUD] || isAirPodsListeningModeSneak)
-            && ![.music, .battery, .reminder].contains(sneakType) {
-            return true
+        if type == .music || type == .reminder {
+            return resolvedSneakPeekStyle() == .standard
         }
-        if capsLockManager.isCapsLockActive && Defaults[.enableCapsLockIndicator] && !lockScreenManager.isLocked {
-            return true
-        }
-        return closedMusicPairingEligible(hasActiveMusicSnapshot: hasActiveMusicSnapshotForClosedPairing)
+        return !(Defaults[.inlineHUD] || isAirPodsListeningModeSneak)
+    }
+
+    /// Changes whenever a different closed-notch activity takes the floor, and
+    /// only then. It keys the animation that lets the notch surface grow and
+    /// shrink with the activity's wings, without a blanket animation on every
+    /// layout change (a ticking timer must not spring the whole notch).
+    private struct ClosedActivitySignature: Equatable {
+        var sneakPeek: SneakContentType?
+        var expansion: SneakContentType?
+        var music: Bool
+        var capsLock: Bool
+        var timer: Bool
+        var reminder: Bool
+        var recording: Bool
+        var download: Bool
+        var focus: Bool
+        var privacy: Bool
+        var idleFace: Bool
+    }
+
+    private var closedActivitySignature: ClosedActivitySignature {
+        ClosedActivitySignature(
+            sneakPeek: isSneakPeekVisibleOnCurrentScreen ? coordinator.sneakPeek.type : nil,
+            expansion: currentScreenExpansionType,
+            music: closedMusicPairingEligible(hasActiveMusicSnapshot: hasActiveMusicSnapshotForClosedPairing),
+            capsLock: capsLockManager.isCapsLockActive,
+            timer: timerActivity != nil,
+            reminder: reminderManager.isActive,
+            recording: recordingManager.isRecording,
+            download: downloadManager.isDownloading,
+            focus: doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing,
+            privacy: privacyManager.hasAnyIndicator,
+            idleFace: !musicManager.isPlaying && musicManager.isPlayerIdle
+        )
     }
 
     @ViewBuilder
@@ -1044,12 +1074,12 @@ struct ContentView: View {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(
                                   coordinator.sneakPeek.type == .capsLock
-                                      ? AnyTransition.move(edge: .trailing).combined(with: .opacity)
+                                      ? closedLiveActivitySwapTransition
                                       : AnyTransition.hudReveal
                               )
                       } else if vm.notchState == .closed && capsLockManager.isCapsLockActive && Defaults[.enableCapsLockIndicator] && !vm.hideOnClosed && !lockScreenManager.isLocked {
                           InlineHUD(type: .constant(.capsLock), value: .constant(1.0), icon: .constant(""), hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
-                              .transition(AnyTransition.move(edge: .trailing).combined(with: .opacity))
+                              .transition(closedLiveActivitySwapTransition)
                       } else if canShowMusicDuringExpansion && musicPairingEligible {
                           MusicLiveActivity(secondary: musicSecondary)
                               .id("closed-music-live-activity")
@@ -1059,17 +1089,22 @@ struct ContentView: View {
                               .transition(closedLiveActivitySwapTransition)
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .reminder) && vm.notchState == .closed && reminderManager.isActive && enableReminderLiveActivity && !vm.hideOnClosed {
                           ReminderLiveActivity()
+                              .transition(closedLiveActivitySwapTransition)
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .recording) && vm.notchState == .closed && recordingManager.isRecording && Defaults[.enableScreenRecordingDetection] && Defaults[.showRecordingIndicator] && !vm.hideOnClosed && !musicPairingEligible {
                           RecordingLiveActivity(hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
+                              .transition(closedLiveActivitySwapTransition)
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .download) && vm.notchState == .closed && downloadManager.isDownloading && Defaults[.enableDownloadListener] && !vm.hideOnClosed {
                           DownloadLiveActivity()
-                              .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                              .transition(closedLiveActivitySwapTransition)
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .doNotDisturb) && vm.notchState == .closed && Defaults[.enableDoNotDisturbDetection] && Defaults[.showDoNotDisturbIndicator] && (doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing) && !vm.hideOnClosed && !lockScreenManager.isLocked {
                           DoNotDisturbLiveActivity()
+                              .transition(closedLiveActivitySwapTransition)
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
                         PrivacyLiveActivity()
+                              .transition(closedLiveActivitySwapTransition)
                       } else if !isCurrentScreenExpansionVisible && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
-                          DynamicIslandFaceAnimation().animation(.interactiveSpring, value: musicManager.isPlayerIdle)
+                          DynamicIslandFaceAnimation()
+                              .transition(closedLiveActivitySwapTransition)
                       } else if vm.notchState == .open {
                           DynamicIslandHeader()
                               .frame(height: (Defaults[.enableMinimalisticUI] && isDynamicIslandMode) ? nil : max(24, vm.effectiveClosedNotchHeight))
@@ -1122,6 +1157,8 @@ struct ContentView: View {
                       }
                   }
               }
+              // The surface follows the wings: animate it only when the activity changes.
+              .animation(NotchlyTheme.Motion.spring, value: closedActivitySignature)
               .conditionalModifier(shouldFixSizeForSneakPeek()) { view in
                   view
                       .fixedSize()
@@ -1140,26 +1177,31 @@ struct ContentView: View {
               // Menu-bar clearance would shift that lane underneath the camera
               // housing and clip one of the two content areas.
               .offset(x: isConnectivityHUDVisible ? 0 : menuBarClearanceOffset)
-              .animation(.smooth(duration: 0.25), value: menuBarClearanceOffset)
+              .animation(NotchlyTheme.Motion.spring, value: menuBarClearanceOffset)
               .zIndex(2)
               
               ZStack {
                   if vm.notchState == .open {
-                      Group {
-                          switch coordinator.currentView {
-                              case .home:
-                                  NotchHomeView(albumArtNamespace: albumArtNamespace)
+                      // The content arrives a beat after the shell has started to
+                      // expand; switching tabs slides the page within it.
+                      ZStack {
+                          Group {
+                              switch coordinator.currentView {
+                                  case .home:
+                                      NotchHomeView(albumArtNamespace: albumArtNamespace)
+                              }
                           }
+                          .id(coordinator.currentView)
+                          .transition(tabSwitchTransition)
                       }
-                      .id(coordinator.currentView)
-                      .transition(tabSwitchTransition)
+                      .transition(.notchContentReveal)
                   }
               }
               .zIndex(1)
               .allowsHitTesting(vm.notchState == .open)
               .blur(radius: abs(gestureProgress) > 0.3 ? min(abs(gestureProgress), 8) : 0)
               .opacity(abs(gestureProgress) > 0.3 ? min(abs(gestureProgress * 2), 0.8) : 1)
-              .animation(.smooth(duration: 0.3), value: coordinator.currentView)
+              .animation(NotchlyTheme.Motion.spring, value: coordinator.currentView)
           }
       }
 
@@ -1198,21 +1240,25 @@ struct ContentView: View {
         return formatter
     }()
 
+    /// The idle face: the animation sits beside the notch, in a wing the same
+    /// width as its (empty) twin on the other side.
     @ViewBuilder
     func DynamicIslandFaceAnimation() -> some View {
         let sideSize = max(0, vm.effectiveClosedNotchHeight - 12)
-        HStack {
-            HStack {
-                Rectangle()
-                    .fill(.clear)
-                    .frame(width: sideSize, height: sideSize)
-                Rectangle()
-                    .fill(.black)
-                    .frame(width: vm.closedNotchSize.width)
-                IdleAnimationView()
-                    .frame(width: sideSize, height: sideSize)
-            }
-        }.frame(height: vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0), alignment: .center)
+        let layout = ClosedNotchMetrics.wingLayout(
+            notchWidth: vm.closedNotchSize.width,
+            screenName: currentScreenName,
+            leftContent: sideSize,
+            rightContent: sideSize,
+            isHovering: isHovering
+        )
+        NotchWings(layout: layout, height: vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0)) {
+            Color.clear
+                .frame(width: sideSize, height: sideSize)
+        } right: {
+            IdleAnimationView()
+                .frame(width: sideSize, height: sideSize)
+        }
     }
 
     /// Whether the closed music activity is showing the track's title and artist

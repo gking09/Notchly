@@ -121,7 +121,7 @@ class AudioSpectrum: NSView {
             let current = (barLayer.presentation()?.value(forKeyPath: "transform.scale.y") as? CGFloat) ?? resting
             barLayer.removeAllAnimations()
             barLayer.transform = CATransform3DMakeScale(1, resting, 1)
-            guard abs(current - resting) > 0.01, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { continue }
+            guard abs(current - resting) > 0.01, !NotchlyTheme.Motion.reduceMotion else { continue }
             let settle = CABasicAnimation(keyPath: "transform.scale.y")
             settle.fromValue = current
             settle.toValue = resting

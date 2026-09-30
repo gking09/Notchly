@@ -33,8 +33,11 @@ struct ReminderLiveActivity: View {
 
     @Default(.reminderPresentationStyle) private var presentationStyle
 
-    private let wingPadding: CGFloat = 16
+    @State private var isHovering = false
+
     private let ringStrokeWidth: CGFloat = 3
+    /// Breathing room between a wing's content and its outer edge.
+    private let outerInset: CGFloat = 2
 
     private var notchContentHeight: CGFloat {
         max(0, vm.effectiveClosedNotchHeight)
@@ -43,43 +46,50 @@ struct ReminderLiveActivity: View {
     var body: some View {
         if let reminder = manager.activeReminder {
             content(for: reminder, now: manager.currentDate)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
 
+    /// Icon on one side, countdown on the other. The wings are the same width
+    /// -- whichever of the two is wider -- with the notch-sized gap dead centre,
+    /// so neither is ever drawn behind the cut-out.
     @ViewBuilder
     private func content(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> some View {
-        HStack(spacing: 0) {
-            Color.clear
-                .frame(width: leftWingWidth, height: notchContentHeight)
-                .background(alignment: .leading) {
-                    iconSection(for: reminder, now: now)
-                        .padding(.leading, wingPadding / 2)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                }
+        let layout = ClosedNotchMetrics.wingLayout(
+            notchWidth: vm.closedNotchSize.width,
+            screenName: vm.screen,
+            leftContent: iconDiameter + outerInset,
+            rightContent: rightContentWidth(for: reminder, now: now) + outerInset,
+            isHovering: isHovering
+        )
 
-            Rectangle()
-                .fill(.black)
-                .frame(width: vm.closedNotchSize.width, height: notchContentHeight)
-
-            Color.clear
-                .frame(width: rightWingWidth(for: reminder, now: now), height: notchContentHeight)
-                .background(alignment: .trailing) {
-                    rightSection(for: reminder, now: now)
-                        .padding(.trailing, wingPadding / 2)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                }
+        NotchWings(layout: layout, height: notchContentHeight + (isHovering ? 8 : 0)) {
+            iconSection(for: reminder, now: now)
+                .padding(.leading, outerInset)
+        } right: {
+            rightSection(for: reminder, now: now)
+                .padding(.trailing, outerInset)
         }
-        .frame(height: notchContentHeight, alignment: .center)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(NotchlyTheme.Motion.snappy) {
+                isHovering = hovering
+            }
+        }
     }
 
     private func iconSection(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> some View {
         let diameter = iconDiameter
         let accent = accentColor(for: reminder, now: now)
 
+        let critical = isCritical(for: reminder, now: now)
+
         return Image(systemName: iconName(for: reminder, now: now))
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(accent)
+            .contentTransition(.symbolEffect(.replace))
+            // Turning critical (inside the sneak-peek window) gives the bell a nudge.
+            .symbolEffect(.bounce, options: .nonRepeating, value: NotchlyTheme.Motion.reduceMotion ? false : critical)
+            .animation(NotchlyTheme.Motion.spring, value: critical)
             .frame(width: diameter, height: diameter)
             .frame(width: iconDiameter, height: notchContentHeight, alignment: .center)
     }
@@ -119,8 +129,10 @@ struct ReminderLiveActivity: View {
         return Text(countdown)
             .font(.system(size: 16, weight: .semibold, design: .monospaced))
             .foregroundColor(accent)
-            .contentTransition(.numericText())
-            .animation(.smooth(duration: 0.25), value: countdown)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .contentTransition(.numericText(countsDown: true))
+            .animation(NotchlyTheme.Motion.snappy, value: countdown)
             .frame(height: notchContentHeight, alignment: .center)
     }
 
@@ -129,6 +141,10 @@ struct ReminderLiveActivity: View {
             Text(minutesCountdown(for: reminder, now: now))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(.numericText(countsDown: true))
+                .animation(NotchlyTheme.Motion.snappy, value: minutesCountdown(for: reminder, now: now))
         }
         .frame(height: notchContentHeight, alignment: .center)
     }
@@ -162,33 +178,29 @@ struct ReminderLiveActivity: View {
         return NotchlyTheme.Palette.silver
     }
 
-    private var leftWingWidth: CGFloat {
-        wingPadding + iconDiameter
-    }
-
-    private func rightWingWidth(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> CGFloat {
-        var width = wingPadding
+    /// What the countdown side asks for.
+    private func rightContentWidth(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> CGFloat {
         switch presentationStyle {
         case .ringCountdown:
-            width += ringDiameter
+            return ringDiameter
         case .digital:
-            width += countdownWidth(for: reminder, now: now)
+            return countdownWidth(for: reminder, now: now)
         case .minutes:
-            width += minutesWidth(for: reminder, now: now)
+            return minutesWidth(for: reminder, now: now)
         }
-        return width
     }
 
     private func countdownWidth(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> CGFloat {
         let text = digitalCountdown(for: reminder, now: now)
-        let width = measureTextWidth(text, font: monospacedDigitFont(size: 16, weight: ReminderFont.Weight.semibold))
-        return max(width + 18, 76)
+        let font = monospacedFont(size: 16, weight: ReminderFont.Weight.semibold)
+        // Never narrower than `00:00`, so the digits roll without the wing resizing.
+        return max(measureTextWidth(text, font: font), measureTextWidth("00:00", font: font)) + 2
     }
 
     private func minutesWidth(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> CGFloat {
         let text = minutesCountdown(for: reminder, now: now)
         let width = measureTextWidth(text, font: systemFont(size: 13, weight: ReminderFont.Weight.semibold))
-        return max(width + 18, 88)
+        return width + 2
     }
 
     private var iconDiameter: CGFloat {
@@ -212,11 +224,11 @@ struct ReminderLiveActivity: View {
         #endif
     }
 
-    private func monospacedDigitFont(size: CGFloat, weight: ReminderFont.Weight) -> ReminderFont {
+    private func monospacedFont(size: CGFloat, weight: ReminderFont.Weight) -> ReminderFont {
         #if canImport(AppKit)
-        return NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight)
+        return NSFont.monospacedSystemFont(ofSize: size, weight: weight)
         #else
-        return UIFont.monospacedDigitSystemFont(ofSize: size, weight: weight)
+        return UIFont.monospacedSystemFont(ofSize: size, weight: weight)
         #endif
     }
 

@@ -207,7 +207,8 @@ struct GlassButtonStyle: ButtonStyle {
                 }
             }
             .scaleEffect(configuration.isPressed ? NotchlyTheme.Motion.pressedScale : 1)
-            .animation(NotchlyTheme.Motion.snappy, value: configuration.isPressed)
+            // A springy release: the button dips on press and rebounds slightly.
+            .animation(NotchlyTheme.Motion.pop, value: configuration.isPressed)
             .animation(NotchlyTheme.Motion.snappy, value: isHovering)
             .onHover { isHovering = $0 }
         }
@@ -275,7 +276,7 @@ struct NotchlyPressButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? NotchlyTheme.Motion.pressedScale : 1)
-            .animation(NotchlyTheme.Motion.snappy, value: configuration.isPressed)
+            .animation(NotchlyTheme.Motion.pop, value: configuration.isPressed)
     }
 }
 

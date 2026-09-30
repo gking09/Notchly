@@ -473,7 +473,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if isInlineSneakPeekActive {
             // Calculate required width for inline sneak peek:
             // Album art (~32) + Middle section (380) + Visualizer (~32) + horizontal padding (28) + clip shape margin (12)
-            let inlineSneakPeekWidth: CGFloat = 460
+            // The window must never be narrower than the wings it hosts: the
+            // wings are symmetric, so the wider side sets both.
+            let closedPadding = cornerRadiusInsets.closed.bottom
+            let wingsWidth: CGFloat = airPodsListeningModeSneakActive
+                ? InlineHUD.airPodsListeningModeWidth(
+                    closedNotchWidth: vm.closedNotchSize.width,
+                    gestureProgress: 0,
+                    minimalistic: Defaults[.enableMinimalisticUI]
+                )
+                : NotchWingLayout.make(
+                    notchWidth: max(vm.closedNotchSize.width, 96) + 8,
+                    leftContent: MusicWingMetrics.maxTrackInfoWidth,
+                    rightContent: MusicWingMetrics.maxTrackInfoWidth,
+                    innerClearance: NotchWingLayout.innerClearance
+                ).totalWidth
+            let inlineSneakPeekWidth: CGFloat = max(460, wingsWidth + closedPadding * 2)
             return CGSize(width: inlineSneakPeekWidth, height: vm.effectiveClosedNotchHeight)
         }
 

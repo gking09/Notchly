@@ -39,18 +39,12 @@ struct DoNotDisturbLiveActivity: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        let layout = wingLayout
+        NotchWings(layout: layout, height: vm.effectiveClosedNotchHeight) {
             iconWing
-                .frame(width: iconWingWidth, height: wingHeight)
-
-            Rectangle()
-                .fill(Color.black)
-                .frame(width: centerSegmentWidth)
-
-            labelWing
-                .frame(width: labelWingWidth, height: wingHeight)
+        } right: {
+            labelWing(contentWidth: layout.contentWidth)
         }
-        .frame(width: notchEnvelopeWidth, height: vm.effectiveClosedNotchHeight)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityDescription)
         .onAppear(perform: handleInitialState)
@@ -61,6 +55,24 @@ struct DoNotDisturbLiveActivity: View {
     }
 
     // MARK: - Layout helpers
+
+    /// Symmetric wings around the notch-sized gap. The icon side and the label
+    /// side each ask for what they need and the wider one sets both, so the gap
+    /// stays on the hardware notch whatever the label says.
+    private var wingLayout: NotchWingLayout {
+        let iconContent = iconWingContent
+        let labelContent = labelWingContent
+        guard iconContent > 0 || labelContent > 0 else {
+            // Collapsed: no wings, and a gap matching the idle closed notch.
+            return NotchWingLayout.make(notchWidth: collapsedNotchWidth, leftContent: 0, rightContent: 0).arrival
+        }
+        return ClosedNotchMetrics.wingLayout(
+            notchWidth: collapsedNotchWidth,
+            screenName: vm.screen,
+            leftContent: iconContent,
+            rightContent: labelContent
+        )
+    }
 
     private var collapsedNotchWidth: CGFloat {
         let width = currentClosedNotchWidth
@@ -90,43 +102,26 @@ struct DoNotDisturbLiveActivity: View {
         max(vm.effectiveClosedNotchHeight - 10, 20)
     }
 
-    private var iconWingWidth: CGFloat {
+    /// What the icon side asks for.
+    private var iconWingContent: CGFloat {
         (isExpanded || showInactiveIcon) ? minimalWingWidth : 0
     }
 
-    private var labelWingWidth: CGFloat {
+    /// What the label side asks for.
+    private var labelWingContent: CGFloat {
         guard shouldShowLabel else {
             return focusToastMode ? 0 : ((isExpanded || showInactiveIcon) ? minimalWingWidth : 0)
         }
 
         if focusToastMode {
-            return max(labelIntrinsicWidth + 26, minimalWingWidth)
+            return max(labelIntrinsicWidth + 12, minimalWingWidth)
         }
 
         return max(desiredLabelWidth, minimalWingWidth)
     }
 
-    private var notchEnvelopeWidth: CGFloat {
-        centerSegmentWidth + iconWingWidth + labelWingWidth
-    }
-
     private var minimalWingWidth: CGFloat {
         max(vm.effectiveClosedNotchHeight - 12, 24)
-    }
-
-    private var closedNotchContentInset: CGFloat {
-        cornerRadiusInsets.closed.top + cornerRadiusInsets.closed.bottom
-    }
-
-    private var collapsedToastBaseWidth: CGFloat {
-        max(0, collapsedNotchWidth - closedNotchContentInset)
-    }
-
-    private var centerSegmentWidth: CGFloat {
-        if focusToastMode && iconWingWidth == 0 && labelWingWidth == 0 {
-            return collapsedToastBaseWidth
-        }
-        return collapsedNotchWidth
     }
 
     private var desiredLabelWidth: CGFloat {
@@ -155,10 +150,6 @@ struct DoNotDisturbLiveActivity: View {
 
     private var shouldMarqueeLabel: Bool {
         shouldShowLabel && labelIntrinsicWidth > focusLabelBaselineWidth
-    }
-
-    private var marqueeFrameWidth: CGFloat {
-        max(48, labelWingWidth - 8)
     }
 
     private var focusLabelFont: Font {
@@ -268,49 +259,48 @@ struct DoNotDisturbLiveActivity: View {
     // MARK: - Subviews
 
     private var iconWing: some View {
-        Color.clear
-            .overlay(alignment: .center) {
-                if iconWingWidth > 0 {
-                    currentIcon
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(currentIconColor)
-                        .contentTransition(.opacity)
-                        .scaleEffect(iconScale)
-                        .animation(.none, value: iconScale)
-                }
+        Group {
+            if iconWingContent > 0 {
+                currentIcon
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(currentIconColor)
+                    .contentTransition(.opacity)
+                    .scaleEffect(iconScale)
+                    .animation(.none, value: iconScale)
+                    .frame(width: minimalWingWidth, height: wingHeight, alignment: .center)
             }
-            .animation(.smooth(duration: 0.3), value: iconWingWidth)
+        }
     }
 
-    private var labelWing: some View {
-        Color.clear
-            .overlay(alignment: .trailing) {
-                if shouldShowLabel {
-                    Group {
-                        if shouldMarqueeLabel {
-                            MarqueeText(
-                                .constant(labelText),
-                                font: focusLabelFont,
-                                nsFont: .caption1,
-                                textColor: labelColor,
-                                minDuration: 0.4,
-                                frameWidth: marqueeFrameWidth
-                            )
-                            .frame(width: marqueeFrameWidth, alignment: .trailing)
-                        } else {
-                            Text(labelText)
-                                .font(focusLabelFont)
-                                .foregroundColor(labelColor)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                                .contentTransition(.opacity)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
+    private func labelWing(contentWidth: CGFloat) -> some View {
+        Group {
+            if shouldShowLabel {
+                Group {
+                    if shouldMarqueeLabel {
+                        let marqueeWidth = max(48, contentWidth - 8)
+                        MarqueeText(
+                            .constant(labelText),
+                            font: focusLabelFont,
+                            nsFont: .caption1,
+                            textColor: labelColor,
+                            minDuration: 0.4,
+                            frameWidth: marqueeWidth
+                        )
+                        .frame(width: marqueeWidth, alignment: .trailing)
+                    } else {
+                        Text(labelText)
+                            .font(focusLabelFont)
+                            .foregroundColor(labelColor)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .contentTransition(.opacity)
                     }
-                    .padding(.horizontal, 4)
                 }
+                .padding(.horizontal, 4)
+                .transition(.opacity)
             }
-            .animation(.smooth(duration: 0.3), value: shouldShowLabel)
+        }
+        .animation(NotchlyTheme.Motion.spring, value: shouldShowLabel)
     }
 
     private var labelColor: Color {

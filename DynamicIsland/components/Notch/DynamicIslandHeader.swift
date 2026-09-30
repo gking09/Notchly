@@ -74,8 +74,8 @@ struct DynamicIslandHeader: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .opacity(vm.notchState == .closed ? 0 : 1)
-            .blur(radius: vm.notchState == .closed ? 20 : 0)
-            .animation(NotchlyTheme.Motion.spring.delay(0.1), value: vm.notchState)
+            .blur(radius: vm.notchState == .closed ? 6 : 0)
+            .animation(NotchlyTheme.Motion.spring(delay: 0.1), value: vm.notchState)
             .zIndex(2)
             .padding(8)
 
@@ -170,8 +170,8 @@ struct DynamicIslandHeader: View {
             .font(.system(.headline, design: .rounded))
             .frame(maxWidth: .infinity, alignment: .trailing)
             .opacity(vm.notchState == .closed ? 0 : 1)
-            .blur(radius: vm.notchState == .closed ? 20 : 0)
-            .animation(NotchlyTheme.Motion.spring.delay(0.1), value: vm.notchState)
+            .blur(radius: vm.notchState == .closed ? 6 : 0)
+            .animation(NotchlyTheme.Motion.spring(delay: 0.1), value: vm.notchState)
             .zIndex(2)
         }
         .foregroundColor(NotchlyTheme.Palette.textSecondary)

@@ -57,9 +57,8 @@ struct TimerProgressRing: View {
 
 /// Sizing shared by the standalone live activity and the music pairing.
 enum TimerActivityMetrics {
-    /// Outer padding on each wing, and the gap to the hardware notch.
-    static let sideInset: CGFloat = 12
-    static let notchGap: CGFloat = 8
+    /// Breathing room between a wing's content and its outer edge.
+    static let sideInset: CGFloat = 2
     /// Extra width each wing gains while the "Done" state is showing.
     static let finishedExpansion: CGFloat = 14
     static let dotSize: CGFloat = 8
@@ -85,15 +84,17 @@ enum TimerActivityMetrics {
         presentation.kind == .timer ? ringDiameter(notchHeight: notchHeight) : dotSize
     }
 
-    static func leftWingWidth(for presentation: TimerActivityPresentation, notchHeight: CGFloat) -> CGFloat {
+    /// What the leading wing asks for: the ring or dot. Grows a little while "Done" shows.
+    static func leftContentWidth(for presentation: TimerActivityPresentation, notchHeight: CGFloat) -> CGFloat {
         leadingGlyphWidth(for: presentation, notchHeight: notchHeight)
-            + sideInset + notchGap
+            + sideInset
             + (presentation.isFinished ? finishedExpansion : 0)
     }
 
-    static func rightWingWidth(for presentation: TimerActivityPresentation) -> CGFloat {
+    /// What the trailing wing asks for: the time read-out.
+    static func rightContentWidth(for presentation: TimerActivityPresentation) -> CGFloat {
         trailingTextWidth(for: presentation)
-            + sideInset + notchGap
+            + sideInset
             + (presentation.isFinished ? finishedExpansion : 0)
     }
 
@@ -123,9 +124,9 @@ enum TimerActivityMetrics {
 
 /// Timer / stopwatch on the closed notch. Content sits in the wings either
 /// side of the hardware cutout: the leading wing carries the progress ring
-/// (timer) or a pulsing dot (stopwatch), the trailing wing the time. The
-/// middle lane is black and exactly as wide as the physical notch, so nothing
-/// is ever drawn behind it.
+/// (timer) or a pulsing dot (stopwatch), the trailing wing the time. The wings
+/// are always the same width -- the wider of the two contents -- and the gap
+/// between them is exactly the notch, so nothing is ever drawn behind it.
 struct TimerActivityLiveActivity: View {
     @EnvironmentObject private var vm: DynamicIslandViewModel
     @ObservedObject private var timer = TimerManager.shared
@@ -145,20 +146,23 @@ struct TimerActivityLiveActivity: View {
         vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0)
     }
 
-    private var middleWidth: CGFloat {
-        vm.closedNotchSize.width + (isHovering ? 8 : 0)
-    }
-
     var body: some View {
         if let presentation {
-            HStack(spacing: 0) {
-                leadingWing(presentation)
-                Rectangle()
-                    .fill(.black)
-                    .frame(width: middleWidth, height: notchContentHeight)
-                trailingWing(presentation)
+            let layout = ClosedNotchMetrics.wingLayout(
+                notchWidth: vm.closedNotchSize.width,
+                screenName: vm.screen,
+                leftContent: TimerActivityMetrics.leftContentWidth(for: presentation, notchHeight: notchContentHeight),
+                rightContent: TimerActivityMetrics.rightContentWidth(for: presentation),
+                isHovering: isHovering
+            )
+            NotchWings(layout: layout, height: adjustedNotchHeight) {
+                leadingGlyph(presentation)
+                    .padding(.leading, TimerActivityMetrics.sideInset)
+            } right: {
+                ClosedTimerText(presentation: presentation)
+                    .frame(width: TimerActivityMetrics.trailingTextWidth(for: presentation), alignment: .trailing)
+                    .padding(.trailing, TimerActivityMetrics.sideInset)
             }
-            .frame(height: adjustedNotchHeight, alignment: .center)
             .contentShape(Rectangle())
             .scaleEffect(bump ? 1.06 : 1)
             .animation(NotchlyTheme.Motion.spring, value: presentation.isFinished)
@@ -170,7 +174,7 @@ struct TimerActivityLiveActivity: View {
             .onChange(of: presentation.isFinished) { _, finished in
                 guard finished else { return }
                 // A short overshoot as the wings widen for "Done".
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                withAnimation(NotchlyTheme.Motion.pop) {
                     bump = true
                 }
                 Task { @MainActor in
@@ -181,21 +185,6 @@ struct TimerActivityLiveActivity: View {
                 }
             }
         }
-    }
-
-    // MARK: Wings
-
-    private func leadingWing(_ presentation: TimerActivityPresentation) -> some View {
-        Color.clear
-            .frame(
-                width: TimerActivityMetrics.leftWingWidth(for: presentation, notchHeight: notchContentHeight),
-                height: notchContentHeight
-            )
-            .background(alignment: .leading) {
-                leadingGlyph(presentation)
-                    .padding(.leading, TimerActivityMetrics.sideInset)
-                    .frame(maxHeight: .infinity)
-            }
     }
 
     @ViewBuilder
@@ -212,20 +201,6 @@ struct TimerActivityLiveActivity: View {
         case .stopwatch:
             StopwatchDot(isRunning: !presentation.isPaused)
         }
-    }
-
-    private func trailingWing(_ presentation: TimerActivityPresentation) -> some View {
-        Color.clear
-            .frame(
-                width: TimerActivityMetrics.rightWingWidth(for: presentation),
-                height: notchContentHeight
-            )
-            .background(alignment: .trailing) {
-                ClosedTimerText(presentation: presentation)
-                    .frame(width: TimerActivityMetrics.trailingTextWidth(for: presentation), alignment: .trailing)
-                    .padding(.trailing, TimerActivityMetrics.sideInset)
-                    .frame(maxHeight: .infinity)
-            }
     }
 }
 

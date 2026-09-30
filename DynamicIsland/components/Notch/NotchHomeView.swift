@@ -349,6 +349,9 @@ struct AlbumArtView: View {
             }
             albumArtButton
         }
+        // The artwork flies in from the closed notch (matched geometry), so it
+        // must stay visible; it only settles from slightly small.
+        .staggered(index: 1, offset: 0, blur: 0, fades: false)
     }
 
     private var albumArtBackground: some View {
@@ -462,11 +465,15 @@ struct MusicControlsView: View {
     var body: some View {
         VStack(alignment: .leading) {
             songInfoAndSlider
-            if shouldShowControlHUDRow {
-                controlHUDRow
-            } else {
-                playbackControls
+                .staggered(index: 2)
+            Group {
+                if shouldShowControlHUDRow {
+                    controlHUDRow
+                } else {
+                    playbackControls
+                }
             }
+            .staggered(index: 3)
         }
         .buttonStyle(PlainButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -948,6 +955,7 @@ struct NotchHomeView: View {
                 VStack(spacing: QuickActionsMetrics.contentSpacing) {
                     if quickActionsVisible {
                         QuickActionsBar()
+                            .staggered(index: 0)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     standardContent
@@ -956,7 +964,7 @@ struct NotchHomeView: View {
         }
         .transition(.opacity.animation(.smooth.speed(0.9))
             .combined(with: .move(edge: .top)))
-        .blur(radius: vm.notchState == .closed ? 30 : 0)
+        .blur(radius: vm.notchState == .closed ? 8 : 0)
         .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
     }
 

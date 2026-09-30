@@ -17,6 +17,7 @@
  */
 
 import SwiftUI
+import AppKit
 import Defaults
 
 struct RecordingLiveActivity: View {
@@ -27,42 +28,46 @@ struct RecordingLiveActivity: View {
 
     @Binding var hoverAnimation: Bool
     @Binding var gestureProgress: CGFloat
-    @State private var isVisible = false
+
+    private static let statusFont = NSFont.monospacedDigitSystemFont(ofSize: 14, weight: .semibold)
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-
+        Group {
             if presentation == .expanded {
-                expandedDetails
-                    .frame(width: hudWidth, height: hudHeight)
-                    .transition(.opacity)
-            } else {
-                HStack(spacing: 0) {
-                    recordingBadge
-                        .frame(width: leadingWidth, height: rowHeight)
-
-                    Rectangle()
-                        .fill(.black)
-                        .frame(width: centerWidth, height: vm.effectiveClosedNotchHeight)
-
-                    trailingStatus
-                        .frame(width: trailingWidth, height: rowHeight)
+                // The tall hover panel: its content sits below the notch row.
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    expandedDetails
+                        .frame(width: hudWidth, height: hudHeight)
                 }
-                .frame(width: hudWidth, height: vm.effectiveClosedNotchHeight)
+                .frame(width: hudWidth, height: hudHeight, alignment: .bottom)
+                .transition(.opacity)
+            } else {
+                wings
+                    .transition(.opacity)
             }
         }
-        .frame(width: hudWidth, height: hudHeight, alignment: .bottom)
+        .animation(NotchlyTheme.Motion.spring, value: presentation)
         .accessibilityElement(children: .contain)
-        .onAppear {
-            withAnimation(.smooth(duration: 0.32)) {
-                isVisible = true
-            }
-        }
-        .onChange(of: recordingManager.isRecording) { _, isRecording in
-            withAnimation(.smooth(duration: isRecording ? 0.32 : 0.2)) {
-                isVisible = isRecording
-            }
+    }
+
+    /// Record badge on one side, elapsed time (and, on hover, the stop button)
+    /// on the other. The wings are the same width with the notch-sized gap
+    /// between them; the budget is what the notch's outer frame reserves.
+    private var wings: some View {
+        let layout = ClosedNotchMetrics.wingLayout(
+            notchWidth: vm.closedNotchSize.width,
+            screenName: vm.screen,
+            leftContent: rowHeight + gestureProgress / 2,
+            rightContent: trailingContentWidth + gestureProgress / 2,
+            isHovering: hoverAnimation,
+            widthBudget: hudWidth
+        )
+
+        return NotchWings(layout: layout, height: vm.effectiveClosedNotchHeight + (hoverAnimation ? 8 : 0)) {
+            recordingBadge
+        } right: {
+            trailingStatus
         }
     }
 
@@ -88,26 +93,29 @@ struct RecordingLiveActivity: View {
         vm.effectiveClosedNotchHeight + presentation.extraHeight
     }
 
-    private var centerWidth: CGFloat {
-        vm.closedNotchSize.width + (hoverAnimation ? 8 : 0)
-    }
-
     private var rowHeight: CGFloat {
         max(0, vm.effectiveClosedNotchHeight - 12)
     }
 
-    private var leadingWidth: CGFloat {
-        guard isVisible else { return 0 }
-        return max(0, vm.effectiveClosedNotchHeight - 12 + gestureProgress / 2)
+    private var statusText: String {
+        recordingManager.stopFailureMessage == nil ? recordingManager.formattedDuration : String(localized: "Failed")
     }
 
-    private var trailingWidth: CGFloat {
-        guard isVisible else { return 0 }
-        return max(0, hudWidth - centerWidth - leadingWidth)
+    private var statusTextWidth: CGFloat {
+        // Never narrower than `0:00`, so the digits roll without the wing resizing.
+        max(
+            NotchWingLayout.textWidth(statusText, font: Self.statusFont),
+            NotchWingLayout.textWidth("0:00", font: Self.statusFont)
+        ) + 2
     }
 
     private var inlineStopButtonSize: CGFloat {
         min(max(vm.effectiveClosedNotchHeight - 8, 22), 30)
+    }
+
+    /// What the trailing wing asks for: the time, plus the stop button on hover.
+    private var trailingContentWidth: CGFloat {
+        presentation == .inline ? statusTextWidth + 10 + inlineStopButtonSize : statusTextWidth
     }
 
     private var recordingStatusText: String {
@@ -116,37 +124,33 @@ struct RecordingLiveActivity: View {
 
     @ViewBuilder
     private var recordingBadge: some View {
-        HStack {
-            ZStack {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.red.opacity(0.15))
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.red.opacity(0.15))
 
-                recordingDot(size: 10)
-            }
-            .frame(width: rowHeight, height: rowHeight)
+            recordingDot(size: 10)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .opacity(isVisible ? 1 : 0)
+        .frame(width: rowHeight, height: rowHeight)
     }
 
     @ViewBuilder
     private var trailingStatus: some View {
         HStack(spacing: 10) {
-            Text(recordingManager.stopFailureMessage == nil ? recordingManager.formattedDuration : String(localized: "Failed"))
+            Text(statusText)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.red)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
                 .contentTransition(.numericText())
+                .animation(NotchlyTheme.Motion.snappy, value: statusText)
 
             if presentation == .inline {
                 stopButton(size: inlineStopButtonSize, lineWidth: 1.6)
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .padding(.trailing, 10)
-        .opacity(isVisible ? 1 : 0)
+        .animation(NotchlyTheme.Motion.spring, value: presentation)
     }
 
     private var expandedDetails: some View {

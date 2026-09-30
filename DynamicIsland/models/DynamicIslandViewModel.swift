@@ -29,7 +29,11 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     let animation: Animation?
 
     @Published var contentType: ContentType = .normal
-    @Published private(set) var notchState: NotchState = .closed
+    @Published private(set) var notchState: NotchState = .closed {
+        didSet {
+            if oldValue != notchState { NotchStateClock.noteChange() }
+        }
+    }
 
     var cancellables: Set<AnyCancellable> = []
 

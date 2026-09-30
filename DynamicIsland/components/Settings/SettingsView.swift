@@ -471,8 +471,14 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } detail: {
-            detailView(for: resolvedSelection)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // A quick crossfade with a small lift when the section changes.
+            ZStack {
+                detailView(for: resolvedSelection)
+                    .id(resolvedSelection)
+                    .transition(.settingsPage)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(NotchlyTheme.Motion.spring, value: resolvedSelection)
         }
         .navigationSplitViewStyle(.balanced)
         .toolbar(removing: .sidebarToggle)
@@ -1549,6 +1555,11 @@ struct Charge: View {
                 }
             }
         }
+        .animation(NotchlyTheme.Motion.snappy, value: showPowerStatusNotifications)
+        .animation(NotchlyTheme.Motion.snappy, value: showChargingBatteryHUD)
+        .animation(NotchlyTheme.Motion.snappy, value: showLowBatteryHUD)
+        .animation(NotchlyTheme.Motion.snappy, value: showFullBatteryHUD)
+        .animation(NotchlyTheme.Motion.snappy, value: showCriticalBatteryHUD)
         .navigationTitle("Battery")
     }
 }
@@ -4156,6 +4167,12 @@ struct LiveActivitiesSettings: View {
                 Text("Configure the countdown style in the Calendar tab.")
             }
         }
+        // Options that depend on a toggle dim and reveal smoothly rather than snapping.
+        .animation(NotchlyTheme.Motion.snappy, value: enableScreenRecordingDetection)
+        .animation(NotchlyTheme.Motion.snappy, value: showRecordingIndicator)
+        .animation(NotchlyTheme.Motion.snappy, value: recordingControlMode)
+        .animation(NotchlyTheme.Motion.snappy, value: enableDoNotDisturbDetection)
+        .animation(NotchlyTheme.Motion.snappy, value: focusIndicatorNonPersistent)
         .navigationTitle("Live Activities")
         .onAppear {
             fullDiskAccessPermission.refreshStatus()
