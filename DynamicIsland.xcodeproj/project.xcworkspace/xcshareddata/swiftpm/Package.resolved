@@ -65,15 +65,6 @@
       }
     },
     {
-      "identity" : "open-meteo",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/open-meteo/open-meteo",
-      "state" : {
-        "revision" : "f18ccb781804c444b87e6175a4b62ecfbe0212dc",
-        "version" : "1.4.16"
-      }
-    },
-    {
       "identity" : "pow",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/EmergeTools/Pow",

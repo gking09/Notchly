@@ -2207,10 +2207,6 @@ class MusicManager: ObservableObject {
     // MARK: - Video Artwork
 
     func fetchVideoArtwork() {
-        guard Defaults[.lockScreenMusicFullscreenVideoArtwork] else {
-            videoArtworkURL = nil
-            return
-        }
         // Se il player non è Apple Music, non toccare videoArtworkURL:
         // SpotifyController gestisce il canvas in modo autonomo tramite liveArtworkURL.
         guard bundleIdentifier == "com.apple.Music" else {

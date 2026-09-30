@@ -154,7 +154,7 @@ class LockScreenManager: ObservableObject {
         )
 
         // Fallback: macOS sometimes delays `com.apple.screenIsUnlocked`, leaving
-        // lock-screen widgets visible after the user-perceived unlock.
+        // the lock activity visible after the user-perceived unlock.
         // The workspace session-active notification typically fires earlier; the
         // guard at the top of `screenUnlocked` makes the call idempotent.
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -256,15 +256,10 @@ class LockScreenManager: ObservableObject {
             coordinator.toggleSneakPeek(status: false, type: coordinator.sneakPeek.type)
         }
         
-        // Show panel FIRST (creates and shows window on lock screen)
-        print("[\(timestamp())] LockScreenManager: 🎵 Showing lock screen panel")
-        LockScreenPanelManager.shared.showPanel()
         updateNativeHUDSuppression()
         LockScreenLiveActivityWindowManager.shared.showLocked()
-        LockScreenWeatherManager.shared.showWeatherWidget()
-        LockScreenTimerWidgetManager.shared.handleLockStateChange(isLocked: true)
         
-        // THEN trigger lock icon in Atoll (only if enabled in settings)
+        // Trigger lock icon in Atoll (only if enabled in settings)
         if Defaults[.enableLockScreenLiveActivity] {
             print("[\(timestamp())] LockScreenManager: 🔴 Starting lock icon live activity")
             coordinator.toggleExpandingView(status: true, type: .lockScreen)
@@ -324,13 +319,7 @@ class LockScreenManager: ObservableObject {
             }
         }
         
-        // Hide panel window immediately and synchronously
-        print("[\(timestamp())] LockScreenManager: 🚪 Hiding panel window")
-        LockScreenPanelManager.shared.hidePanel()
-        FullScreenArtworkWindowManager.shared.hide()
         LockScreenLiveActivityWindowManager.shared.showUnlockAndScheduleHide()
-        LockScreenWeatherManager.shared.hideWeatherWidget()
-        LockScreenTimerWidgetManager.shared.handleLockStateChange(isLocked: false)
         
         // Update state immediately
         if Defaults[.enableLockScreenLiveActivity] {
@@ -352,7 +341,7 @@ class LockScreenManager: ObservableObject {
     // Defensive fallback against late/missed `com.apple.screenIsUnlocked` and
     // `NSWorkspace.sessionDidBecomeActiveNotification` notifications, which
     // macOS sometimes delivers well after the user-perceived unlock — leaving
-    // lock-screen widgets visible for an extra moment. While we believe we are
+    // the lock activity visible for an extra moment. While we believe we are
     // locked, poll the canonical session-lock state and fire `screenUnlocked()`
     // the moment the OS flips. The handler's duplicate-event guard makes this
     // safe to call alongside any later-arriving notification.
@@ -365,10 +354,8 @@ class LockScreenManager: ObservableObject {
 
     /// Starts the twice-a-second poll of the canonical session lock state.
     ///
-    /// Runs only while this manager believes the Mac is locked, and does two
-    /// things on each tick: fires `screenUnlocked()` as soon as the OS reports
-    /// the session unlocked, and re-presents the media panel if something has
-    /// taken it down while the Mac is still locked.
+    /// Runs only while this manager believes the Mac is locked, and fires
+    /// `screenUnlocked()` as soon as the OS reports the session unlocked.
     private func startLockStatePolling() {
         lockStatePollTask?.cancel()
         lockStatePollTask = Task { [weak self] in
@@ -382,9 +369,6 @@ class LockScreenManager: ObservableObject {
                         self.screenUnlocked()
                         return
                     }
-
-                    // Still locked: make sure the media panel is actually there.
-                    LockScreenPanelManager.shared.ensurePresentedWhileLocked()
                 }
             }
         }
@@ -400,8 +384,7 @@ class LockScreenManager: ObservableObject {
 
     /// Copy EXACT logic from ScreenRecordingManager
     /// Volume feedback on the lock screen comes from macOS, for as long as the
-    /// Mac is locked. Whether the music panel is up no longer changes that, so
-    /// this only has to run when the lock state itself changes.
+    /// Mac is locked, so this only has to run when the lock state itself changes.
     func updateNativeHUDSuppression() {
         // Acting only on a change matters -- handing the HUD over restarts
         // OSDUIHelper -- but the record of what has been applied belongs with

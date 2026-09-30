@@ -49,7 +49,6 @@ Atoll turns the MacBook notch into a focused command surface for media, system i
 ## Highlights
 - Media controls for Apple Music, Spotify, Cider, and more with inline previews.
 - Live Activities for media playback, Focus, screen recording, privacy indicators, downloads (beta), and battery/charging.
-- Lock screen widgets for media, timers, charging, Bluetooth devices, and weather.
 - Lightweight system insight for CPU, GPU, memory, network, and disk usage.
 - Productivity tools including timers, clipboard history, color picker, and calendar previews.
 - Customization for layouts, animations, hover behavior, and shortcut remapping.
@@ -57,7 +56,7 @@ Atoll turns the MacBook notch into a focused command surface for media, system i
 ## Other Features
 - Gesture controls for opening/closing the notch and media navigation.
 - Parallax hover interactions with smooth transitions.
-- Lock screen appearance and positioning controls for panels and widgets.
+- Lock and unlock live activity with optional lock and fingerprint icons.
 
 <p align="center">
   <img src="https://i.postimg.cc/HkLGn6yH/846F86A4_A2F9_4CD6_BC84_1D720D377728_1_201_a.jpg" alt="Atoll preview" width="920">
@@ -83,7 +82,6 @@ Atoll turns the MacBook notch into a focused command surface for media, system i
 ## Settings
 - Choose appearance, animation style, and per‑feature toggles.
 - Remap global shortcuts and adjust hover behaviour.
-- Enable lock screen widgets and select data sources.
 
 ## Gesture Controls
 - Two-finger swipe down to open the notch when hover-to-open is disabled; swipe up to close.
@@ -104,11 +102,9 @@ Atoll builds upon the work of several open-source projects and draws inspiration
 
 - [**Boring.Notch**](https://github.com/TheBoredTeam/boring.notch) - foundational codebase that provided the initial media player integration, AirDrop surface implementation, file dock functionality, and calendar event display. Major architectural patterns and notch interaction models were adapted from this project.
 
-- [**Alcove**](https://tryalcove.com) - primary inspiration for the Minimalistic Mode interface design and the conceptual framework for lock screen widget integration that informed Atoll's compact layout strategy.
+- [**Alcove**](https://tryalcove.com) - primary inspiration for the Minimalistic Mode interface design that informed Atoll's compact layout strategy.
 
-- [**Open Meteo**](https://open-meteo.com) - weather apis for the lock screen widgets
-
-- [**SkyLightWindow**](https://github.com/Lakr233/SkyLightWindow) - window rendering for Lock Screen Widgets
+- [**SkyLightWindow**](https://github.com/Lakr233/SkyLightWindow) - window rendering for HUD overlays and the lock screen live activity
 
 - [**rtaudio**](https://github.com/ZephyrCodesStuff/rtaudio) - Live music visualizer using C++ was adapted from this project
 
@@ -116,7 +112,6 @@ Atoll builds upon the work of several open-source projects and draws inspiration
 
 - [**DynamicNotch**](https://github.com/jackson-storm/DynamicNotch) - thanks DynamicNotch for letting us use their battery huds
 
-- Wick - Thanks Nate for allowing us to replicate the iOS like Timer design for the Lock Screen Widget
 
 
 

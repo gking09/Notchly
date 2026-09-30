@@ -39,16 +39,13 @@ final class ExtensionAuthorizationManager: ObservableObject {
 
     var isExtensionsFeatureEnabled: Bool { Defaults[.enableThirdPartyExtensions] }
     var areLiveActivitiesEnabled: Bool { Defaults[.enableExtensionLiveActivities] }
-    var areLockScreenWidgetsEnabled: Bool { Defaults[.enableExtensionLockScreenWidgets] }
     var areNotchExperiencesEnabled: Bool { Defaults[.enableExtensionNotchExperiences] }
 
     func updateFeatureToggles(extensionsEnabled: Bool? = nil,
                               liveActivitiesEnabled: Bool? = nil,
-                              lockScreenWidgetsEnabled: Bool? = nil,
                               notchExperiencesEnabled: Bool? = nil) {
         if let extensionsEnabled { Defaults[.enableThirdPartyExtensions] = extensionsEnabled }
         if let liveActivitiesEnabled { Defaults[.enableExtensionLiveActivities] = liveActivitiesEnabled }
-        if let lockScreenWidgetsEnabled { Defaults[.enableExtensionLockScreenWidgets] = lockScreenWidgetsEnabled }
         if let notchExperiencesEnabled { Defaults[.enableExtensionNotchExperiences] = notchExperiencesEnabled }
         objectWillChange.send()
     }
@@ -143,12 +140,6 @@ final class ExtensionAuthorizationManager: ObservableObject {
     func canProcessLiveActivityRequest(from bundleIdentifier: String) -> Bool {
         guard preflight(bundleIdentifier: bundleIdentifier, scope: .liveActivities) else { return false }
         guard areLiveActivitiesEnabled else { return false }
-        return true
-    }
-
-    func canProcessLockScreenRequest(from bundleIdentifier: String) -> Bool {
-        guard preflight(bundleIdentifier: bundleIdentifier, scope: .lockScreenWidgets) else { return false }
-        guard areLockScreenWidgetsEnabled else { return false }
         return true
     }
 

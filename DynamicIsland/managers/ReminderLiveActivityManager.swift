@@ -45,7 +45,6 @@ final class ReminderLiveActivityManager: ObservableObject {
     @Published private(set) var currentDate: Date = Date()
     @Published private(set) var upcomingEntries: [ReminderEntry] = []
     @Published private(set) var activeWindowReminders: [ReminderEntry] = []
-    @Published private(set) var lockScreenSnapshot: LockScreenReminderWidgetSnapshot?
 
     private let logger: os.Logger = os.Logger(subsystem: "com.ebullioscopic.Atoll", category: "ReminderLiveActivity")
 
@@ -69,12 +68,6 @@ final class ReminderLiveActivityManager: ObservableObject {
     private var deferredLockResumeTask: Task<Void, Never>? { didSet { oldValue?.cancel() } }
     private var nextAllowedLockResumeRefresh: Date = .distantPast
     private let lockResumeCooldown: TimeInterval = 5
-    private let lockScreenTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter
-    }()
 
     private var lastAppliedLeadTime = Defaults[.reminderLeadTime]
     private var lastAppliedHideAllDay = Defaults[.hideAllDayEvents]
@@ -202,7 +195,6 @@ final class ReminderLiveActivityManager: ObservableObject {
         upcomingEntries = []
         activeWindowReminders = []
         cancelAllTimers()
-        lockScreenSnapshot = nil
     }
 
     private func handleCalendarEventsUpdate(_ events: [EventModel]) {
@@ -460,8 +452,6 @@ final class ReminderLiveActivityManager: ObservableObject {
             return
         }
 
-        defer { publishLockScreenSnapshot(referenceDate: date) }
-
         currentDate = date
         updateActiveWindowReminders(for: date)
 
@@ -559,74 +549,6 @@ final class ReminderLiveActivityManager: ObservableObject {
             logger.debug("[Reminder] Active window reminder count -> \(filtered.count, privacy: .public)")
             activeWindowReminders = filtered
         }
-    }
-
-    private func publishLockScreenSnapshot(referenceDate: Date) {
-        guard Defaults[.enableLockScreenReminderWidget] else {
-            if lockScreenSnapshot != nil {
-                lockScreenSnapshot = nil
-            }
-            return
-        }
-        guard let entry = activeReminder else {
-            if lockScreenSnapshot != nil {
-                lockScreenSnapshot = nil
-            }
-            return
-        }
-
-        let snapshot = buildLockScreenSnapshot(for: entry, now: referenceDate)
-        if lockScreenSnapshot != snapshot {
-            Logger.log("Publishing new lock screen snapshot: \(snapshot.title)", category: .debug)
-            lockScreenSnapshot = snapshot
-        }
-    }
-
-    private func buildLockScreenSnapshot(for entry: ReminderEntry, now: Date) -> LockScreenReminderWidgetSnapshot {
-        let title = entry.event.title.isEmpty ? "Upcoming Reminder" : entry.event.title
-        let isCritical = lockScreenCriticalWindowContains(entry: entry, now: now)
-        return LockScreenReminderWidgetSnapshot(
-            title: title,
-            eventTimeText: lockScreenTimeFormatter.string(from: entry.event.start),
-            relativeDescription: lockScreenRelativeDescription(for: entry, now: now),
-            accent: lockScreenAccentColor(for: entry, isCritical: isCritical),
-            chipStyle: Defaults[.lockScreenReminderChipStyle],
-            isCritical: isCritical,
-            iconName: isCritical ? Self.criticalIconName : Self.standardIconName
-        )
-    }
-
-    private func lockScreenAccentColor(for entry: ReminderEntry, isCritical: Bool) -> LockScreenReminderWidgetSnapshot.RGBAColor {
-        if isCritical {
-            return .init(nsColor: .systemRed)
-        }
-
-        let boosted = Color(nsColor: entry.event.calendar.color).ensureMinimumBrightness(factor: 0.7)
-        return .init(nsColor: NSColor(boosted))
-    }
-
-    private func lockScreenRelativeDescription(for entry: ReminderEntry, now: Date) -> String? {
-        let remaining = entry.event.start.timeIntervalSince(now)
-        if remaining <= 0 {
-            return String(format: String(localized: "now"))
-        }
-
-        let minutes = Int(ceil(remaining / 60))
-        switch minutes {
-        case ..<1:
-            return String(format: String(localized: "now"))
-        case 1:
-            return String(format: String(localized: "in %@"), String(localized: "1 min"))
-        default:
-            return "\(String(format: String(localized: "in \(minutes)"))) \(String(format: String(localized: "min")))"
-        }
-    }
-
-    private func lockScreenCriticalWindowContains(entry: ReminderEntry, now: Date) -> Bool {
-        let window = TimeInterval(Defaults[.reminderSneakPeekDuration])
-        guard window > 0 else { return false }
-        let remaining = entry.event.start.timeIntervalSince(now)
-        return remaining > 0 && remaining <= window
     }
 
     static func additionalHeight(forRowCount rowCount: Int) -> CGFloat {

@@ -115,7 +115,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let networkConnectivityManager = NetworkConnectivityManager.shared
     let idleAnimationManager = IdleAnimationManager.shared  // NEW: Custom idle animations
     let downloadManager = DownloadManager.shared  // NEW: browser downloads detection
-    let lockScreenPanelManager = LockScreenPanelManager.shared  // NEW: Lock screen music panel
     let mediaControlsStateCoordinator = MediaControlsStateCoordinator.shared
     let systemTimerBridge = SystemTimerBridge.shared
     let extensionXPCServiceHost = ExtensionXPCServiceHost.shared
@@ -996,19 +995,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         previousScreens = NSScreen.screens
 
-        // Skip weather under UI testing: prepareLocationAccess prompts for Location.
-        if Defaults[.enableLockScreenWeatherWidget] && !AppRuntimeEnvironment.isUITesting {
-            LockScreenWeatherManager.shared.prepareLocationAccess()
-            Task { @MainActor in
-                await LockScreenWeatherManager.shared.refresh(force: true)
-            }
-        }
-
-        // Warm up the lock screen timer widget manager so it can observe timer/default
-        // changes immediately instead of waiting for the first lock event.
-        let timerWidgetManager = LockScreenTimerWidgetManager.shared
-        timerWidgetManager.handleLockStateChange(isLocked: LockScreenManager.shared.currentLockStatus)
-
     }
 
     private func installTopMenuItemsIfNeeded() {
@@ -1533,10 +1519,8 @@ final class MediaControlsStateCoordinator {
         }
 
         if showStandard {
-            restoreLockScreenPanelIfNeeded()
             restoreMusicControlWindowIfNeeded()
         } else {
-            cacheAndDisableLockScreenPanel()
             cacheAndDisableMusicControlWindow()
         }
     }
@@ -1561,23 +1545,6 @@ final class MediaControlsStateCoordinator {
         if clearCache {
             Defaults[.cachedMusicLiveActivityPreference] = nil
         }
-    }
-
-    private func cacheAndDisableLockScreenPanel() {
-        if Defaults[.cachedLockScreenMediaWidgetPreference] == nil {
-            Defaults[.cachedLockScreenMediaWidgetPreference] = Defaults[.enableLockScreenMediaWidget]
-        }
-
-        if Defaults[.enableLockScreenMediaWidget] {
-            Defaults[.enableLockScreenMediaWidget] = false
-            LockScreenPanelManager.shared.hidePanel()
-        }
-    }
-
-    private func restoreLockScreenPanelIfNeeded() {
-        guard let cached = Defaults[.cachedLockScreenMediaWidgetPreference] else { return }
-        Defaults[.enableLockScreenMediaWidget] = cached
-        Defaults[.cachedLockScreenMediaWidgetPreference] = nil
     }
 
     private func cacheAndDisableMusicControlWindow() {

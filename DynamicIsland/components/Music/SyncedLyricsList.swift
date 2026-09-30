@@ -2,9 +2,8 @@
 //  SyncedLyricsList.swift
 //  DynamicIsland
 //
-//  The scrolling, swept lyrics list shared by the notch's lyrics tab and the
-//  expanded lock screen player, so the two cannot drift apart in how they
-//  decide what a row is or which one is current.
+//  The scrolling, swept lyrics list used by the notch's lyrics tab and pinned
+//  lyrics, deciding what a row is and which one is current.
 //
 
 import SwiftUI

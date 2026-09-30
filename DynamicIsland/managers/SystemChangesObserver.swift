@@ -28,9 +28,7 @@ import AVFoundation
 /// None of this app's HUDs can be seen over the lock screen: the inline style
 /// lives in the notch, which is not on screen there, and the window-based
 /// styles sit below the lock screen shield. So while locked the app stands
-/// down and macOS's own HUD is unsuppressed instead — except when the lock
-/// screen music panel is up, which carries its own volume slider and would
-/// otherwise leave two indicators on screen at once.
+/// down and macOS's own HUD is unsuppressed instead.
 enum SystemHUDPlacement {
     /// This app's HUDs are never shown while locked; something else covers it.
     static func suppressesAppHUD(isLocked: Bool) -> Bool {
@@ -39,19 +37,10 @@ enum SystemHUDPlacement {
 
     /// True when macOS should be allowed to draw its own HUD again.
     ///
-    /// Whenever the Mac is locked — including with the music panel up. The
-    /// panel replaces the *volume* indicator only, but native suppression is
-    /// not per-channel: there is one `OSDUIHelper`, frozen or not. Withholding
-    /// it because the panel shows volume therefore left the brightness and
-    /// keyboard-backlight keys with no indicator from either side, since
-    /// `suppressesAppHUD` has already stood this app's HUDs down for every
-    /// channel while locked.
-    ///
-    /// Silently dead keys are the worse failure, so the panel's capsule and the
-    /// native HUD are both allowed to show volume while locked. Removing that
-    /// duplication needs per-channel *interception* — swallow the volume keys
-    /// so only the capsule moves, let brightness through to the native HUD —
-    /// which is a larger change than this decision point.
+    /// Whenever the Mac is locked: `suppressesAppHUD` has already stood this
+    /// app's HUDs down for every channel, so withholding the native HUD would
+    /// leave the volume, brightness and keyboard-backlight keys with no
+    /// indicator from either side.
     static func yieldsToNativeHUD(isLocked: Bool) -> Bool {
         isLocked
     }
@@ -257,7 +246,7 @@ final class SystemChangesObserver: MediaKeyInterceptorDelegate {
 
     @MainActor
     private func sendVolumeNotification(value: Float, isMuted: Bool) {
-        // Locked, macOS draws the HUD (or the lock screen music panel does), so
+        // Locked, macOS draws the HUD, so
         // stand down entirely — including the re-suppression below, which would
         // otherwise silence the native HUD again on the next keypress.
         guard !SystemHUDPlacement.suppressesAppHUD(isLocked: LockScreenManager.isLockedSnapshot) else { return }

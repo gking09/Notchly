@@ -335,9 +335,7 @@ class SystemHUDManager {
     /// None of this app's HUD styles can be seen over the lock screen — the
     /// inline one lives in the notch, the others sit below the lock screen
     /// shield — so suppressing the system HUD there left the volume keys with
-    /// no feedback at all. The exception is the lock screen music panel, which
-    /// carries its own slider; unsuppressing then would put two indicators on
-    /// screen at once.
+    /// no feedback at all.
     @MainActor
     func updateNativeHUDSuppressionForLockState(isLocked: Bool) {
         // Readiness first, then the record of what has been applied. The other

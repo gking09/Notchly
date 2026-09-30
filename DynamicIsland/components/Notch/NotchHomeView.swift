@@ -1041,7 +1041,7 @@ struct MusicSliderView: View {
     var trailingLabel: TrailingLabel = .duration
     var restingTrackHeight: CGFloat = 8
     var draggingTrackHeight: CGFloat = 14
-    /// When set, bypasses Defaults[.sliderColor] (used by lock screen appearance).
+    /// When set, bypasses Defaults[.sliderColor] (for callers that need a fixed tint).
     var tintOverride: Color? = nil
     /// Greys the track out until it is reached for, the way Apple's transport
     /// sliders do. Opt-in: the notch's own slider is meant to carry the album

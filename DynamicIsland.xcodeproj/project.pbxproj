@@ -415,7 +415,6 @@
 				B19424072CD0DB52003E5DC2 /* XCRemoteSwiftPackageReference "LottieUI" */,
 				146BC4352D366E9B0047C66A /* XCRemoteSwiftPackageReference "MacroVisionKit" */,
 				7E61181F2E24071E0050006C /* XCRemoteSwiftPackageReference "SkyLightWindow" */,
-				7E09D5962EB7B497005AF41D /* XCRemoteSwiftPackageReference "open-meteo" */,
 				7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -771,7 +770,6 @@
 				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
 				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
-				ENABLE_RESOURCE_ACCESS_LOCATION = YES;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -793,8 +791,6 @@
 				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Atoll needs access to save screenshots to your desktop.";
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "Atoll needs access to read files in the downloads folder.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocationUsageDescription = "Atoll uses your location to display accurate lock screen weather.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Atoll uses your location to display accurate lock screen weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Atoll needs microphone access to record voice questions for the AI assistant feature.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Atoll needs Reminders access to show your reminders";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "Atoll needs Reminders access to show your reminders";
@@ -845,7 +841,6 @@
 				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
 				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
-				ENABLE_RESOURCE_ACCESS_LOCATION = YES;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -867,8 +862,6 @@
 				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Atoll needs access to save screenshots to your desktop.";
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "Atoll needs access to read files in the downloads folder.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocationUsageDescription = "Atoll uses your location to display accurate lock screen weather.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Atoll uses your location to display accurate lock screen weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Atoll needs microphone access to record voice questions for the AI assistant feature.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Atoll needs Reminders access to show your reminders";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "Atoll needs Reminders access to show your reminders";
@@ -961,14 +954,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.6.4;
-			};
-		};
-		7E09D5962EB7B497005AF41D /* XCRemoteSwiftPackageReference "open-meteo" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/open-meteo/open-meteo";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.16;
 			};
 		};
 		7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */ = {
