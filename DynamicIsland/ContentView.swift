@@ -1274,8 +1274,6 @@ struct ContentView: View {
                                   NotchStatsView()
                               case .llmUsage:
                                   NotchLLMUsageView()
-                              case .colorPicker:
-                                  NotchColorPickerView()
                             case .notes:
                                 NotchNotesView()
                             case .clipboard:
@@ -2389,7 +2387,6 @@ struct ContentView: View {
     private func hasAnyActivePopovers() -> Bool {
      return vm.isBatteryPopoverActive || 
          vm.isClipboardPopoverActive || 
-         vm.isColorPickerPopoverActive || 
          vm.isStatsPopoverActive ||
          vm.isTimerPopoverActive ||
          vm.isPerAppVolumePopoverActive ||

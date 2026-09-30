@@ -36,14 +36,14 @@ struct ProfileSelectionView: View {
             id: "developer",
             name: String(localized: "Developer"),
             icon: "terminal.fill",
-            description: String(localized: "Code and debug with color picker, stats monitoring, and screen assistant."),
+            description: String(localized: "Code and debug with stats monitoring, and screen assistant."),
             gradient: [Color.blue, Color.purple]
         ),
         UserProfile(
             id: "designer",
             name: String(localized: "Designer"),
             icon: "paintbrush.fill",
-            description: String(localized: "Create and design with color picker, mirror, and visual effects."),
+            description: String(localized: "Create and design with mirror, and visual effects."),
             gradient: [Color.pink, Color.orange]
         ),
         UserProfile(
@@ -207,7 +207,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     // Developer Profile Settings
     let isDeveloper = profiles.contains("developer")
     if isDeveloper {
-        Defaults[.enableColorPickerFeature] = true
         Defaults[.enableStatsFeature] = true
         Defaults[.enableTimerFeature] = true
         Defaults[.enableScreenAssistant] = true
@@ -218,7 +217,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     // Designer Profile Settings
     let isDesigner = profiles.contains("designer")
     if isDesigner {
-        Defaults[.enableColorPickerFeature] = true
         Defaults[.showMirror] = true
         Defaults[.lightingEffect] = true
         Defaults[.inlineHUD] = true
@@ -232,7 +230,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     let isLightUse = profiles.contains("lightuse")
     if isLightUse {
         Defaults[.enableMinimalisticUI] = true
-        Defaults[.enableColorPickerFeature] = false
         Defaults[.showMirror] = false
         Defaults[.enableStatsFeature] = false
         Defaults[.enableTimerFeature] = true
@@ -246,7 +243,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     if isStudent {
         Defaults[.enableTimerFeature] = true
         Defaults[.showCalendar] = true
-        Defaults[.enableColorPickerFeature] = false
         Defaults[.showMirror] = false
         Defaults[.enableStatsFeature] = false
         Defaults[.enableMinimalisticUI] = false

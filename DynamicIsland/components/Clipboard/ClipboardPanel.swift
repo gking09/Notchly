@@ -685,3 +685,28 @@ private struct ClipboardRowActionButton: View {
         print("Close panel")
     }
 }
+
+// MARK: - Native Style Close Button Component
+// MARK: - Native Style Close Button Component
+struct NativeStyleCloseButton: View {
+    let action: () -> Void
+    @State private var isHovered = false
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 8, weight: .medium))
+                .foregroundColor(.white)
+                .frame(width: 13, height: 13)
+                .background(isHovered ? Color.red.opacity(0.8) : Color.red)
+                .clipShape(Circle())
+                .scaleEffect(isHovered ? 1.1 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
