@@ -20,9 +20,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case lockScreen
     case media
     case devices
-    case quickActions
     case stash
-    case hub
     case hudAndOSD
     case battery
     case downloads
@@ -36,9 +34,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .lockScreen: return String(localized: "Lock Screen")
         case .media: return String(localized: "Media")
         case .devices: return String(localized: "Devices")
-        case .quickActions: return String(localized: "Quick Actions")
         case .stash: return String(localized: "Stash")
-        case .hub: return String(localized: "Hub")
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
         case .downloads: return String(localized: "Downloads")
@@ -52,9 +48,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .lockScreen: return "lock.laptopcomputer"
         case .media: return "play.laptopcomputer"
         case .devices: return "headphones"
-        case .quickActions: return "square.grid.2x2.fill"
         case .stash: return "tray.and.arrow.down.fill"
-        case .hub: return "clock.fill"
         case .hudAndOSD: return "dial.medium.fill"
         case .battery: return "battery.100.bolt"
         case .downloads: return "square.and.arrow.down"
@@ -68,9 +62,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .lockScreen: return .orange
         case .media: return .green
         case .devices: return Color(red: 0.1, green: 0.11, blue: 0.12)
-        case .quickActions: return .red
         case .stash: return .teal
-        case .hub: return .cyan
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
         case .downloads: return .gray
@@ -195,16 +187,10 @@ private enum LegacySettingsSearchCatalog {
         LegacySettingsSearchEntry(tab: .media, title: "Side lyrics width", keywords: ["lyrics", "width", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics width")),
         LegacySettingsSearchEntry(tab: .media, title: "Side lyrics horizontal offset", keywords: ["lyrics", "offset", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics horizontal offset")),
         LegacySettingsSearchEntry(tab: .media, title: "Show live canvas in Notchly", keywords: ["canvas", "live canvas", "album art", "dynamic island", "spotify canvas"], highlightID: SettingsTab.media.highlightID(for: "Show live canvas in Notchly")),
-        LegacySettingsSearchEntry(tab: .media, title: "Auto-hide inactive notch media player", keywords: ["auto hide", "inactive", "placeholder", "notch media"], highlightID: SettingsTab.media.highlightID(for: "Auto-hide inactive notch media player")),
         LegacySettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
         LegacySettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
 
         // Hub
-        LegacySettingsSearchEntry(tab: .hub, title: "Show the Hub", keywords: ["hub", "clock", "centre", "center", "home"], highlightID: SettingsTab.hub.highlightID(for: "Show the Hub")),
-        LegacySettingsSearchEntry(tab: .hub, title: "Show seconds", keywords: ["hub", "clock", "seconds"], highlightID: SettingsTab.hub.highlightID(for: "Show seconds")),
-        LegacySettingsSearchEntry(tab: .hub, title: "Time format", keywords: ["hub", "clock", "12-hour", "24-hour", "am pm", "military"], highlightID: SettingsTab.hub.highlightID(for: "Time format")),
-        LegacySettingsSearchEntry(tab: .hub, title: "Show the date", keywords: ["hub", "clock", "date", "day"], highlightID: SettingsTab.hub.highlightID(for: "Show the date")),
-        LegacySettingsSearchEntry(tab: .hub, title: "Hub chips", keywords: ["hub", "chips", "timer", "battery", "stash", "focus", "paused music"], highlightID: SettingsTab.hub.highlightID(for: "Hub chips")),
 
 
 
@@ -225,10 +211,6 @@ private enum LegacySettingsSearchCatalog {
         LegacySettingsSearchEntry(tab: .stash, title: "Clear when the Mac sleeps or locks", keywords: ["stash", "sleep", "lock", "privacy", "clear"], highlightID: SettingsTab.stash.highlightID(for: "Clear when the Mac sleeps or locks")),
         LegacySettingsSearchEntry(tab: .stash, title: "Hide previews until hover", keywords: ["stash", "privacy", "blur", "text", "preview"], highlightID: SettingsTab.stash.highlightID(for: "Hide previews until hover")),
         LegacySettingsSearchEntry(tab: .stash, title: "Stash clipboard shortcut", keywords: ["stash", "shortcut", "keyboard", "clipboard"], highlightID: SettingsTab.stash.highlightID(for: "Stash clipboard shortcut")),
-        LegacySettingsSearchEntry(tab: .quickActions, title: "Show Quick Actions row", keywords: ["quick actions", "buttons", "row", "home"], highlightID: SettingsTab.quickActions.highlightID(for: "Show Quick Actions row")),
-        LegacySettingsSearchEntry(tab: .quickActions, title: "Shortcut name", keywords: ["shortcuts", "focus", "do not disturb", "automation"], highlightID: SettingsTab.quickActions.highlightID(for: "Shortcut name")),
-        LegacySettingsSearchEntry(tab: .quickActions, title: "Timer & stopwatch live activity", keywords: ["timer", "stopwatch", "live activity", "closed notch"], highlightID: SettingsTab.quickActions.highlightID(for: "Timer & stopwatch live activity")),
-        LegacySettingsSearchEntry(tab: .quickActions, title: "Timer sound", keywords: ["timer", "sound", "alarm", "chime"], highlightID: SettingsTab.quickActions.highlightID(for: "Timer sound")),
     ]
 }
 
@@ -2503,88 +2485,6 @@ struct Media: View {
     }
 }
 
-struct HubSettings: View {
-    @Default(.enableHub) private var enableHub
-    @Default(.hubShowSeconds) private var showSeconds
-    @Default(.hubTimeFormat) private var timeFormat
-    @Default(.hubShowDate) private var showDate
-    @Default(.hubHiddenChips) private var hiddenChips
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.hub.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableHub) {
-                    Text("Show the Hub")
-                }
-                .settingsHighlight(id: highlightID("Show the Hub"))
-            } header: {
-                Text("Hub")
-            } footer: {
-                Text("A large clock in the middle of the Home tab, with chips for whatever is relevant right now. It is not shown in Minimalistic UI.")
-            }
-
-            if enableHub {
-                Section {
-                    Defaults.Toggle(key: .hubShowSeconds) {
-                        Text("Show seconds")
-                    }
-                    .settingsHighlight(id: highlightID("Show seconds"))
-
-                    SettingsSegmentedPicker(
-                        "Time format",
-                        selection: $timeFormat,
-                        items: Array(HubTimeFormat.allCases)
-                    ) { $0.title }
-                    .settingsHighlight(id: highlightID("Time format"))
-
-                    Defaults.Toggle(key: .hubShowDate) {
-                        Text("Show the date")
-                    }
-                    .settingsHighlight(id: highlightID("Show the date"))
-                } header: {
-                    Text("Clock")
-                } footer: {
-                    Text("Follow system uses the 12 or 24-hour setting of your Mac.")
-                }
-
-                Section {
-                    ForEach(HubChip.priority) { chip in
-                        Toggle(isOn: visibilityBinding(for: chip)) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(chip.title)
-                                Text(chip.detail)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Chips")
-                } footer: {
-                    Text("Chips only appear while they have something to show, and the clock stands alone when none do. Up to three are shown at once, most important first.")
-                }
-                .settingsHighlight(id: highlightID("Hub chips"))
-            }
-        }
-        .animation(NotchlyTheme.Motion.snappy, value: enableHub)
-    }
-
-    private func visibilityBinding(for chip: HubChip) -> Binding<Bool> {
-        Binding(
-            get: { !hiddenChips.contains(chip) },
-            set: { isOn in
-                var updated = hiddenChips.filter { $0 != chip }
-                if !isOn { updated.append(chip) }
-                hiddenChips = updated
-            }
-        )
-    }
-}
-
 private extension DevicesSettingsView {
     enum BluetoothHUDIconStyle: String {
         case symbol
@@ -3417,187 +3317,6 @@ func warningBadge(_ text: String, _ description: String) -> some View {
     }
 }
 
-struct QuickActionsSettings: View {
-    @ObservedObject private var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.enableQuickActions) private var enableQuickActions
-    @Default(.quickActionsOrder) private var order
-    @Default(.quickActionsHidden) private var hidden
-    @Default(.quickActionsShortcutName) private var shortcutName
-    @State private var soundRefresh = 0
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.quickActions.highlightID(for: title)
-    }
-
-    private var orderedActions: [QuickAction] {
-        QuickActionsLayout.normalizedOrder(order)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableQuickActions) {
-                    Text("Show Quick Actions row")
-                }
-                .settingsHighlight(id: highlightID("Show Quick Actions row"))
-            } header: {
-                Text("Quick Actions")
-            } footer: {
-                Text("A row of small glass buttons at the top of the Home tab. It is not shown in Minimalistic UI.")
-            }
-
-            if enableQuickActions {
-                actionsSection
-                shortcutSection
-                liveActivitySection
-                soundSection
-            }
-        }
-    }
-
-    // MARK: Actions
-
-    @ViewBuilder
-    private var actionsSection: some View {
-        Section {
-            ForEach(orderedActions) { action in
-                HStack(spacing: 10) {
-                    Toggle(isOn: visibilityBinding(for: action)) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Label(action.title, systemImage: action.symbolName)
-                            Text(action.detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Spacer(minLength: 8)
-
-                    Button {
-                        move(action, by: -1)
-                    } label: {
-                        Image(systemName: "chevron.up")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(orderedActions.first == action)
-                    .help("Move earlier")
-
-                    Button {
-                        move(action, by: 1)
-                    } label: {
-                        Image(systemName: "chevron.down")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(orderedActions.last == action)
-                    .help("Move later")
-                }
-            }
-        } header: {
-            Text("Buttons")
-        } footer: {
-            Text("Choose which buttons appear and in what order, left to right.")
-        }
-    }
-
-    private func visibilityBinding(for action: QuickAction) -> Binding<Bool> {
-        Binding(
-            get: { !hidden.contains(action) },
-            set: { isOn in
-                var updated = hidden.filter { $0 != action }
-                if !isOn { updated.append(action) }
-                hidden = updated
-            }
-        )
-    }
-
-    private func move(_ action: QuickAction, by offset: Int) {
-        withAnimation(.smooth) {
-            order = QuickActionsLayout.moved(order, action: action, by: offset)
-        }
-    }
-
-    // MARK: Shortcut
-
-    @ViewBuilder
-    private var shortcutSection: some View {
-        Section {
-            TextField("Shortcut name", text: $shortcutName)
-                .settingsHighlight(id: highlightID("Shortcut name"))
-        } header: {
-            Text("Run Shortcut")
-        } footer: {
-            Text("macOS has no public switch for Do Not Disturb. Create a Shortcut that sets a Focus, or does anything else, and enter its exact name here. The button stays hidden until a name is set.")
-        }
-    }
-
-    // MARK: Timer & stopwatch
-
-    @ViewBuilder
-    private var liveActivitySection: some View {
-        Section {
-            Toggle("Timer & stopwatch live activity", isOn: $coordinator.timerLiveActivityEnabled)
-                .settingsHighlight(id: highlightID("Timer & stopwatch live activity"))
-        } header: {
-            Text("Timer & Stopwatch")
-        } footer: {
-            Text("While a timer or stopwatch runs, the closed notch shows it: a progress ring and the remaining time for a timer, a pulsing dot and the elapsed time for a stopwatch.")
-        }
-    }
-
-    @ViewBuilder
-    private var soundSection: some View {
-        let customPath = UserDefaults.standard.string(forKey: "customTimerSoundPath")
-        Section {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Timer sound")
-                        .font(.system(size: 16, weight: .medium))
-                    Spacer()
-                    Button("Choose File", action: selectCustomTimerSound)
-                        .buttonStyle(.bordered)
-                }
-
-                if let customPath {
-                    Text("Custom: \(URL(fileURLWithPath: customPath).lastPathComponent)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("Default: timer.mp3")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Button("Reset to Default") {
-                    UserDefaults.standard.removeObject(forKey: "customTimerSoundPath")
-                    soundRefresh += 1
-                }
-                .buttonStyle(.bordered)
-                .disabled(customPath == nil)
-            }
-            .settingsHighlight(id: highlightID("Timer sound"))
-        } header: {
-            Text("Timer Sound")
-        } footer: {
-            Text("Plays once when a timer ends. Supported formats include MP3, M4A, WAV, and AIFF.")
-        }
-        .id(soundRefresh)
-    }
-
-    private func selectCustomTimerSound() {
-        let panel = NSOpenPanel()
-        panel.title = "Select Timer Sound"
-        panel.allowedContentTypes = [.audio]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-
-        if panel.runModal() == .OK, let url = panel.url {
-            UserDefaults.standard.set(url.path, forKey: "customTimerSoundPath")
-            soundRefresh += 1
-        }
-    }
-}
-
 struct CustomOSDSettings: View {
     @Default(.enableCustomOSD) var enableCustomOSD
     @Default(.hasSeenOSDAlphaWarning) var hasSeenOSDAlphaWarning
@@ -4020,7 +3739,6 @@ extension SettingsTab {
     /// The Notchly page this legacy tab now lives on.
     var page: NotchlySettingsPage {
         switch self {
-        case .hub, .quickActions: return .homeHub
         case .media: return .music
         case .liveActivities, .lockScreen, .devices, .battery, .hudAndOSD, .downloads: return .liveActivities
         case .stash: return .stash
@@ -4033,7 +3751,6 @@ extension SettingsTab {
         switch self {
         case .liveActivities: return String(localized: "Activities")
         case .hudAndOSD: return String(localized: "Volume & Brightness")
-        case .hub: return String(localized: "Hub")
         default: return title
         }
     }
@@ -4046,9 +3763,7 @@ extension SettingsTab {
         case .lockScreen: SettingsForm(tab: .lockScreen) { LockScreenSettings() }
         case .media: SettingsForm(tab: .media) { Media() }
         case .devices: SettingsForm(tab: .devices) { DevicesSettingsView() }
-        case .quickActions: SettingsForm(tab: .quickActions) { QuickActionsSettings() }
         case .stash: SettingsForm(tab: .stash) { StashSettings() }
-        case .hub: SettingsForm(tab: .hub) { HubSettings() }
         case .hudAndOSD: SettingsForm(tab: .hudAndOSD) { HUDAndOSDSettingsView() }
         case .battery: SettingsForm(tab: .battery) { Charge() }
         case .downloads: SettingsForm(tab: .downloads) { Downloads() }
@@ -4063,7 +3778,7 @@ extension NotchlySettingsPage {
         switch self {
         case .general: return []
         case .appearance: return []
-        case .homeHub: return [.hub, .quickActions]
+        case .homeHub: return []
         case .music: return [.media]
         case .liveActivities: return [.liveActivities, .battery, .hudAndOSD, .devices, .lockScreen, .downloads]
         case .stash: return [.stash]

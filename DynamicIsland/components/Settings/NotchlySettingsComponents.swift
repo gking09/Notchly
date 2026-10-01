@@ -161,6 +161,7 @@ struct NotchlySettingRow<Trailing: View>: View {
     var subtitle: String?
     var help: String?
     var highlightID: String?
+    var symbol: String?
     var isEnabled: Bool = true
     @ViewBuilder var trailing: () -> Trailing
 
@@ -171,9 +172,11 @@ struct NotchlySettingRow<Trailing: View>: View {
         subtitle: String? = nil,
         help: String? = nil,
         highlightID: String? = nil,
+        symbol: String? = nil,
         isEnabled: Bool = true,
         @ViewBuilder trailing: @escaping () -> Trailing
     ) {
+        self.symbol = symbol
         self.title = title
         self.subtitle = subtitle
         self.help = help
@@ -184,6 +187,17 @@ struct NotchlySettingRow<Trailing: View>: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.78))
+                    .frame(width: 28, height: 28)
+                    .background {
+                        RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
+                            .fill(NotchlySettingsStyle.controlFill)
+                    }
+                    .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(title)
@@ -862,5 +876,38 @@ extension NotchlySettingItem {
         @ViewBuilder trailing: @escaping () -> Trailing
     ) -> NotchlySettingRow<Trailing> {
         NotchlySettingRow(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, trailing: trailing)
+    }
+}
+
+// MARK: - Text field
+
+/// A small glass text field for use as a row's trailing control.
+struct NotchlyTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    var width: CGFloat = 200
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .textFieldStyle(.plain)
+            .font(.system(size: 12.5))
+            .focused($isFocused)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 5)
+            .frame(width: width)
+            .frame(minHeight: 26)
+            .background {
+                Capsule()
+                    .fill(NotchlySettingsStyle.controlFill)
+                    .overlay {
+                        Capsule().strokeBorder(
+                            isFocused ? Color.primary.opacity(0.3) : NotchlySettingsStyle.cardStroke,
+                            lineWidth: NotchlyTheme.Stroke.hairline
+                        )
+                    }
+            }
+            .animation(NotchlyTheme.Motion.snappy, value: isFocused)
     }
 }

@@ -157,6 +157,15 @@ final class NotchlySettingsTests: XCTestCase {
         XCTAssertEqual(shared.search("app icon").first?.entry.page, .appearance)
     }
 
+    func testHomeHubPageSearch() {
+        let shared = SettingsSearchIndex.shared
+        XCTAssertEqual(shared.search("show seconds").first?.entry.page, .homeHub)
+        XCTAssertEqual(shared.search("quick actions").first?.entry.page, .homeHub)
+        XCTAssertEqual(shared.search("timer sound").first?.entry.highlightID, NotchlyHomeHubPage.Item.timerSound.highlightID)
+        XCTAssertEqual(shared.search("webcam").first?.entry.page, .homeHub)
+        XCTAssertEqual(shared.search("paused music").first?.entry.page, .homeHub)
+    }
+
     func testGeneralPageSearch() {
         let shared = SettingsSearchIndex.shared
         XCTAssertEqual(shared.search("launch at login").first?.entry.page, .general)

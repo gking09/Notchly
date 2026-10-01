@@ -93,7 +93,6 @@ struct NotchlySettingsView: View {
     @State private var selectedPage: NotchlySettingsPage
     @State private var selectedSections: [NotchlySettingsPage: SettingsTab] = [:]
     @State private var searchText = ""
-    @Default(.enableMinimalisticUI) private var enableMinimalisticUI
 
     private let searchIndex = SettingsSearchIndex.shared
 
@@ -168,6 +167,8 @@ struct NotchlySettingsView: View {
             NotchlyGeneralPage()
         } else if selectedPage == .appearance {
             NotchlyAppearancePage()
+        } else if selectedPage == .homeHub {
+            NotchlyHomeHubPage()
         } else if let section = currentSection {
             // Legacy section views are grouped Forms; they keep scrolling themselves.
             section.legacyContent
@@ -179,9 +180,7 @@ struct NotchlySettingsView: View {
     // MARK: Pages & sections
 
     private var sections: [SettingsTab] {
-        selectedPage.legacySections.filter { section in
-            section != .quickActions || !enableMinimalisticUI
-        }
+        selectedPage.legacySections
     }
 
     private var currentSection: SettingsTab? {
