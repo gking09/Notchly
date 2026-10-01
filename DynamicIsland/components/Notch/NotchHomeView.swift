@@ -459,7 +459,7 @@ struct MusicControlsView: View {
     @Default(.showMediaOutputControl) private var showMediaOutputControl
     @Default(.musicSkipBehavior) private var musicSkipBehavior
     @Default(.enableLyrics) private var enableLyrics
-    @Default(.showCalendar) private var showCalendar
+    @Default(.enableHub) private var enableHub
     private let seekInterval: TimeInterval = 10
 
     var body: some View {
@@ -513,7 +513,7 @@ struct MusicControlsView: View {
                 frameWidth: width
             )
             .fontWeight(.medium)
-            if enableLyrics && showCalendar {
+            if enableLyrics && enableHub {
                 let transition = AnyTransition.lyricLine
 
                 let line = musicManager.currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -889,7 +889,7 @@ struct NotchHomeView: View {
     @ObservedObject private var musicManager = MusicManager.shared
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
-    @Default(.showCalendar) private var showCalendar
+    @Default(.enableHub) private var enableHub
     @Default(.enableLyrics) private var enableLyrics
     @Default(.lyricsPanelWidth) private var lyricsPanelWidth
     @Default(.lyricsPanelOffset) private var lyricsPanelOffset
@@ -897,8 +897,6 @@ struct NotchHomeView: View {
     @Default(.quickActionsOrder) private var quickActionsOrder
     @Default(.quickActionsHidden) private var quickActionsHidden
     @Default(.quickActionsShortcutName) private var quickActionsShortcutName
-    @State private var showCalendarDeferred = false
-    @State private var calendarSyncGeneration = 0
     let albumArtNamespace: Namespace.ID
 
     /// Whether the music player should actively display (enabled AND has real content).
@@ -915,36 +913,16 @@ struct NotchHomeView: View {
     }
 
     private var shouldShowSideLyrics: Bool {
-        shouldShowMusicPlayer && enableLyrics && !showCalendar
+        shouldShowMusicPlayer && enableLyrics && !enableHub
     }
     
     var body: some View {
         Group {
             if !coordinator.firstLaunch {
                 mainContent
-                    .onAppear {
-                        syncCalendarDeferred()
-                    }
-                    .onChange(of: showCalendar) { _, newValue in
-                        syncCalendarDeferred()
-                    }
             }
         }
         .transition(.opacity)
-    }
-
-    private func syncCalendarDeferred() {
-        guard showCalendar else {
-            showCalendarDeferred = false
-            calendarSyncGeneration &+= 1
-            return
-        }
-        let generation = calendarSyncGeneration
-        DispatchQueue.main.async {
-            if generation == calendarSyncGeneration {
-                showCalendarDeferred = true
-            }
-        }
     }
 
     private var mainContent: some View {
@@ -968,32 +946,22 @@ struct NotchHomeView: View {
         .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
     }
 
-    /// Music player, calendar and mirror, laid out as before the row existed.
+    /// Music player, the Hub and the mirror, left to right. With no player the Hub
+    /// stands alone in the middle.
     @ViewBuilder
     private var standardContent: some View {
         if shouldShowSideLyrics {
             sideLyricsContent
         } else {
-            HStack(alignment: .top, spacing: SideLyricsLayout.hStackSpacing) {
-                // Normal mode: Show full music player with optional calendar and webcam
+            HStack(alignment: .top, spacing: HomeLayoutBudget.columnSpacing) {
                 if shouldShowMusicPlayer {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                if showCalendar && showCalendarDeferred {
-                    Group {
-                        if shouldShowMusicPlayer {
-                            CalendarView()
-                        } else {
-                            StandaloneCalendarView()
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .onHover { isHovering in
-                        vm.isHoveringCalendar = isHovering
-                    }
-                    .environmentObject(vm)
+                if enableHub {
+                    HubView()
+                        .frame(maxWidth: shouldShowMusicPlayer ? nil : CGFloat.infinity)
                 }
 
                 if mirrorIsVisible {

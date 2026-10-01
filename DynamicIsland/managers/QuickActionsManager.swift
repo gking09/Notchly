@@ -103,6 +103,15 @@ final class QuickActionsManager: ObservableObject {
         }
     }
 
+    /// Grows `panel` out of the row (the Hub's timer chip uses this). Leaves an
+    /// already-open panel alone rather than closing it, unlike a button press.
+    func showPanel(_ panel: Panel) {
+        guard openPanel != panel else { return }
+        withAnimation(NotchlyTheme.Motion.spring) {
+            openPanel = panel
+        }
+    }
+
     private func togglePanel(_ panel: Panel) {
         withAnimation(NotchlyTheme.Motion.spring) {
             openPanel = (openPanel == panel) ? nil : panel

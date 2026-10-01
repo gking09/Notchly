@@ -138,59 +138,6 @@ enum AnimationSource: Codable, Hashable, Equatable {
     }
 }
 
-enum CalendarSelectionState: Codable, Defaults.Serializable {
-    case all
-    case selected(Set<String>)
-}
-
-enum FantasticalViewStyle: String, CaseIterable, Codable, Defaults.Serializable {
-    case mini = "mini"
-    case calendar = "calendar"
-    
-    var displayName: String {
-        switch self {
-        case .mini: return String(localized: "Mini View")
-        case .calendar: return String(localized: "Full Calendar")
-        }
-    }
-}
-
-enum ThirdPartyCalendarApp: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
-    case fantastical = "fantastical"
-    case notionCalendar = "notionCalendar"
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .fantastical: return "Fantastical"
-        case .notionCalendar: return "Notion Calendar"
-        }
-    }
-    
-    /// Bundle identifiers to try when looking up the app icon (first match wins).
-    var bundleIdentifiers: [String] {
-        switch self {
-        case .fantastical: return ["com.flexibits.fantastical2.mac", "com.flexibits.fantastical"]
-        case .notionCalendar: return ["com.cron.electron"]
-        }
-    }
-    
-    var fallbackIconName: String {
-        switch self {
-        case .fantastical: return "calendar.badge.clock"
-        case .notionCalendar: return "calendar.badge.plus"
-        }
-    }
-    
-    var fallbackIconColor: Color {
-        switch self {
-        case .fantastical: return .red
-        case .notionCalendar: return .blue
-        }
-    }
-}
-
 enum ThirdPartyDDCProvider: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
     case betterDisplay
     case lunar
@@ -529,25 +476,6 @@ enum SiriResponsivenessMode: String, CaseIterable, Identifiable, Defaults.Serial
     }
 }
 
-enum ReminderPresentationStyle: String, CaseIterable, Identifiable, Defaults.Serializable {
-    case ringCountdown = "Ring"
-    case digital = "Digital"
-    case minutes = "Minutes"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-            case .ringCountdown:
-                return String(localized: "Ring")
-            case .digital:
-                return String(localized: "Digital")
-            case .minutes:
-                return String(localized: "Minutes")
-        }
-    }
-}
-
 enum ColorExtractionMode: String, CaseIterable, Identifiable, Defaults.Serializable {
     case legacy, vibrant
     var id: Self { self }
@@ -614,9 +542,6 @@ extension Defaults.Keys {
     static let selectedIdleAnimation = Key<CustomIdleAnimation?>("selectedIdleAnimation", default: nil)
     static let animationTransformOverrides = Key<[String: AnimationTransformConfig]>("animationTransformOverrides", default: [:])
     static let tileShowLabels = Key<Bool>("tileShowLabels", default: false)
-    static let showCalendar = Key<Bool>("showCalendar", default: true)
-    static let hideCompletedReminders = Key<Bool>("hideCompletedReminders", default: true)
-    static let hideAllDayEvents = Key<Bool>("hideAllDayEvents", default: false)
     static let sliderColor = Key<SliderColorEnum>(
         "sliderUseAlbumArtColor",
         default: SliderColorEnum.white
@@ -663,11 +588,6 @@ extension Defaults.Keys {
     static let cachedMusicLiveActivityPreference = Key<Bool?>("cachedMusicLiveActivityPreference", default: nil)
     static let cachedMusicControlWindowPreference = Key<Bool?>("cachedMusicControlWindowPreference", default: nil)
     static let siriResponsivenessMode = Key<SiriResponsivenessMode>("siriResponsivenessMode", default: .automatic)
-    
-    // MARK: Third-party Calendar Integration
-    static let enableThirdPartyCalendarApp = Key<Bool>("enableThirdPartyCalendarApp", default: false)
-    static let selectedCalendarApp = Key<ThirdPartyCalendarApp>("selectedCalendarApp", default: .fantastical)
-    static let fantasticalDefaultView = Key<FantasticalViewStyle>("fantasticalDefaultView", default: .mini)
     
         // MARK: Battery
     static let showPowerStatusNotifications = Key<Bool>("showPowerStatusNotifications", default: true)
@@ -716,11 +636,6 @@ extension Defaults.Keys {
     static let systemEventIndicatorUseAccent = Key<Bool>("systemEventIndicatorUseAccent", default: false)
     static let showProgressPercentages = Key<Bool>("showProgressPercentages", default: true)
     
-    
-        // MARK: Calendar
-    static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
-        static let showFullEventTitles = Key<Bool>("showFullEventTitles", default: false)
-        static let autoScrollToNextEvent = Key<Bool>("autoScrollToNextEvent", default: true)
     
         // MARK: Fullscreen Media Detection
     static let alwaysHideInFullscreen = Key<Bool>("alwaysHideInFullscreen", default: false)
@@ -777,13 +692,16 @@ extension Defaults.Keys {
     /// Name of the Shortcuts shortcut the "Run shortcut" action runs.
     static let quickActionsShortcutName = Key<String>("quickActionsShortcutName", default: "")
 
-    // MARK: Reminder Live Activity
-    static let enableReminderLiveActivity = Key<Bool>("enableReminderLiveActivity", default: true)
-    static let reminderPresentationStyle = Key<ReminderPresentationStyle>("reminderPresentationStyle", default: .ringCountdown)
-    static let reminderLeadTime = Key<Int>("reminderLeadTime", default: 5)
-    static let reminderSneakPeekDuration = Key<Double>("reminderSneakPeekDuration", default: 5)
-    
-    
+    // MARK: Hub
+    /// The centrepiece on the Home tab: a large clock with context chips.
+    static let enableHub = Key<Bool>("enableHub", default: true)
+    static let hubShowSeconds = Key<Bool>("hubShowSeconds", default: false)
+    static let hubTimeFormat = Key<HubTimeFormat>("hubTimeFormat", default: .system)
+    static let hubShowDate = Key<Bool>("hubShowDate", default: true)
+    /// Chips the user has switched off. Hidden-based, so a chip added in a later
+    /// version shows up without the stored preference having to know about it.
+    static let hubHiddenChips = Key<[HubChip]>("hubHiddenChips", default: [])
+
     // MARK: Keyboard Shortcuts
     static let enableShortcuts = Key<Bool>("enableShortcuts", default: true)
     

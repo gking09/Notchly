@@ -19,13 +19,17 @@ Notchly is a **notch-only** app. The non-notch features of the project it was fo
 - Synced lyrics (side panel, line under the notch, or pinned while closed), optional Spotify canvas artwork, waveform scrubber, AirPlay and output picker.
 - Standard layout and a compact minimalistic layout.
 
+**Hub** (centre of the Home tab)
+- A large glanceable clock in a soft-glass card: hours and minutes that roll over with numeric transitions, an optional seconds readout, the date line, a slowly breathing monochrome glow, and a gentle lean toward the pointer.
+- A context-aware chip row under the clock that only shows what is relevant right now and springs in and out: battery (charging bolt, time remaining or to full, or when it runs low), a running timer or stopwatch (click to open it), Stash item count (click to open the Stash), Focus, and paused music (click to resume). With nothing to report, only the clock shows.
+- Settings: show seconds, 12 / 24-hour (follows the system by default), show the date, and which chips to show. Not shown in the Minimalistic layout.
+
 **Live activities** (shown in the closed notch)
 - Battery and charging, low-battery and full-battery alerts.
 - Focus / Do Not Disturb.
 - Downloads (beta; Safari, Chrome and Chromium-based browsers, Firefox).
 - Screen recording indicator.
 - Privacy indicators for camera and microphone use.
-- Calendar reminders.
 - Bluetooth device connections, including AirPods battery.
 - Network connectivity (Wi-Fi, hotspot, no connection).
 - Caps Lock indicator.
@@ -38,7 +42,6 @@ Notchly is a **notch-only** app. The non-notch features of the project it was fo
 
 **Tabs and tools**
 - Timer with presets and a ruler-style picker.
-- Calendar with events and reminders.
 - Webcam mirror.
 - Stash: a temporary tray in the notch for text, links, images and files. Drop things on the notch (or add the clipboard on demand), click to copy back, drag out to other apps; items expire on a retention you choose.
 - Global keyboard shortcuts, gesture controls (swipe to open/close, horizontal swipes to skip), haptics, and per-feature toggles in Settings.
@@ -47,7 +50,7 @@ Notchly is a **notch-only** app. The non-notch features of the project it was fo
 - macOS 14.0 or later (optimised for macOS 15+).
 - A MacBook with a notch.
 - Xcode 15 or later to build from source.
-- Permissions as needed: Accessibility, Camera, Calendar and Reminders, Screen Recording, Music / media.
+- Permissions as needed: Accessibility, Camera, Screen Recording, Music / media.
 
 ## Build from source
 ```bash

@@ -108,7 +108,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     var whatsNewWindow: NSWindow?
     var timer: Timer?
-    let calendarManager = CalendarManager.shared
     let webcamManager = WebcamManager.shared
     let dndManager = DoNotDisturbManager.shared  // NEW: DND detection
     let bluetoothAudioManager = BluetoothAudioManager.shared  // NEW: Bluetooth audio detection
@@ -129,7 +128,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Block-based AudioTap observers, kept with their center so they can be removed by token
     private var audioTapObserverTokens: [(center: NotificationCenter, token: NSObjectProtocol)] = []
-//    let calendarManager = CalendarManager.shared
 //    let webcamManager = WebcamManager.shared
 //    var closeNotchWorkItem: DispatchWorkItem?
 //    private var previousScreens: [NSScreen]?
@@ -430,8 +428,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateWindowSizeIfNeeded() {
         // Calculate required size based on current state
         let requiredSize = calculateRequiredNotchSize()
-        let animateResize = shouldAnimateResize(for: requiredSize)
-        resizeWindows(to: requiredSize, animated: animateResize, force: false)
+        resizeWindows(to: requiredSize, animated: true, force: false)
     }
 
     private func updateWindowSizeForTabSwitch() {
@@ -644,13 +641,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.setFrame(targetFrame, display: true)
     }
 
-    private func shouldAnimateResize(for newSize: CGSize) -> Bool {
-        if Defaults[.enableMinimalisticUI] && !ReminderLiveActivityManager.shared.activeWindowReminders.isEmpty {
-            return false
-        }
-        return true
-    }
-    
     func applicationDidFinishLaunching(_ notification: Notification) {
         LockScreenLiveActivityWindowManager.shared.configure(viewModel: vm)
         LockScreenManager.shared.configure(viewModel: vm)
@@ -774,14 +764,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.debouncedUpdateWindowSize()
         }.store(in: &cancellables)
 
-        ReminderLiveActivityManager.shared.$activeWindowReminders
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.debouncedUpdateWindowSize()
-            }
-            .store(in: &cancellables)
-
         Publishers.MergeMany(
+            Defaults.publisher(.enableHub, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableQuickActions, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.quickActionsOrder, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.quickActionsHidden, options: []).map { _ in () }.eraseToAnyPublisher(),

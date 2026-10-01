@@ -44,7 +44,7 @@ enum SideLyricsLayout {
 
 func sideLyricsRequiredNotchWidth() -> CGFloat {
     guard Defaults[.enableLyrics],
-          !Defaults[.showCalendar],
+          !Defaults[.enableHub],
           !Defaults[.enableMinimalisticUI],
           Defaults[.showStandardMediaControls],
           (!Defaults[.autoHideInactiveNotchMediaPlayer] || MusicManager.shared.hasActiveSession)
@@ -66,11 +66,30 @@ func sideLyricsRequiredNotchWidth() -> CGFloat {
         + SideLyricsLayout.combinedInset
 }
 
+/// Width the Home tab needs for the Hub next to the player (and the mirror, when
+/// there is one). Zero unless the Hub is on screen: without it the existing
+/// minimums already cover the player.
+///
+/// Whether the player counts depends on the setting alone, not on whether
+/// something is playing: the notch would otherwise resize every time a track
+/// started or stopped.
+func hubRequiredNotchWidth() -> CGFloat {
+    guard Defaults[.enableHub], !Defaults[.enableMinimalisticUI] else { return 0 }
+    return HomeLayoutBudget.requiredNotchWidth(
+        hubVisible: true,
+        playerVisible: Defaults[.showStandardMediaControls],
+        mirrorVisible: Defaults[.showMirror] && WebcamManager.shared.cameraAvailable
+    )
+}
+
 var openNotchSize: CGSize {
     let storedWidth = Defaults[.openNotchWidth]
     let minWidth = currentRecommendedMinimumNotchWidth()
     let maxWidth = maxAllowedNotchWidth()
-    let width = min(max(storedWidth, minWidth, sideLyricsRequiredNotchWidth()), maxWidth)
+    let width = min(
+        max(storedWidth, minWidth, sideLyricsRequiredNotchWidth(), hubRequiredNotchWidth()),
+        maxWidth
+    )
     // The Quick Actions row sits above the Home content and needs its own room,
     // so the music layout underneath keeps the height it always had.
     let height: CGFloat = 200 + (quickActionsBarVisible() ? QuickActionsMetrics.extraNotchHeight : 0)
@@ -105,7 +124,7 @@ func enabledStandardTabCount() -> Int {
     var count = 0
 
     // Home tab
-    if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] || Defaults[.showMirror] {
+    if Defaults[.showStandardMediaControls] || Defaults[.enableHub] || Defaults[.showMirror] {
         count += 1
     }
 
@@ -161,12 +180,6 @@ func minimalisticOpenNotchSize(isDynamicIslandMode: Bool) -> CGSize {
     if Defaults[.enableLyrics] && !MusicManager.shared.isAdvertisement {
         size.height += minimalisticLyricsExtraHeight
     }
-    
-    let reminderCount = ReminderLiveActivityManager.shared.activeWindowReminders.count
-    if reminderCount > 0 {
-        let reminderHeight = ReminderLiveActivityManager.additionalHeight(forRowCount: reminderCount)
-        size.height += reminderHeight
-    }
 
     return size
 }
@@ -187,7 +200,7 @@ let inlineLyricsLineHeight: CGFloat = 18
 /// while a line is on screen, so the notch keeps a stable height between lyric lines.
 ///
 /// Minimalistic UI is excluded: its player draws lyrics whenever they are enabled,
-/// regardless of the calendar, and sizes itself for them through its own resize
+/// regardless of the Hub, and sizes itself for them through its own resize
 /// publisher. Adding this line there would reserve room for a line the standard
 /// player is not drawing.
 func inlineLyricsAdjustedNotchSize(
@@ -202,7 +215,7 @@ func inlineLyricsAdjustedNotchSize(
     guard isHomeTabActive,
           !Defaults[.enableMinimalisticUI],
           Defaults[.enableLyrics],
-          Defaults[.showCalendar],
+          Defaults[.enableHub],
           Defaults[.showStandardMediaControls],
           (!Defaults[.autoHideInactiveNotchMediaPlayer] || MusicManager.shared.hasActiveSession)
     else {

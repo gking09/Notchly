@@ -40,7 +40,7 @@ struct TabModel: Identifiable {
 
 struct TabSelectionView: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.showCalendar) private var showCalendar
+    @Default(.enableHub) private var enableHub
     @Default(.showMirror) private var showMirror
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.enableMinimalisticUI) private var enableMinimalisticUI
@@ -107,7 +107,7 @@ struct TabSelectionView: View {
         if enableMinimalisticUI {
             return true
         }
-        return showStandardMediaControls || showCalendar || showMirror
+        return showStandardMediaControls || enableHub || showMirror
     }
 
     private func badge(for tab: TabModel) -> Int {

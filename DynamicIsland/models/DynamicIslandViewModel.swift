@@ -43,9 +43,7 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     var onViewTeardown: (() -> Void)?
     
     @Published var hideOnClosed: Bool = true
-    @Published var isHoveringCalendar: Bool = false
     @Published var isBatteryPopoverActive: Bool = false
-    @Published var isReminderPopoverActive: Bool = false
     /// Whether any output picker popover is open.
     ///
     /// Four separate views can present one of these -- the media output and
@@ -144,27 +142,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
 
         setupDetectorObserver()
 
-        ReminderLiveActivityManager.shared.$activeWindowReminders
-            .removeDuplicates()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                let updatedTarget = self.calculateDynamicNotchSize()
-                guard self.notchState == .open else { return }
-                guard self.notchSize != updatedTarget else { return }
-                withAnimation(.smooth) {
-                    self.notchSize = updatedTarget
-                }
-                if let delegate = AppDelegate.shared {
-                    delegate.ensureWindowSize(
-                        addShadowPadding(to: updatedTarget, isMinimalistic: Defaults[.enableMinimalisticUI]),
-                        animated: true,
-                        force: false
-                    )
-                }
-            }
-            .store(in: &cancellables)
-
         // Observe settings + lyrics changes to dynamically resize the notch
         let enableLyricsPublisher = Defaults.publisher(.enableLyrics).map { $0.newValue }
 
@@ -216,7 +193,7 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
 
         Publishers.MergeMany(
             Defaults.publisher(.enableLyrics, options: []).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.showCalendar, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableHub, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showStandardMediaControls, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.autoHideInactiveNotchMediaPlayer, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showMirror, options: []).map { _ in () }.eraseToAnyPublisher(),

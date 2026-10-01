@@ -57,7 +57,7 @@ struct ProfileSelectionView: View {
             id: "student",
             name: String(localized: "Student"),
             icon: "book.fill",
-            description: String(localized: "Stay organized with calendar, timer, and battery monitoring."),
+            description: String(localized: "Stay organized with the clock Hub, timer, and battery monitoring."),
             gradient: [Color.indigo, Color.cyan]
         )
     ]
@@ -233,7 +233,7 @@ func applyProfileSettings(_ profiles: Set<String>) {
     let isStudent = profiles.contains("student")
     if isStudent {
         Defaults[.enableQuickActions] = true
-        Defaults[.showCalendar] = true
+        Defaults[.enableHub] = true
         Defaults[.showMirror] = false
         Defaults[.enableMinimalisticUI] = false
     }

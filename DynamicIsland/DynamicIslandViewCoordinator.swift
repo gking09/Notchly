@@ -28,7 +28,6 @@ enum SneakContentType: Equatable {
     case mic
     case battery
     case download
-    case reminder
     case recording
     case doNotDisturb
     case bluetoothAudio
@@ -130,7 +129,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
         // Observe all tab-affecting settings to enforce minimum notch width
         Publishers.MergeMany(
             Defaults.publisher(.showStandardMediaControls).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableHub).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showMirror).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableStash).map { _ in () }.eraseToAnyPublisher()
@@ -183,15 +182,8 @@ class DynamicIslandViewCoordinator: ObservableObject {
         styleOverride: SneakPeekStyle? = nil,
         onScreen targetScreen: NSScreen? = nil
     ) {
-        let resolvedDuration: TimeInterval
-        switch type {
-        case .reminder:
-            resolvedDuration = Defaults[.reminderSneakPeekDuration]
-        default:
-            resolvedDuration = duration
-        }
-        sneakPeekDuration = resolvedDuration
-        let bypassedTypes: [SneakContentType] = [.music, .reminder, .bluetoothAudio]
+        sneakPeekDuration = duration
+        let bypassedTypes: [SneakContentType] = [.music, .bluetoothAudio]
         
         if !bypassedTypes.contains(type) && !Defaults[.enableSystemHUD] {
             return

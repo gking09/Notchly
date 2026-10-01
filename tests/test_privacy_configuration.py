@@ -36,13 +36,16 @@ class PrivacyConfigurationTests(unittest.TestCase):
             ),
         )
 
-    def test_full_access_reminder_api_has_matching_usage_text(self):
+    def test_calendar_and_reminder_access_is_not_requested(self):
+        # The Calendar and the reminder live activity were removed; nothing in
+        # the app reads EventKit any more, so no permission should be declared.
         project = PROJECT.read_text()
+        entitlements = plistlib.loads(ENTITLEMENTS.read_bytes())
 
-        self.assertEqual(
-            2,
-            project.count("INFOPLIST_KEY_NSRemindersFullAccessUsageDescription ="),
-        )
+        self.assertNotIn("INFOPLIST_KEY_NSCalendars", project)
+        self.assertNotIn("INFOPLIST_KEY_NSReminders", project)
+        self.assertNotIn("ENABLE_RESOURCE_ACCESS_CALENDARS", project)
+        self.assertNotIn("com.apple.security.personal-information.calendars", entitlements)
 
     def test_release_resigning_preserves_archived_entitlements(self):
         workflow = RELEASE_WORKFLOW.read_text()

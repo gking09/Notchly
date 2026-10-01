@@ -8,7 +8,6 @@ import AppKit
 import AVFoundation
 import Combine
 import Defaults
-import EventKit
 import KeyboardShortcuts
 import LaunchAtLogin
 import LottieUI
@@ -50,7 +49,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case devices
     case quickActions
     case stash
-    case calendar
+    case hub
     case hudAndOSD
     case battery
     case downloads
@@ -65,7 +64,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general, .appearance:                                          return .core
         case .media, .liveActivities, .lockScreen, .devices:                 return .mediaAndDisplay
         case .hudAndOSD, .battery:                                           return .system
-        case .quickActions, .stash, .calendar:                              return .productivity
+        case .hub, .quickActions, .stash:                                    return .productivity
         case .downloads, .shortcuts:                                         return .utilities
         case .about:                                                         return .info
         }
@@ -81,7 +80,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .devices: return String(localized: "Devices")
         case .quickActions: return String(localized: "Quick Actions")
         case .stash: return String(localized: "Stash")
-        case .calendar: return String(localized: "Calendar")
+        case .hub: return String(localized: "Hub")
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
         case .downloads: return String(localized: "Downloads")
@@ -100,7 +99,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .devices: return "headphones"
         case .quickActions: return "square.grid.2x2.fill"
         case .stash: return "tray.and.arrow.down.fill"
-        case .calendar: return "calendar"
+        case .hub: return "clock.fill"
         case .hudAndOSD: return "dial.medium.fill"
         case .battery: return "battery.100.bolt"
         case .downloads: return "square.and.arrow.down"
@@ -119,7 +118,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .devices: return Color(red: 0.1, green: 0.11, blue: 0.12)
         case .quickActions: return .red
         case .stash: return .teal
-        case .calendar: return .cyan
+        case .hub: return .cyan
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
         case .downloads: return .gray
@@ -186,7 +185,6 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .liveActivities, title: "Enable Camera Detection", keywords: ["camera", "privacy indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Camera Detection")),
         SettingsSearchEntry(tab: .liveActivities, title: "Enable Microphone Detection", keywords: ["microphone", "privacy"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Microphone Detection")),
         SettingsSearchEntry(tab: .liveActivities, title: "Enable music live activity", keywords: ["music", "now playing"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable music live activity")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Enable reminder live activity", keywords: ["reminder", "live activity"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable reminder live activity")),
 
         // Battery (Charge)
         SettingsSearchEntry(tab: .battery, title: "Show battery indicator", keywords: ["battery hud", "charge"], highlightID: SettingsTab.battery.highlightID(for: "Show battery indicator")),
@@ -255,7 +253,7 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .media, title: "Sneak Peek Style", keywords: ["sneak peek", "preview"], highlightID: SettingsTab.media.highlightID(for: "Sneak Peek Style")),
         SettingsSearchEntry(tab: .media, title: "Pinned lyric context", keywords: ["pinned lyrics", "lyric context", "lyrics lines", "closed notch", "lyrics height"], highlightID: SettingsTab.media.highlightID(for: "Pinned lyric context")),
         SettingsSearchEntry(tab: .media, title: "Keep lyrics under the closed notch", keywords: ["lyrics", "pin", "pinned", "closed notch", "always show"], highlightID: SettingsTab.media.highlightID(for: "Keep lyrics under the closed notch")),
-        SettingsSearchEntry(tab: .media, title: "Show lyrics", keywords: ["lyrics", "song text", "side panel", "calendar", "inline"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
+        SettingsSearchEntry(tab: .media, title: "Show lyrics", keywords: ["lyrics", "song text", "side panel", "hub", "inline"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
         // Targets the lyrics toggle rather than the Highlight picker: the picker
         // only exists while lyrics are on, so a search result pointing at it
         // scrolls to nothing for anyone who has not turned them on yet -- which
@@ -268,15 +266,12 @@ private enum SettingsSearchIndex {
         SettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
         SettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
 
-        // Calendar
-        SettingsSearchEntry(tab: .calendar, title: "Show calendar", keywords: ["calendar", "events"], highlightID: SettingsTab.calendar.highlightID(for: "Show calendar")),
-        SettingsSearchEntry(tab: .calendar, title: "Enable reminder live activity", keywords: ["reminder", "live activity"], highlightID: SettingsTab.calendar.highlightID(for: "Enable reminder live activity")),
-        SettingsSearchEntry(tab: .calendar, title: "Countdown style", keywords: ["reminder countdown"], highlightID: SettingsTab.calendar.highlightID(for: "Countdown style")),
-        SettingsSearchEntry(tab: .calendar, title: "Chip color", keywords: ["reminder chip", "color"], highlightID: SettingsTab.calendar.highlightID(for: "Chip color")),
-        SettingsSearchEntry(tab: .calendar, title: "Hide all-day events", keywords: ["calendar", "all-day"], highlightID: SettingsTab.calendar.highlightID(for: "Hide all-day events")),
-        SettingsSearchEntry(tab: .calendar, title: "Hide completed reminders", keywords: ["reminder", "completed"], highlightID: SettingsTab.calendar.highlightID(for: "Hide completed reminders")),
-        SettingsSearchEntry(tab: .calendar, title: "Show full event titles", keywords: ["calendar", "titles"], highlightID: SettingsTab.calendar.highlightID(for: "Show full event titles")),
-        SettingsSearchEntry(tab: .calendar, title: "Auto-scroll to next event", keywords: ["calendar", "scroll"], highlightID: SettingsTab.calendar.highlightID(for: "Auto-scroll to next event")),
+        // Hub
+        SettingsSearchEntry(tab: .hub, title: "Show the Hub", keywords: ["hub", "clock", "centre", "center", "home"], highlightID: SettingsTab.hub.highlightID(for: "Show the Hub")),
+        SettingsSearchEntry(tab: .hub, title: "Show seconds", keywords: ["hub", "clock", "seconds"], highlightID: SettingsTab.hub.highlightID(for: "Show seconds")),
+        SettingsSearchEntry(tab: .hub, title: "Time format", keywords: ["hub", "clock", "12-hour", "24-hour", "am pm", "military"], highlightID: SettingsTab.hub.highlightID(for: "Time format")),
+        SettingsSearchEntry(tab: .hub, title: "Show the date", keywords: ["hub", "clock", "date", "day"], highlightID: SettingsTab.hub.highlightID(for: "Show the date")),
+        SettingsSearchEntry(tab: .hub, title: "Hub chips", keywords: ["hub", "chips", "timer", "battery", "stash", "focus", "paused music"], highlightID: SettingsTab.hub.highlightID(for: "Hub chips")),
 
 
         // Appearance
@@ -631,8 +626,9 @@ struct SettingsView: View {
             .hudAndOSD,
             .battery,
             // Productivity
+            .hub,
             .quickActions,
-            .calendar,
+            .stash,
             // Utilities
             .downloads,
             .shortcuts,
@@ -872,9 +868,9 @@ struct SettingsView: View {
             SettingsForm(tab: .stash) {
                 StashSettings()
             }
-        case .calendar:
-            SettingsForm(tab: .calendar) {
-                CalendarSettings()
+        case .hub:
+            SettingsForm(tab: .hub) {
+                HubSettings()
             }
         case .hudAndOSD:
             SettingsForm(tab: .hudAndOSD) {
@@ -3015,7 +3011,7 @@ struct Media: View {
     @Default(.showSneakPeekOnTrackChange) private var showSneakPeekOnTrackChange
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
-    @Default(.showCalendar) private var showCalendar
+    @Default(.enableHub) private var enableHub
     @Default(.enableLyrics) private var enableLyrics
     @Default(.pinLyricsWhenClosed) private var pinLyricsWhenClosed
     @Default(.pinnedLyricContext) private var pinnedLyricContext
@@ -3236,9 +3232,9 @@ struct Media: View {
                 }
 
                 Text(
-                    showCalendar
-                        ? "Lyrics sit on one line under the artist name, since the calendar is using the rest of the notch. Turn the calendar off to give them a full panel beside the player."
-                        : "Lyrics get their own panel beside the player. Turn the calendar on to move them under the artist name instead."
+                    enableHub
+                        ? "Lyrics sit on one line under the artist name, since the Hub is using the rest of the notch. Turn the Hub off to give them a full panel beside the player."
+                        : "Lyrics get their own panel beside the player. Turn the Hub on to move them under the artist name instead."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -3253,7 +3249,7 @@ struct Media: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                if enableLyrics && !enableMinimalisticUI && !showCalendar && showStandardMediaControls {
+                if enableLyrics && !enableMinimalisticUI && !enableHub && showStandardMediaControls {
                     Slider(value: $lyricsPanelWidth, in: 180...420, step: 10) {
                         HStack {
                             Text("Side lyrics width")
@@ -3274,7 +3270,7 @@ struct Media: View {
                     }
                     .settingsHighlight(id: highlightID("Side lyrics horizontal offset"))
 
-                    Text("These controls apply when the calendar is disabled.")
+                    Text("These controls apply when the Hub is turned off.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -3375,260 +3371,86 @@ struct Media: View {
     }
 }
 
-struct CalendarSettings: View {
-    @ObservedObject private var calendarManager = CalendarManager.shared
-    @Default(.showCalendar) var showCalendar: Bool
-    @Default(.enableLyrics) private var enableLyrics
-    @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
-    @Default(.reminderPresentationStyle) var reminderPresentationStyle
-    @Default(.reminderLeadTime) var reminderLeadTime
-    @Default(.reminderSneakPeekDuration) var reminderSneakPeekDuration
-    @Default(.hideAllDayEvents) var hideAllDayEvents
-    @Default(.hideCompletedReminders) var hideCompletedReminders
-    @Default(.showFullEventTitles) var showFullEventTitles
-    @Default(.autoScrollToNextEvent) var autoScrollToNextEvent
-    @Default(.enableThirdPartyCalendarApp) private var enableThirdPartyCalendarApp
-    @Default(.selectedCalendarApp) private var selectedCalendarApp
-    @Default(.fantasticalDefaultView) private var fantasticalDefaultView
+struct HubSettings: View {
+    @Default(.enableHub) private var enableHub
+    @Default(.hubShowSeconds) private var showSeconds
+    @Default(.hubTimeFormat) private var timeFormat
+    @Default(.hubShowDate) private var showDate
+    @Default(.hubHiddenChips) private var hiddenChips
 
     private func highlightID(_ title: String) -> String {
-        SettingsTab.calendar.highlightID(for: title)
+        SettingsTab.hub.highlightID(for: title)
     }
 
     var body: some View {
         Form {
-            if !calendarManager.hasCalendarAccess || !calendarManager.hasReminderAccess {
-                Text("Calendar or Reminder access is denied. Please enable it in System Settings.")
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
-                    .padding()
+            Section {
+                Defaults.Toggle(key: .enableHub) {
+                    Text("Show the Hub")
+                }
+                .settingsHighlight(id: highlightID("Show the Hub"))
+            } header: {
+                Text("Hub")
+            } footer: {
+                Text("A large clock in the middle of the Home tab, with chips for whatever is relevant right now. It is not shown in Minimalistic UI.")
+            }
 
-                HStack {
-                    Button("Request Access") {
-                        Task {
-                            await calendarManager.checkCalendarAuthorization()
-                            await calendarManager.checkReminderAuthorization()
-                        }
+            if enableHub {
+                Section {
+                    Defaults.Toggle(key: .hubShowSeconds) {
+                        Text("Show seconds")
                     }
-                    .buttonStyle(.borderedProminent)
-
-                    Button("Open System Settings") {
-                        if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                            NSWorkspace.shared.open(settingsURL)
-                        }
-                    }
-                }
-            } else {
-                // Permissions status
-                Section(header: Text("Permissions")) {
-                    HStack {
-                        Text("Calendars")
-                        Spacer()
-                        Text(statusText(for: calendarManager.calendarAuthorizationStatus))
-                            .foregroundColor(color(for: calendarManager.calendarAuthorizationStatus))
-                    }
-                    HStack {
-                        Text("Reminders")
-                        Spacer()
-                        Text(statusText(for: calendarManager.reminderAuthorizationStatus))
-                            .foregroundColor(color(for: calendarManager.reminderAuthorizationStatus))
-                    }
-                }
-
-                Defaults.Toggle(key: .showCalendar) {
-                    Text("Show calendar")
-                }
-                .settingsHighlight(id: highlightID("Show calendar"))
-                if enableLyrics {
-                    Text("Lyrics are on too, so the two share the notch and lyrics drop to a single line under the artist name.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Section(header: Text("Event List")) {
-                    Toggle("Hide completed reminders", isOn: $hideCompletedReminders)
-                        .settingsHighlight(id: highlightID("Hide completed reminders"))
-                    Toggle("Show full event titles", isOn: $showFullEventTitles)
-                        .settingsHighlight(id: highlightID("Show full event titles"))
-                    Toggle("Auto-scroll to next event", isOn: $autoScrollToNextEvent)
-                        .settingsHighlight(id: highlightID("Auto-scroll to next event"))
-                }
-
-                Section(header: Text("All-Day Events")) {
-                    Toggle("Hide all-day events", isOn: $hideAllDayEvents)
-                        .settingsHighlight(id: highlightID("Hide all-day events"))
-                        .disabled(!showCalendar)
-
-                    Text("Turn this off to include all-day entries in the notch calendar and reminder live activity.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Section(header: Text("Reminder Live Activity")) {
-                    Defaults.Toggle(key: .enableReminderLiveActivity) {
-                        Text("Enable reminder live activity")
-                    }
-                    .settingsHighlight(id: highlightID("Enable reminder live activity"))
+                    .settingsHighlight(id: highlightID("Show seconds"))
 
                     SettingsSegmentedPicker(
-                        "Countdown style",
-                        selection: $reminderPresentationStyle,
-                        items: Array(ReminderPresentationStyle.allCases)
-                    ) { $0.displayName }
-                    .disabled(!enableReminderLiveActivity)
-                    .settingsHighlight(id: highlightID("Countdown style"))
+                        "Time format",
+                        selection: $timeFormat,
+                        items: Array(HubTimeFormat.allCases)
+                    ) { $0.title }
+                    .settingsHighlight(id: highlightID("Time format"))
 
-                    HStack {
-                        Text("Notify before")
-                        Slider(
-                            value: Binding(
-                                get: { Double(reminderLeadTime) },
-                                set: { reminderLeadTime = Int($0) }
-                            ),
-                            in: 1...60,
-                            step: 1
-                        )
-                        .disabled(!enableReminderLiveActivity)
-                        Text("\(reminderLeadTime) min")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 60, alignment: .trailing)
+                    Defaults.Toggle(key: .hubShowDate) {
+                        Text("Show the date")
                     }
-
-                    HStack {
-                        Text("Sneak peek duration")
-                        Slider(
-                            value: $reminderSneakPeekDuration,
-                            in: 3...20,
-                            step: 1
-                        )
-                        .disabled(!enableReminderLiveActivity)
-                        Text("\(Int(reminderSneakPeekDuration)) s")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 60, alignment: .trailing)
-                    }
+                    .settingsHighlight(id: highlightID("Show the date"))
+                } header: {
+                    Text("Clock")
+                } footer: {
+                    Text("Follow system uses the 12 or 24-hour setting of your Mac.")
                 }
 
-                
-                // MARK: - Third-party Calendar Integration
                 Section {
-                    Defaults.Toggle(key: .enableThirdPartyCalendarApp) {
-                        HStack {
-                            Image(systemName: "ellipsis.calendar")
-                                .foregroundStyle(.secondary)
-                                .frame(width: 20, height: 20)
-                            Text("Enable third-party calendar app launch")
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Enable third-party calendar app launch"))
-                    
-                    if enableThirdPartyCalendarApp {
-                        Picker("Calendar App", selection: $selectedCalendarApp) {
-                            ForEach(ThirdPartyCalendarApp.allCases) { app in
-                                HStack {
-                                    AppIconImage(
-                                        bundleIdentifiers: app.bundleIdentifiers,
-                                        symbolFallback: app.fallbackIconName,
-                                        symbolColor: app.fallbackIconColor
-                                    )
-                                    Text(app.displayName)
-                                }
-                                .tag(app)
+                    ForEach(HubChip.priority) { chip in
+                        Toggle(isOn: visibilityBinding(for: chip)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(chip.title)
+                                Text(chip.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
-                        }
-                        .settingsHighlight(id: highlightID("Calendar App"))
-                        
-                        if selectedCalendarApp == .fantastical {
-                            Picker("Default View", selection: $fantasticalDefaultView) {
-                                ForEach(FantasticalViewStyle.allCases, id: \.self) { style in
-                                    Text(style.displayName).tag(style)
-                                }
-                            }
-                            .settingsHighlight(id: highlightID("Fantastical Default View"))
                         }
                     }
                 } header: {
-                    Text("Third-party Calendar Integration")
+                    Text("Chips")
                 } footer: {
-                    Text("When enabled, clicking on calendar events will open the selected third-party calendar app instead of Apple Calendar.")
+                    Text("Chips only appear while they have something to show, and the clock stands alone when none do. Up to three are shown at once, most important first.")
                 }
-
-                Section(header: Text("Select Calendars")) {
-                    let grouped = Dictionary(grouping: calendarManager.allCalendars, by: \.accountName)
-                    let sortedAccounts = grouped.keys.sorted()
-
-                    ForEach(sortedAccounts, id: \.self) { account in
-                        let accountCalendars = grouped[account] ?? []
-                        let allAccountSelected = accountCalendars.allSatisfy { calendarManager.getCalendarSelected($0) }
-
-                        Section(header: HStack {
-                            Text(account)
-                            Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { allAccountSelected },
-                                set: { isSelected in
-                                    Task {
-                                        await calendarManager.setCalendarsSelected(accountCalendars, isSelected: isSelected)
-                                    }
-                                }
-                            ))
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .controlSize(.mini)
-                            .disabled(!showCalendar)
-                        }) {
-                            ForEach(accountCalendars, id: \.id) { calendar in
-                                Toggle(isOn: Binding(
-                                    get: { calendarManager.getCalendarSelected(calendar) },
-                                    set: { isSelected in
-                                        Task {
-                                            await calendarManager.setCalendarSelected(calendar, isSelected: isSelected)
-                                        }
-                                    }
-                                )) {
-                                    HStack(spacing: 8) {
-                                        Circle()
-                                            .fill(Color(calendar.color))
-                                            .frame(width: 8, height: 8)
-                                        Text(calendar.title)
-                                    }
-                                }
-                                .disabled(!showCalendar)
-                            }
-                        }
-                    }
-                }
+                .settingsHighlight(id: highlightID("Hub chips"))
             }
         }
-        .onAppear {
-            Task {
-                await calendarManager.checkCalendarAuthorization()
-                await calendarManager.checkReminderAuthorization()
+        .animation(NotchlyTheme.Motion.snappy, value: enableHub)
+        .navigationTitle("Hub")
+    }
+
+    private func visibilityBinding(for chip: HubChip) -> Binding<Bool> {
+        Binding(
+            get: { !hiddenChips.contains(chip) },
+            set: { isOn in
+                var updated = hiddenChips.filter { $0 != chip }
+                if !isOn { updated.append(chip) }
+                hiddenChips = updated
             }
-        }
-        .navigationTitle("Calendar")
-    }
-
-    private func statusText(for status: EKAuthorizationStatus) -> String {
-        switch status {
-        case .fullAccess, .authorized: return String(localized: "Full Access")
-        case .writeOnly: return String(localized: "Write Only")
-        case .denied: return String(localized: "Denied")
-        case .restricted: return String(localized: "Restricted")
-        case .notDetermined: return String(localized: "Not Determined")
-        @unknown default: return String(localized: "Unknown")
-        }
-    }
-
-    private func color(for status: EKAuthorizationStatus) -> Color {
-        switch status {
-        case .fullAccess, .authorized: return .green
-        case .writeOnly: return .yellow
-        case .denied, .restricted: return .red
-        case .notDetermined: return .secondary
-        @unknown default: return .secondary
-        }
+        )
     }
 }
 
@@ -4170,17 +3992,6 @@ struct LiveActivitiesSettings: View {
                 Text("Media Live Activity")
             } footer: {
                 Text("Use the Media tab to configure sneak peek, lyrics, and floating media controls.")
-            }
-
-            Section {
-                Defaults.Toggle(key: .enableReminderLiveActivity) {
-                    Text("Enable reminder live activity")
-                }
-                .settingsHighlight(id: highlightID("Enable reminder live activity"))
-            } header: {
-                Text("Reminder Live Activity")
-            } footer: {
-                Text("Configure the countdown style in the Calendar tab.")
             }
         }
         // Options that depend on a toggle dim and reveal smoothly rather than snapping.
