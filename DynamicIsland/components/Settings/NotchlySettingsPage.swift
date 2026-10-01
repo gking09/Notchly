@@ -79,7 +79,7 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .general:
             return ["displays", "monitor", "launch at login", "gestures", "hover", "haptics", "menu bar", "screenshot", "privacy", "startup"]
         case .appearance:
-            return ["look", "theme", "shape", "corner radius", "width", "mirror", "spectrogram", "icon", "idle animation", "shadow"]
+            return ["look", "theme", "shape", "corner radius", "size", "width", "height", "minimalistic", "colors", "spectrogram", "icon", "idle animation", "shadow"]
         case .homeHub:
             return ["hub", "clock", "date", "chips", "quick actions", "timer", "stopwatch", "home", "centre", "center"]
         case .music:
@@ -129,7 +129,7 @@ extension NotchlySettingsPage {
     /// a legacy `Form` section hosted by the shell).
     var isNative: Bool {
         switch self {
-        case .general, .about: return true
+        case .general, .appearance, .about: return true
         default: return false
         }
     }
@@ -138,6 +138,7 @@ extension NotchlySettingsPage {
     var nativeItems: [NotchlySettingItem] {
         switch self {
         case .general: return NotchlyGeneralPage.items
+        case .appearance: return NotchlyAppearancePage.items
         default: return []
         }
     }

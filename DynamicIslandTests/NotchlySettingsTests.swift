@@ -148,6 +148,15 @@ final class NotchlySettingsTests: XCTestCase {
         }
     }
 
+    func testAppearancePageSearch() {
+        let shared = SettingsSearchIndex.shared
+        XCTAssertEqual(shared.search("minimalistic").first?.entry.page, .appearance)
+        XCTAssertEqual(shared.search("corner radius").first?.entry.page, .appearance)
+        XCTAssertEqual(shared.search("idle animation").first?.entry.page, .appearance)
+        XCTAssertEqual(shared.search("expanded notch width").first?.entry.highlightID, NotchlyAppearancePage.Item.expandedWidth.highlightID)
+        XCTAssertEqual(shared.search("app icon").first?.entry.page, .appearance)
+    }
+
     func testGeneralPageSearch() {
         let shared = SettingsSearchIndex.shared
         XCTAssertEqual(shared.search("launch at login").first?.entry.page, .general)

@@ -166,6 +166,8 @@ struct NotchlySettingsView: View {
             NotchlyAboutPage()
         } else if selectedPage == .general {
             NotchlyGeneralPage()
+        } else if selectedPage == .appearance {
+            NotchlyAppearancePage()
         } else if let section = currentSection {
             // Legacy section views are grouped Forms; they keep scrolling themselves.
             section.legacyContent

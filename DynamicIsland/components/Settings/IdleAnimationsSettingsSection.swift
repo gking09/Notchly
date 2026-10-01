@@ -51,7 +51,17 @@ struct IdleAnimationsSettingsSection: View {
     @State private var editingExistingAnimation: CustomIdleAnimation?
     
     var body: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Idle animation style")
+                    .font(.system(size: 13, weight: .medium))
+                Spacer()
+                if showNotHumanFace {
+                    Text("\(customIdleAnimations.count) animations")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(NotchlySettingsStyle.textSecondary)
+                }
+            }
             if showNotHumanFace {
                 // Horizontal scrollable grid of animations
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -117,20 +127,20 @@ struct IdleAnimationsSettingsSection: View {
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             }
-        } header: {
-            HStack {
-                Text("Idle Animation Style")
-                Spacer()
-                if showNotHumanFace {
-                    Text("\(customIdleAnimations.count) animations")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } footer: {
             if showNotHumanFace {
-                Text("Choose animation to display when Notchly is idle. Tap to select, hold to delete custom animations.")
+                Text("Pick what the notch shows when it is idle. Tap to select; custom animations can be edited or deleted.")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(NotchlySettingsStyle.textSecondary)
             }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(NotchlySettingsStyle.divider)
+                .frame(height: NotchlyTheme.Stroke.hairline)
+                .padding(.leading, 14)
         }
         .fileImporter(
             isPresented: $showingFilePicker,
