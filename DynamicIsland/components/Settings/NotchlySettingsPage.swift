@@ -137,8 +137,7 @@ extension NotchlySettingsPage {
     /// a legacy `Form` section hosted by the shell).
     var isNative: Bool {
         switch self {
-        case .general, .appearance, .homeHub, .music, .stash, .shortcuts, .about: return true
-        default: return false
+        case .general, .appearance, .homeHub, .music, .liveActivities, .stash, .shortcuts, .about: return true
         }
     }
 
@@ -149,6 +148,7 @@ extension NotchlySettingsPage {
         case .appearance: return NotchlyAppearancePage.items
         case .homeHub: return NotchlyHomeHubPage.items
         case .music: return NotchlyMusicPage.items
+        case .liveActivities: return NotchlyLiveActivitiesPage.items
         case .stash: return NotchlyStashPage.items
         case .shortcuts: return NotchlyShortcutsPage.items
         default: return []

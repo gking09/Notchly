@@ -33,13 +33,6 @@ final class NotchlySettingsTests: XCTestCase {
         XCTAssertEqual(NotchlySettingsPage.sidebarPages.first, .general)
     }
 
-    func testEveryLegacyTabIsHostedByExactlyOnePage() {
-        for tab in SettingsTab.allCases {
-            let hosts = NotchlySettingsPage.allCases.filter { $0.legacySections.contains(tab) }
-            XCTAssertEqual(hosts, [tab.page], "\(tab) must be reachable from exactly its page")
-        }
-    }
-
     // MARK: Search
 
     private func index() -> SettingsSearchIndex {
@@ -112,23 +105,15 @@ final class NotchlySettingsTests: XCTestCase {
         XCTAssertEqual(shared.search("stash").first?.entry.page, .stash)
     }
 
-    func testSharedIndexRowsAreMappedToExistingSections() {
-        for entry in SettingsSearchIndex.shared.entries {
-            if let sectionID = entry.sectionID {
-                let tab = SettingsTab(rawValue: sectionID)
-                XCTAssertNotNil(tab, entry.title)
-                XCTAssertEqual(tab?.page, entry.page, entry.title)
-            }
-        }
+    func testSharedIndexHasUniqueEntryIds() {
         let ids = SettingsSearchIndex.shared.entries.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count, "duplicate search entry ids")
     }
 
     // MARK: Native pages
 
-    func testNativePagesHaveNoLegacySectionsAndUniqueItems() {
-        for page in NotchlySettingsPage.allCases where page.isNative && page != .about {
-            XCTAssertTrue(page.legacySections.isEmpty, "\(page) is native")
+    func testNativePagesHaveUniqueItems() {
+        for page in NotchlySettingsPage.allCases where page != .about {
             let items = page.nativeItems
             XCTAssertFalse(items.isEmpty, "\(page) has no search items")
             let own = items.filter { $0.anchorTitle == nil }
@@ -200,7 +185,7 @@ final class NotchlySettingsTests: XCTestCase {
     func testStashPageSearch() {
         let shared = SettingsSearchIndex.shared
         XCTAssertEqual(shared.search("enable stash").first?.entry.highlightID, NotchlyStashPage.Item.enable.highlightID)
-        XCTAssertEqual(shared.search("retention").first?.entry.highlightID, NotchlyStashPage.Item.keepItems.highlightID)
+        XCTAssertEqual(shared.search("keep items").first?.entry.highlightID, NotchlyStashPage.Item.keepItems.highlightID)
         XCTAssertEqual(shared.search("big files").first?.entry.page, .stash)
         XCTAssertEqual(shared.search("hide previews").first?.entry.highlightID, NotchlyStashPage.Item.hidePreviews.highlightID)
     }
@@ -209,10 +194,41 @@ final class NotchlySettingsTests: XCTestCase {
         let shared = SettingsSearchIndex.shared
         XCTAssertEqual(shared.search("global keyboard").first?.entry.highlightID, NotchlyShortcutsPage.Item.enable.highlightID)
         XCTAssertEqual(shared.search("toggle notch").first?.entry.highlightID, NotchlyShortcutsPage.Item.toggleNotch.highlightID)
-        XCTAssertEqual(shared.search("sneak peek").first?.entry.page, .shortcuts)
+        XCTAssertEqual(shared.search("toggle sneak peek").first?.entry.highlightID, NotchlyShortcutsPage.Item.sneakPeek.highlightID)
         // The clipboard shortcut can be set from either page.
         let pages = Set(shared.search("stash clipboard", limit: 20).map(\.entry.page))
         XCTAssertTrue(pages.contains(.shortcuts) && pages.contains(.stash))
+    }
+
+    func testLiveActivitiesPageSearch() {
+        let shared = SettingsSearchIndex.shared
+        for query in ["low battery hud", "charger wattage", "battery health", "critical battery threshold", "bluetooth low battery alert",
+                      "caps lock color", "camera detection", "download speed", "lock/unlock sounds", "siri detection", "focus label",
+                      "recording hover", "third-party ddc", "volume step", "brightness fine step", "crash report", "airpods listening"] {
+            XCTAssertEqual(shared.search(query).first?.entry.page, .liveActivities, query)
+        }
+        XCTAssertEqual(shared.search("charge limit hud").first?.entry.highlightID, NotchlyLiveActivitiesPage.Item.chargeLimitHUD.highlightID)
+        XCTAssertEqual(shared.search("glowing effect").first?.entry.highlightID, NotchlyLiveActivitiesPage.Item.glow.highlightID)
+        // Style-specific rows land on the style picker, which is always on screen.
+        XCTAssertEqual(shared.search("vertical bar position").first?.entry.highlightID, NotchlyLiveActivitiesPage.Item.displayStyle.highlightID)
+        XCTAssertEqual(shared.search("enable custom osd").first?.entry.highlightID, NotchlyLiveActivitiesPage.Item.displayStyle.highlightID)
+        XCTAssertEqual(shared.search("lunar provider").first?.entry.page, .liveActivities)
+    }
+
+    func testLiveActivitiesSectionsAreAnchoredAndUnique() {
+        let sections = NotchlyLiveActivitiesPage.Section.allCases
+        XCTAssertEqual(Set(sections.map(\.anchorID)).count, sections.count)
+        XCTAssertEqual(Set(sections.map(\.title)).count, sections.count)
+        for section in sections {
+            XCTAssertNotNil(NSImage(systemSymbolName: section.symbol, accessibilityDescription: nil), "\(section) symbol")
+        }
+    }
+
+    func testRemovedLegacyRowsStayRemoved() {
+        // The music live activity toggle lives on the Music page only.
+        let hits = SettingsSearchIndex.shared.search("music live activity", limit: 20)
+        XCTAssertTrue(hits.contains { $0.entry.page == .music })
+        XCTAssertFalse(hits.contains { $0.entry.page == .liveActivities && !$0.entry.isPageEntry && $0.entry.title.lowercased().contains("music") })
     }
 
     // MARK: Visual check (opt-in)
@@ -241,6 +257,19 @@ final class NotchlySettingsTests: XCTestCase {
             Defaults[.enableLyrics] = savedLyrics
             Defaults[.showNotHumanFace] = savedIdle
         }
+        let savedHUD = (Defaults[.enableSystemHUD], Defaults[.enableCustomOSD], Defaults[.enableVerticalHUD], Defaults[.enableCircularHUD])
+        let savedDDC = Defaults[.enableThirdPartyDDCIntegration]
+        defer {
+            (Defaults[.enableSystemHUD], Defaults[.enableCustomOSD], Defaults[.enableVerticalHUD], Defaults[.enableCircularHUD]) = savedHUD
+            Defaults[.enableThirdPartyDDCIntegration] = savedDDC
+        }
+        if let hud = env["NOTCHLY_RENDER_HUD"] {
+            Defaults[.enableSystemHUD] = hud == "notch"
+            Defaults[.enableCustomOSD] = hud == "osd"
+            Defaults[.enableVerticalHUD] = hud == "vertical"
+            Defaults[.enableCircularHUD] = hud == "circular"
+        }
+        if env["NOTCHLY_RENDER_DDC"] == "1" { Defaults[.enableThirdPartyDDCIntegration] = true }
         if let raw = env["NOTCHLY_RENDER_SOURCE"], let source = MediaControllerType(rawValue: raw) { Defaults[.mediaController] = source }
         if env["NOTCHLY_RENDER_LYRICS"] == "1" { Defaults[.enableLyrics] = true }
         if env["NOTCHLY_RENDER_IDLE"] == "1" { Defaults[.showNotHumanFace] = true }

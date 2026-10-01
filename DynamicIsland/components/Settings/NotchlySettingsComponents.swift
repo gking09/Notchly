@@ -268,7 +268,7 @@ struct NotchlyPageScroll<Content: View>: View {
                 return request
             }) { request in
                 withAnimation(.easeInOut(duration: 0.45)) {
-                    proxy.scrollTo(request.id, anchor: .center)
+                    proxy.scrollTo(request.id, anchor: request.anchor)
                 }
                 highlightCoordinator.consumeScrollRequest(request)
             }
@@ -930,6 +930,8 @@ struct NotchlyTextField: View {
 struct NotchlyNoticeRow: View {
     let text: String
     var isError = false
+    /// Renders `[links](https://...)` in the text.
+    var markdown = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -937,7 +939,9 @@ struct NotchlyNoticeRow: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11, weight: .semibold))
             }
-            Text(text)
+            Group {
+                if markdown { Text(LocalizedStringKey(text)) } else { Text(text) }
+            }
                 .font(.system(size: 11.5))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)

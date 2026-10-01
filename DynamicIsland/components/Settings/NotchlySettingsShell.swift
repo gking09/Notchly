@@ -164,15 +164,12 @@ struct NotchlySettingsView: View {
             NotchlyHomeHubPage()
         } else if selectedPage == .music {
             NotchlyMusicPage()
+        } else if selectedPage == .liveActivities {
+            NotchlyLiveActivitiesPage()
         } else if selectedPage == .stash {
             NotchlyStashPage()
         } else if selectedPage == .shortcuts {
             NotchlyShortcutsPage()
-        } else if let section = currentSection {
-            // Legacy section views are grouped Forms; they keep scrolling themselves.
-            section.legacyContent
-                .formStyle(.grouped)
-                .scrollContentBackground(.hidden)
         }
     }
 
