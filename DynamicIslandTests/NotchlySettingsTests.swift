@@ -197,6 +197,24 @@ final class NotchlySettingsTests: XCTestCase {
         XCTAssertEqual(shared.search("hover delay").first?.entry.highlightID, NotchlyGeneralPage.Item.hoverDelay.highlightID)
     }
 
+    func testStashPageSearch() {
+        let shared = SettingsSearchIndex.shared
+        XCTAssertEqual(shared.search("enable stash").first?.entry.highlightID, NotchlyStashPage.Item.enable.highlightID)
+        XCTAssertEqual(shared.search("retention").first?.entry.highlightID, NotchlyStashPage.Item.keepItems.highlightID)
+        XCTAssertEqual(shared.search("big files").first?.entry.page, .stash)
+        XCTAssertEqual(shared.search("hide previews").first?.entry.highlightID, NotchlyStashPage.Item.hidePreviews.highlightID)
+    }
+
+    func testShortcutsPageSearch() {
+        let shared = SettingsSearchIndex.shared
+        XCTAssertEqual(shared.search("global keyboard").first?.entry.highlightID, NotchlyShortcutsPage.Item.enable.highlightID)
+        XCTAssertEqual(shared.search("toggle notch").first?.entry.highlightID, NotchlyShortcutsPage.Item.toggleNotch.highlightID)
+        XCTAssertEqual(shared.search("sneak peek").first?.entry.page, .shortcuts)
+        // The clipboard shortcut can be set from either page.
+        let pages = Set(shared.search("stash clipboard", limit: 20).map(\.entry.page))
+        XCTAssertTrue(pages.contains(.shortcuts) && pages.contains(.stash))
+    }
+
     // MARK: Visual check (opt-in)
 
     /// Renders pages of the settings window to PNGs for eyeballing. Skipped unless

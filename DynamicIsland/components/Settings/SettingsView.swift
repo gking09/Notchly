@@ -19,11 +19,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case liveActivities
     case lockScreen
     case devices
-    case stash
     case hudAndOSD
     case battery
     case downloads
-    case shortcuts
 
     var id: String { rawValue }
 
@@ -32,11 +30,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .liveActivities: return String(localized: "Live Activities")
         case .lockScreen: return String(localized: "Lock Screen")
         case .devices: return String(localized: "Devices")
-        case .stash: return String(localized: "Stash")
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
         case .downloads: return String(localized: "Downloads")
-        case .shortcuts: return String(localized: "Shortcuts")
         }
     }
 
@@ -45,11 +41,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .liveActivities: return "waveform.path.ecg"
         case .lockScreen: return "lock.laptopcomputer"
         case .devices: return "headphones"
-        case .stash: return "tray.and.arrow.down.fill"
         case .hudAndOSD: return "dial.medium.fill"
         case .battery: return "battery.100.bolt"
         case .downloads: return "square.and.arrow.down"
-        case .shortcuts: return "keyboard"
         }
     }
 
@@ -58,11 +52,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .liveActivities: return .pink
         case .lockScreen: return .orange
         case .devices: return Color(red: 0.1, green: 0.11, blue: 0.12)
-        case .stash: return .teal
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
         case .downloads: return .gray
-        case .shortcuts: return .orange
         }
     }
 
@@ -183,17 +175,9 @@ private enum LegacySettingsSearchCatalog {
         LegacySettingsSearchEntry(tab: .lockScreen, title: "Play lock/unlock sounds", keywords: ["chime", "sound"], highlightID: SettingsTab.lockScreen.highlightID(for: "Play lock/unlock sounds")),
 
         // Shortcuts
-        LegacySettingsSearchEntry(tab: .shortcuts, title: "Enable global keyboard shortcuts", keywords: ["keyboard", "shortcut"], highlightID: SettingsTab.shortcuts.highlightID(for: "Enable global keyboard shortcuts")),
 
         // Quick Actions
         // Stash
-        LegacySettingsSearchEntry(tab: .stash, title: "Enable Stash", keywords: ["stash", "tray", "shelf", "clipboard", "drop", "files", "temporary"], highlightID: SettingsTab.stash.highlightID(for: "Enable Stash")),
-        LegacySettingsSearchEntry(tab: .stash, title: "Keep items", keywords: ["stash", "retention", "expire", "hours", "days", "quit"], highlightID: SettingsTab.stash.highlightID(for: "Keep items")),
-        LegacySettingsSearchEntry(tab: .stash, title: "Maximum items", keywords: ["stash", "cap", "limit", "oldest"], highlightID: SettingsTab.stash.highlightID(for: "Maximum items")),
-        LegacySettingsSearchEntry(tab: .stash, title: "Link files larger than", keywords: ["stash", "size", "copy", "link", "megabytes", "big files"], highlightID: SettingsTab.stash.highlightID(for: "Link files larger than")),
-        LegacySettingsSearchEntry(tab: .stash, title: "Clear when the Mac sleeps or locks", keywords: ["stash", "sleep", "lock", "privacy", "clear"], highlightID: SettingsTab.stash.highlightID(for: "Clear when the Mac sleeps or locks")),
-        LegacySettingsSearchEntry(tab: .stash, title: "Hide previews until hover", keywords: ["stash", "privacy", "blur", "text", "preview"], highlightID: SettingsTab.stash.highlightID(for: "Hide previews until hover")),
-        LegacySettingsSearchEntry(tab: .stash, title: "Stash clipboard shortcut", keywords: ["stash", "shortcut", "keyboard", "clipboard"], highlightID: SettingsTab.stash.highlightID(for: "Stash clipboard shortcut")),
     ]
 }
 
@@ -2630,83 +2614,6 @@ private func copyLatestCrashReport() {
     }
 }
 
-struct Shortcuts: View {
-    @Default(.enableShortcuts) var enableShortcuts
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.shortcuts.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableShortcuts) {
-                    Text("Enable global keyboard shortcuts")
-                }
-                .settingsHighlight(id: highlightID("Enable global keyboard shortcuts"))
-            } header: {
-                Text("General")
-            } footer: {
-                Text("When disabled, all keyboard shortcuts will be inactive. You can still use the UI controls.")
-                    .multilineTextAlignment(.trailing)
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-
-            if enableShortcuts {
-                Section {
-                    KeyboardShortcuts.Recorder("Toggle Sneak Peek:", name: .toggleSneakPeek)
-                        .disabled(!enableShortcuts)
-                } header: {
-                    Text("Media")
-                } footer: {
-                    Text("Sneak Peek shows the media title and artist under the notch for a few seconds.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    KeyboardShortcuts.Recorder("Stash clipboard:", name: .stashClipboard)
-                        .disabled(!enableShortcuts)
-                } header: {
-                    Text("Stash")
-                } footer: {
-                    Text("Adds whatever is on the clipboard to the Stash. No shortcut is set by default.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    KeyboardShortcuts.Recorder("Toggle Notch Open:", name: .toggleNotchOpen)
-                        .disabled(!enableShortcuts)
-                } header: {
-                    Text("Navigation")
-                } footer: {
-                    Text("Toggle the notch open or closed from anywhere.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Keyboard shortcuts are disabled")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-
-                        Text("Enable global keyboard shortcuts above to customize your shortcuts.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 8)
-                }
-            }
-        }
-    }
-}
-
 func proFeatureBadge() -> some View {
     Text("Upgrade to Pro")
         .foregroundStyle(Color(red: 0.545, green: 0.196, blue: 0.98))
@@ -3082,101 +2989,6 @@ struct AppIconImage: View {
     }
 }
 
-// MARK: - Stash
-
-struct StashSettings: View {
-    @Default(.enableStash) private var enableStash
-    @Default(.stashRetention) private var retention
-    @Default(.stashMaxItems) private var maxItems
-    @Default(.stashLinkThresholdMB) private var linkThresholdMB
-    @Default(.enableShortcuts) private var enableShortcuts
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.stash.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableStash) {
-                    Text("Enable Stash")
-                }
-                .settingsHighlight(id: highlightID("Enable Stash"))
-            } header: {
-                Text("Stash")
-            } footer: {
-                Text("A temporary tray for text, links, images and files. Drop them on the notch, or add what is on the clipboard. It is not shown in Minimalistic UI.")
-            }
-
-            if enableStash {
-                Section {
-                    Picker("Keep items", selection: $retention) {
-                        ForEach(StashRetention.allCases) { option in
-                            Text(option.localizedName).tag(option)
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Keep items"))
-
-                    Stepper(value: $maxItems, in: StashLimits.maxItemsRange, step: 5) {
-                        HStack {
-                            Text("Maximum items")
-                            Spacer()
-                            Text("\(maxItems)")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Maximum items"))
-
-                    Stepper(value: $linkThresholdMB, in: 10...5000, step: 50) {
-                        HStack {
-                            Text("Link files larger than")
-                            Spacer()
-                            Text("\(linkThresholdMB) MB")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Link files larger than"))
-                } header: {
-                    Text("Storage")
-                } footer: {
-                    Text("Files are copied into Notchly's own folder so they survive the original being moved or deleted. Bigger files are only linked, and show a Linked badge. When the cap is reached the oldest item is removed. Text is kept in a file on this Mac until it expires.")
-                }
-
-                Section {
-                    Defaults.Toggle(key: .stashClearOnSleepOrLock) {
-                        Text("Clear when the Mac sleeps or locks")
-                    }
-                    .settingsHighlight(id: highlightID("Clear when the Mac sleeps or locks"))
-
-                    Defaults.Toggle(key: .stashHidePreviewsUntilHover) {
-                        Text("Hide previews until hover")
-                    }
-                    .settingsHighlight(id: highlightID("Hide previews until hover"))
-                } header: {
-                    Text("Privacy")
-                } footer: {
-                    Text("Nothing is uploaded, and the clipboard is only read when you press Add from clipboard or use the shortcut. Items that password managers mark as private are never taken.")
-                }
-
-                Section {
-                    KeyboardShortcuts.Recorder("Stash clipboard:", name: .stashClipboard)
-                        .disabled(!enableShortcuts)
-                        .settingsHighlight(id: highlightID("Stash clipboard shortcut"))
-                } header: {
-                    Text("Shortcut")
-                } footer: {
-                    Text(enableShortcuts
-                         ? "Adds whatever is on the clipboard to the Stash. No shortcut is set by default."
-                         : "Global keyboard shortcuts are turned off in the Shortcuts section.")
-                }
-            }
-        }
-    }
-}
-
-
 // MARK: - Bridge to the Notchly settings shell
 //
 // The pages themselves are still the legacy section views (stages 2-3 migrate
@@ -3188,8 +3000,6 @@ extension SettingsTab {
     var page: NotchlySettingsPage {
         switch self {
         case .liveActivities, .lockScreen, .devices, .battery, .hudAndOSD, .downloads: return .liveActivities
-        case .stash: return .stash
-        case .shortcuts: return .shortcuts
         }
     }
 
@@ -3209,11 +3019,9 @@ extension SettingsTab {
         case .liveActivities: SettingsForm(tab: .liveActivities) { LiveActivitiesSettings() }
         case .lockScreen: SettingsForm(tab: .lockScreen) { LockScreenSettings() }
         case .devices: SettingsForm(tab: .devices) { DevicesSettingsView() }
-        case .stash: SettingsForm(tab: .stash) { StashSettings() }
         case .hudAndOSD: SettingsForm(tab: .hudAndOSD) { HUDAndOSDSettingsView() }
         case .battery: SettingsForm(tab: .battery) { Charge() }
         case .downloads: SettingsForm(tab: .downloads) { Downloads() }
-        case .shortcuts: SettingsForm(tab: .shortcuts) { Shortcuts() }
         }
     }
 }
@@ -3227,8 +3035,8 @@ extension NotchlySettingsPage {
         case .homeHub: return []
         case .music: return []
         case .liveActivities: return [.liveActivities, .battery, .hudAndOSD, .devices, .lockScreen, .downloads]
-        case .stash: return [.stash]
-        case .shortcuts: return [.shortcuts]
+        case .stash: return []
+        case .shortcuts: return []
         case .about: return []
         }
     }

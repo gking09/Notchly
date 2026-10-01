@@ -954,3 +954,217 @@ struct NotchlyNoticeRow: View {
         }
     }
 }
+
+// MARK: - Whole-number and CGFloat sliders
+
+extension NotchlySettingItem {
+    /// A slider over a whole-number setting.
+    func slider(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        value: Binding<Int>,
+        range: ClosedRange<Int>,
+        step: Int = 1,
+        valueLabel: @escaping (Int) -> String = { "\($0)" }
+    ) -> NotchlySliderRow {
+        NotchlySliderRow(
+            title: title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled,
+            value: Binding(get: { Double(value.wrappedValue) }, set: { value.wrappedValue = Int($0.rounded()) }),
+            range: Double(range.lowerBound)...Double(range.upperBound),
+            step: Double(step),
+            valueLabel: { valueLabel(Int($0.rounded())) }
+        )
+    }
+
+    func slider(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        key: Defaults.Key<Int>,
+        range: ClosedRange<Int>,
+        step: Int = 1,
+        valueLabel: @escaping (Int) -> String = { "\($0)" }
+    ) -> some View {
+        NotchlyDefaultsBound(key) { binding in
+            slider(subtitle, isEnabled: isEnabled, value: binding, range: range, step: step, valueLabel: valueLabel)
+        }
+    }
+
+    func slider(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        key: Defaults.Key<CGFloat>,
+        range: ClosedRange<CGFloat>,
+        step: CGFloat? = nil,
+        valueLabel: @escaping (Double) -> String = { String(format: "%g", ($0 * 100).rounded() / 100) }
+    ) -> some View {
+        NotchlyDefaultsBound(key) { binding in
+            NotchlySliderRow(
+                title: title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled,
+                value: Binding(get: { Double(binding.wrappedValue) }, set: { binding.wrappedValue = CGFloat($0) }),
+                range: Double(range.lowerBound)...Double(range.upperBound),
+                step: step.map(Double.init),
+                valueLabel: valueLabel
+            )
+        }
+    }
+}
+
+// MARK: - Status & permission rows
+
+/// A "label ... coloured dot + status" row for live readouts (is a recording
+/// running, is Focus on).
+struct NotchlyStatusRow: View {
+    let title: String
+    let status: String
+    var tint: Color = .secondary
+    var showsDot = true
+
+    var body: some View {
+        NotchlySettingRow(title) {
+            HStack(spacing: 6) {
+                if showsDot {
+                    Circle().fill(tint).frame(width: 7, height: 7)
+                }
+                Text(status)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(tint == .secondary ? NotchlySettingsStyle.textSecondary : tint)
+            }
+        }
+    }
+}
+
+/// An inline "this needs a permission" prompt with a primary and a secondary action.
+struct NotchlyPermissionRow: View {
+    var title = String(localized: "Accessibility permission required")
+    let message: String
+    var symbol = "exclamationmark.triangle.fill"
+    var tint: Color = Color(nsColor: .systemOrange)
+    var requestTitle = String(localized: "Request Access")
+    var openTitle = String(localized: "Open Settings")
+    let requestAction: () -> Void
+    let openAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(message)
+                .font(.system(size: 11.5))
+                .foregroundStyle(NotchlySettingsStyle.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button(requestTitle, action: requestAction)
+                    .buttonStyle(.notchly(.prominent))
+                Button(openTitle, action: openAction)
+                    .buttonStyle(.notchly(.standard))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(NotchlySettingsStyle.divider)
+                .frame(height: NotchlyTheme.Stroke.hairline)
+                .padding(.leading, 14)
+        }
+    }
+}
+
+// MARK: - Selectable tile
+
+/// A rounded preview tile with a caption, used to pick between a few looks
+/// (HUD style, indicator style, icon style).
+struct NotchlyChoiceTile<Preview: View>: View {
+    let title: String
+    let isSelected: Bool
+    var isEnabled = true
+    var size = CGSize(width: 104, height: 70)
+    let action: () -> Void
+    @ViewBuilder var preview: () -> Preview
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous)
+                        .fill(isSelected ? NotchlySettingsStyle.controlFillPressed : (isHovering ? NotchlySettingsStyle.controlFillHover : NotchlySettingsStyle.controlFill))
+                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.md, style: .continuous)
+                        .strokeBorder(
+                            isSelected ? NotchlySettingsStyle.accent : NotchlySettingsStyle.cardStroke,
+                            lineWidth: isSelected ? 2 : NotchlyTheme.Stroke.hairline
+                        )
+                    preview()
+                }
+                .frame(width: size.width, height: size.height)
+
+                Text(title)
+                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? Color.primary : NotchlySettingsStyle.textSecondary)
+                    .lineLimit(1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.45)
+        .disabled(!isEnabled)
+        .animation(NotchlyTheme.Motion.snappy, value: isHovering)
+        .animation(NotchlyTheme.Motion.snappy, value: isSelected)
+        .onHover { isHovering = $0 }
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Lets a card hold a row of tiles with a title, like a normal row but taller.
+struct NotchlyTileRow<Tiles: View>: View {
+    let title: String
+    var subtitle: String?
+    var highlightID: String?
+    var isEnabled = true
+    @ViewBuilder var tiles: () -> Tiles
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(NotchlySettingsStyle.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) { tiles() }
+                    .padding(.vertical, 2)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(isEnabled ? 1 : 0.45)
+        .disabled(!isEnabled)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(NotchlySettingsStyle.divider)
+                .frame(height: NotchlyTheme.Stroke.hairline)
+                .padding(.leading, 14)
+        }
+        .settingsHighlightIfPresent(highlightID)
+    }
+}
+
+extension NotchlySettingItem {
+    func tiles<Tiles: View>(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        @ViewBuilder tiles: @escaping () -> Tiles
+    ) -> NotchlyTileRow<Tiles> {
+        NotchlyTileRow(title: title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled, tiles: tiles)
+    }
+}
