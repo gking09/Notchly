@@ -84,8 +84,8 @@ class SettingsWindowController: NSWindowController {
     }
 
     /// Opens the settings window, optionally jumping straight to a page.
-    func showWindow(page: NotchlySettingsPage, section: SettingsTab? = nil, highlightID: String? = nil) {
-        NotchlySettingsNavigator.shared.open(page, section: section, highlightID: highlightID)
+    func showWindow(page: NotchlySettingsPage, highlightID: String? = nil) {
+        NotchlySettingsNavigator.shared.open(page, highlightID: highlightID)
         showWindow()
     }
 

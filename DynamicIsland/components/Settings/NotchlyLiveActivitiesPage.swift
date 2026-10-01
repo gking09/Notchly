@@ -248,7 +248,7 @@ struct NotchlyLiveActivitiesPage: View {
 
             NotchlySettingsCard(
                 "Try the alerts",
-                footer: "Runs the real animation on the current display. If an external screen is using the Dynamic Island look, the alert goes there first."
+                footer: "Runs the real animation on the current display. If an external screen is is in pill mode, the alert goes there first."
             ) {
                 testRow(I.testCharging, isEnabled: alertsOn && showChargingBatteryHUD) {
                     batteryStatusViewModel.triggerTestHUD(kind: .charging)

@@ -37,11 +37,11 @@ final class NotchlySettingsTests: XCTestCase {
 
     private func index() -> SettingsSearchIndex {
         SettingsSearchIndex(entries: [
-            SettingsSearchEntry(title: "Show seconds", keywords: ["clock"], page: .homeHub, sectionID: "hub"),
-            SettingsSearchEntry(title: "Battery percentage", keywords: ["charge"], page: .liveActivities, sectionID: "battery"),
-            SettingsSearchEntry(title: "Low battery alert", keywords: ["sound"], page: .liveActivities, sectionID: "battery"),
-            SettingsSearchEntry(title: "Café mode", keywords: ["espresso"], page: .general, sectionID: "general"),
-            SettingsSearchEntry(title: "Enable lyrics", keywords: ["karaoke"], page: .music, sectionID: "media"),
+            SettingsSearchEntry(title: "Show seconds", keywords: ["clock"], page: .homeHub, highlightID: "hub"),
+            SettingsSearchEntry(title: "Battery percentage", keywords: ["charge"], page: .liveActivities, highlightID: "battery"),
+            SettingsSearchEntry(title: "Low battery alert", keywords: ["sound"], page: .liveActivities, highlightID: "battery"),
+            SettingsSearchEntry(title: "Café mode", keywords: ["espresso"], page: .general, highlightID: "general"),
+            SettingsSearchEntry(title: "Enable lyrics", keywords: ["karaoke"], page: .music, highlightID: "media"),
         ])
     }
 
@@ -52,17 +52,17 @@ final class NotchlySettingsTests: XCTestCase {
 
     func testPrefixOutranksWordPrefixOutranksSubstring() {
         let idx = SettingsSearchIndex(entries: [
-            SettingsSearchEntry(title: "Superbat", page: .general, sectionID: "general"),      // substring
-            SettingsSearchEntry(title: "Low bat alert", page: .general, sectionID: "general"), // word prefix
-            SettingsSearchEntry(title: "Battery", page: .general, sectionID: "general"),       // prefix
+            SettingsSearchEntry(title: "Superbat", page: .general, highlightID: "general"),      // substring
+            SettingsSearchEntry(title: "Low bat alert", page: .general, highlightID: "general"), // word prefix
+            SettingsSearchEntry(title: "Battery", page: .general, highlightID: "general"),       // prefix
         ])
         XCTAssertEqual(idx.search("bat").map(\.entry.title), ["Battery", "Low bat alert", "Superbat"])
     }
 
     func testTitleOutranksKeyword() {
         let idx = SettingsSearchIndex(entries: [
-            SettingsSearchEntry(title: "Alerts", keywords: ["battery"], page: .general, sectionID: "general"),
-            SettingsSearchEntry(title: "Battery", page: .general, sectionID: "general"),
+            SettingsSearchEntry(title: "Alerts", keywords: ["battery"], page: .general, highlightID: "general"),
+            SettingsSearchEntry(title: "Battery", page: .general, highlightID: "general"),
         ])
         XCTAssertEqual(idx.search("battery").first?.entry.title, "Battery")
     }
@@ -90,8 +90,8 @@ final class NotchlySettingsTests: XCTestCase {
 
     func testEqualScoresKeepRegistrationOrder() {
         let idx = SettingsSearchIndex(entries: [
-            SettingsSearchEntry(title: "Alpha one", page: .general, sectionID: "general"),
-            SettingsSearchEntry(title: "Alpha two", page: .general, sectionID: "general"),
+            SettingsSearchEntry(title: "Alpha one", page: .general, highlightID: "general"),
+            SettingsSearchEntry(title: "Alpha two", page: .general, highlightID: "general"),
         ])
         XCTAssertEqual(idx.search("alpha").map(\.entry.title), ["Alpha one", "Alpha two"])
     }

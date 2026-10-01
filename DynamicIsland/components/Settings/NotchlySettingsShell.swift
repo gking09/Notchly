@@ -22,21 +22,8 @@ import SwiftUI
 
 // MARK: - Pages
 //
-// Native pages (General, Appearance, Home & Hub, Music, About) are built from the
-// `NotchlySettingsCard` components and register their rows with the search index
-// through `NotchlySettingItem`. The pages that are still legacy `Form` sections
-// are hosted below until stage 3 migrates them:
-//
-//   old tab          page             sub-section
-//   ---------------  ---------------  ---------------------------
-//   Live Activities  Live Activities  Activities
-//   Battery          Live Activities  Battery
-//   Controls (HUD)   Live Activities  Volume & Brightness
-//   Devices          Live Activities  Devices
-//   Lock Screen      Live Activities  Lock Screen
-//   Downloads        Live Activities  Downloads
-//   Stash            Stash            -
-//   Shortcuts        Shortcuts        -
+// Every page is built from the `NotchlySettingsCard` components and registers its
+// rows with the search index through `NotchlySettingItem`.
 
 // MARK: - Navigation requests
 
@@ -45,7 +32,6 @@ final class NotchlySettingsNavigator: ObservableObject {
     struct Request: Equatable, Identifiable {
         let id = UUID()
         var page: NotchlySettingsPage
-        var section: SettingsTab?
         var highlightID: String?
     }
 
@@ -53,8 +39,8 @@ final class NotchlySettingsNavigator: ObservableObject {
 
     @Published var request: Request?
 
-    func open(_ page: NotchlySettingsPage, section: SettingsTab? = nil, highlightID: String? = nil) {
-        request = Request(page: page, section: section, highlightID: highlightID)
+    func open(_ page: NotchlySettingsPage, highlightID: String? = nil) {
+        request = Request(page: page, highlightID: highlightID)
     }
 }
 
@@ -84,7 +70,6 @@ struct NotchlySettingsView: View {
     @StateObject private var highlightCoordinator = SettingsHighlightCoordinator()
 
     @State private var selectedPage: NotchlySettingsPage
-    @State private var selectedSections: [NotchlySettingsPage: SettingsTab] = [:]
     @State private var searchText = ""
 
     private let searchIndex = SettingsSearchIndex.shared
@@ -126,15 +111,6 @@ struct NotchlySettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
                 NotchlyPageHeader(title: selectedPage.title, subtitle: selectedPage.subtitle)
-                if sections.count > 1 {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        NotchlySegmentedControl(
-                            selection: sectionBinding,
-                            options: sections,
-                            label: { $0.sectionTitle }
-                        )
-                    }
-                }
             }
             .padding(.horizontal, 28)
             .padding(.top, 40)
@@ -150,7 +126,7 @@ struct NotchlySettingsView: View {
         }
     }
 
-    private var pageBodyID: String { "\(selectedPage.rawValue)/\(currentSection?.rawValue ?? "-")" }
+    private var pageBodyID: String { selectedPage.rawValue }
 
     @ViewBuilder
     private var pageBody: some View {
@@ -173,24 +149,7 @@ struct NotchlySettingsView: View {
         }
     }
 
-    // MARK: Pages & sections
-
-    private var sections: [SettingsTab] {
-        selectedPage.legacySections
-    }
-
-    private var currentSection: SettingsTab? {
-        let available = sections
-        if let chosen = selectedSections[selectedPage], available.contains(chosen) { return chosen }
-        return available.first
-    }
-
-    private var sectionBinding: Binding<SettingsTab> {
-        Binding(
-            get: { currentSection ?? .liveActivities },
-            set: { selectedSections[selectedPage] = $0 }
-        )
-    }
+    // MARK: Pages
 
     private var pageSelection: Binding<NotchlySettingsPage> {
         Binding(
@@ -211,24 +170,19 @@ struct NotchlySettingsView: View {
         let entry = result.entry
         withAnimation(NotchlyTheme.Motion.spring) {
             selectedPage = entry.page
-            if let sectionID = entry.sectionID, let section = SettingsTab(rawValue: sectionID) {
-                selectedSections[entry.page] = section
-            }
         }
         searchText = ""
         if let highlightID = entry.highlightID {
-            focus(highlightID: highlightID, scope: entry.sectionID ?? entry.page.rawValue)
+            focus(highlightID: highlightID, scope: entry.page.rawValue)
         }
     }
 
     private func apply(_ request: NotchlySettingsNavigator.Request) {
         withAnimation(NotchlyTheme.Motion.spring) {
             selectedPage = request.page
-            if let section = request.section { selectedSections[request.page] = section }
         }
         if let highlightID = request.highlightID {
-            let scope = (request.section ?? request.page.legacySections.first)?.rawValue ?? request.page.rawValue
-            focus(highlightID: highlightID, scope: scope)
+            focus(highlightID: highlightID, scope: request.page.rawValue)
         }
     }
 

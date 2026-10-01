@@ -133,15 +133,7 @@ struct NotchlySettingItem: Equatable {
 }
 
 extension NotchlySettingsPage {
-    /// Whether the page is built from the native Notchly components (as opposed to
-    /// a legacy `Form` section hosted by the shell).
-    var isNative: Bool {
-        switch self {
-        case .general, .appearance, .homeHub, .music, .liveActivities, .stash, .shortcuts, .about: return true
-        }
-    }
-
-    /// Search items of the pages that are already native.
+    /// The searchable rows of the page.
     var nativeItems: [NotchlySettingItem] {
         switch self {
         case .general: return NotchlyGeneralPage.items
@@ -151,7 +143,7 @@ extension NotchlySettingsPage {
         case .liveActivities: return NotchlyLiveActivitiesPage.items
         case .stash: return NotchlyStashPage.items
         case .shortcuts: return NotchlyShortcutsPage.items
-        default: return []
+        case .about: return []
         }
     }
 }
@@ -164,26 +156,22 @@ struct SettingsSearchEntry: Identifiable, Equatable {
     let title: String
     let keywords: [String]
     let page: NotchlySettingsPage
-    /// Which sub-section of the page contains the row (a legacy tab raw value), if any.
-    let sectionID: String?
     /// Scroll / highlight anchor of the row, if it has one.
     let highlightID: String?
 
-    var isPageEntry: Bool { sectionID == nil && highlightID == nil }
+    var isPageEntry: Bool { highlightID == nil }
 
     init(
         id: String? = nil,
         title: String,
         keywords: [String] = [],
         page: NotchlySettingsPage,
-        sectionID: String? = nil,
         highlightID: String? = nil
     ) {
-        self.id = id ?? "\(page.rawValue)/\(sectionID ?? "-")/\(title)"
+        self.id = id ?? "\(page.rawValue)/\(highlightID ?? "-")/\(title)"
         self.title = title
         self.keywords = keywords
         self.page = page
-        self.sectionID = sectionID
         self.highlightID = highlightID
     }
 
@@ -294,4 +282,13 @@ struct SettingsSearchIndex {
         }
         return best
     }
+}
+
+extension SettingsSearchIndex {
+    /// Every page, plus every row of every page.
+    static let shared: SettingsSearchIndex = {
+        let pages = NotchlySettingsPage.allCases.map(SettingsSearchEntry.entry(for:))
+        let rows = NotchlySettingsPage.allCases.flatMap { $0.nativeItems.map(\.searchEntry) }
+        return SettingsSearchIndex(entries: pages + rows)
+    }()
 }
