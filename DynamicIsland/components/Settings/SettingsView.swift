@@ -3772,7 +3772,7 @@ struct Appearance: View {
                 Text(title)
                     .font(.caption)
                     .lineLimit(1)
-                    .foregroundStyle(isSelected ? .white : .secondary)
+                    .foregroundStyle(isSelected ? NotchlySettingsStyle.onAccent : .secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
@@ -4006,7 +4006,7 @@ struct SettingsSegmentedControl<Item: Hashable>: View {
         } label: {
             Text(label(item))
                 .font(.system(size: 11.5, weight: .medium))
-                .foregroundStyle(isSelected ? Color.white : Color.secondary)
+                .foregroundStyle(isSelected ? NotchlySettingsStyle.onAccent : Color.secondary)
                 .lineLimit(1)
                 .padding(.horizontal, 10)
                 .frame(maxWidth: fillsWidth ? .infinity : nil)

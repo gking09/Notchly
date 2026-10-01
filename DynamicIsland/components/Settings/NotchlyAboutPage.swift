@@ -144,7 +144,7 @@ struct NotchlyAboutPage: View {
     private var lineageCard: some View {
         NotchlySettingsCard(
             "Built on",
-            footer: "Notchly is a fork of Atoll, which itself builds on boring.notch. Thank you to both projects and their contributors."
+            footer: "Thank you to both projects and everyone who contributed to them."
         ) {
             creditRow(NotchlyCredits.atoll, subtitle: "Notchly is a fork of Atoll by \(NotchlyCredits.atoll.author)")
             creditRow(NotchlyCredits.boringNotch, subtitle: "Atoll builds on boring.notch by \(NotchlyCredits.boringNotch.author)")
