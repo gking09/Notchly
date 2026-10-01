@@ -11,10 +11,6 @@
 	<string>Notchly uses Apple Music to fetch animated artwork for the notch media player.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Notchly needs audio capture permission to show the real-time music waveform. Audio is only processed live and is never recorded or saved.</string>
-	<key>SUEnableDownloaderService</key>
-	<true/>
-	<key>SUEnableInstallerLauncherService</key>
-	<true/>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict/>

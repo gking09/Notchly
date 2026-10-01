@@ -22,67 +22,73 @@
 
 import AppKit
 import SwiftUI
-import Sparkle
 
 class SettingsWindowController: NSWindowController {
     static let shared = SettingsWindowController()
-    private var updaterController: SPUStandardUpdaterController?
-    
+
+    static let defaultContentSize = NSSize(width: 860, height: 620)
+    static let minimumContentSize = NSSize(width: 760, height: 540)
+
     private init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 600),
+            contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        
+
         super.init(window: window)
-        
+
         setupWindow()
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    func setUpdaterController(_ controller: SPUStandardUpdaterController) {
-        self.updaterController = controller
-        // Recreate the content view with the proper updater controller
-        setupWindow()
-    }
-    
+
     private func setupWindow() {
         guard let window = window else { return }
-        
+
+        // The Notchly shell draws its own sidebar and header, so the title bar
+        // melts into the content: transparent, no title, traffic lights floating
+        // over the sidebar.
         window.title = "Notchly Settings"
-        window.titlebarAppearsTransparent = false
-        window.titleVisibility = .visible
-        window.toolbarStyle = .unified
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
+        window.minSize = Self.minimumContentSize
+        window.contentMinSize = Self.minimumContentSize
         window.level = .normal
-        
+
         // Make it behave like a regular app window with proper Spaces support
         window.collectionBehavior = [.managed, .participatesInCycle]
-        
+
         // Ensure proper window behavior
         window.hidesOnDeactivate = false
         window.isExcludedFromWindowsMenu = false
-        
+
         // Configure window to be a standard document-style window
         window.isRestorable = true
         window.identifier = NSUserInterfaceItemIdentifier("DynamicIslandSettingsWindow")
-        
-        // Create the SwiftUI content
-        let settingsView = SettingsView(updaterController: updaterController)
-        let hostingView = NSHostingView(rootView: settingsView)
+
+        // Create the SwiftUI content. Appearance follows the system (light / dark).
+        let hostingView = NSHostingView(rootView: NotchlySettingsView())
+        hostingView.sizingOptions = []
         window.contentView = hostingView
-        
+        window.setContentSize(Self.defaultContentSize)
+
         // Handle window closing
         window.delegate = self
-        
+
         ScreenCaptureVisibilityManager.shared.register(window, scope: .panelsOnly)
     }
-    
+
+    /// Opens the settings window, optionally jumping straight to a page.
+    func showWindow(page: NotchlySettingsPage, section: SettingsTab? = nil, highlightID: String? = nil) {
+        NotchlySettingsNavigator.shared.open(page, section: section, highlightID: highlightID)
+        showWindow()
+    }
+
     func showWindow() {
         // Ensure window exists
         _ = window

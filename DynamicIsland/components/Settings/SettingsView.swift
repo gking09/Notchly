@@ -11,36 +11,11 @@ import Defaults
 import KeyboardShortcuts
 import LaunchAtLogin
 import LottieUI
-import Sparkle
 import SwiftUI
 import SwiftUIIntrospect
 import UniformTypeIdentifiers
 
-/// Groups for organizing settings tabs in the sidebar.
-private enum SettingsTabGroup: String, CaseIterable, Identifiable {
-    case core
-    case mediaAndDisplay
-    case system
-    case productivity
-    case utilities
-    case info
-
-    var id: String { rawValue }
-
-    /// Display title for the section header.  `nil` means no visible header.
-    var title: String? {
-        switch self {
-        case .core:             return nil
-        case .mediaAndDisplay:  return String(localized: "Media & Display")
-        case .system:           return String(localized: "System")
-        case .productivity:     return String(localized: "Productivity")
-        case .utilities:        return String(localized: "Utilities")
-        case .info:             return nil
-        }
-    }
-}
-
-private enum SettingsTab: String, CaseIterable, Identifiable {
+enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case liveActivities
     case appearance
@@ -54,21 +29,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case battery
     case downloads
     case shortcuts
-    case about
 
     var id: String { rawValue }
-
-    /// Which sidebar group this tab belongs to.
-    var group: SettingsTabGroup {
-        switch self {
-        case .general, .appearance:                                          return .core
-        case .media, .liveActivities, .lockScreen, .devices:                 return .mediaAndDisplay
-        case .hudAndOSD, .battery:                                           return .system
-        case .hub, .quickActions, .stash:                                    return .productivity
-        case .downloads, .shortcuts:                                         return .utilities
-        case .about:                                                         return .info
-        }
-    }
 
     var title: String {
         switch self {
@@ -85,7 +47,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .battery: return String(localized: "Battery")
         case .downloads: return String(localized: "Downloads")
         case .shortcuts: return String(localized: "Shortcuts")
-        case .about: return String(localized: "About")
         }
     }
 
@@ -104,7 +65,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .battery: return "battery.100.bolt"
         case .downloads: return "square.and.arrow.down"
         case .shortcuts: return "keyboard"
-        case .about: return "info.circle"
         }
     }
 
@@ -123,7 +83,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
         case .downloads: return .gray
         case .shortcuts: return .orange
-        case .about: return .secondary
         }
     }
 
@@ -132,7 +91,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-private struct SettingsSearchEntry: Identifiable {
+private struct LegacySettingsSearchEntry: Identifiable {
     let tab: SettingsTab
     let title: String
     let keywords: [String]
@@ -153,180 +112,179 @@ private struct SettingsSearchEntry: Identifiable {
     var id: String { "\(tab.rawValue)-\(title)" }
 }
 
-private enum SettingsSearchIndex {
-    static let entries: [SettingsSearchEntry] = [
+private enum LegacySettingsSearchCatalog {
+    static let entries: [LegacySettingsSearchEntry] = [
         // General
-        SettingsSearchEntry(tab: .general, title: "Enable Minimalistic UI", keywords: ["minimalistic", "ui mode", "general"], highlightID: SettingsTab.general.highlightID(for: "Enable Minimalistic UI")),
-        SettingsSearchEntry(tab: .general, title: "Menubar icon", keywords: ["menu bar", "status bar", "icon"], highlightID: SettingsTab.general.highlightID(for: "Menubar icon")),
-        SettingsSearchEntry(tab: .general, title: "Launch at login", keywords: ["autostart", "startup"], highlightID: SettingsTab.general.highlightID(for: "Launch at login")),
-        SettingsSearchEntry(tab: .general, title: "Show on all displays", keywords: ["multi-display", "external monitor"], highlightID: SettingsTab.general.highlightID(for: "Show on all displays")),
-        SettingsSearchEntry(tab: .general, title: "Show on a specific display", keywords: ["preferred screen", "display picker"], highlightID: SettingsTab.general.highlightID(for: "Show on a specific display")),
-        SettingsSearchEntry(tab: .general, title: "Automatically switch displays", keywords: ["auto switch", "displays"], highlightID: SettingsTab.general.highlightID(for: "Automatically switch displays")),
-        SettingsSearchEntry(tab: .general, title: "Hide Notchly during screenshots & recordings", keywords: ["privacy", "screenshot", "recording"], highlightID: SettingsTab.general.highlightID(for: "Hide Notchly during screenshots & recordings")),
-        SettingsSearchEntry(tab: .general, title: "Enable gestures", keywords: ["gestures", "trackpad"], highlightID: SettingsTab.general.highlightID(for: "Enable gestures")),
-        SettingsSearchEntry(tab: .general, title: "Close gesture", keywords: ["pinch", "swipe"], highlightID: SettingsTab.general.highlightID(for: "Close gesture")),
-        SettingsSearchEntry(tab: .general, title: "Reverse swipe gestures", keywords: ["reverse", "swipe", "media"], highlightID: SettingsTab.general.highlightID(for: "Reverse swipe gestures")),
-        SettingsSearchEntry(tab: .general, title: "Reverse scroll gestures", keywords: ["reverse", "scroll", "open", "close"], highlightID: SettingsTab.general.highlightID(for: "Reverse scroll gestures")),
-        SettingsSearchEntry(tab: .general, title: "Extend hover area", keywords: ["hover", "cursor"], highlightID: SettingsTab.general.highlightID(for: "Extend hover area")),
-        SettingsSearchEntry(tab: .general, title: "Enable haptics", keywords: ["haptic", "feedback"], highlightID: SettingsTab.general.highlightID(for: "Enable haptics")),
-        SettingsSearchEntry(tab: .general, title: "Open notch on hover", keywords: ["hover to open", "auto open"], highlightID: SettingsTab.general.highlightID(for: "Open notch on hover")),
-        SettingsSearchEntry(tab: .general, title: "External display style", keywords: ["dynamic island", "pill", "external display", "non-notch", "floating", "capsule"], highlightID: SettingsTab.general.highlightID(for: "External display style")),
-        SettingsSearchEntry(tab: .general, title: "Hide until hovered", keywords: ["hide", "hover", "external", "non-notch", "auto hide", "slide"], highlightID: SettingsTab.general.highlightID(for: "Hide until hovered")),
-        SettingsSearchEntry(tab: .general, title: "Notch display height", keywords: ["display height", "menu bar size"], highlightID: SettingsTab.general.highlightID(for: "Notch display height")),
+        LegacySettingsSearchEntry(tab: .general, title: "Enable Minimalistic UI", keywords: ["minimalistic", "ui mode", "general"], highlightID: SettingsTab.general.highlightID(for: "Enable Minimalistic UI")),
+        LegacySettingsSearchEntry(tab: .general, title: "Menubar icon", keywords: ["menu bar", "status bar", "icon"], highlightID: SettingsTab.general.highlightID(for: "Menubar icon")),
+        LegacySettingsSearchEntry(tab: .general, title: "Launch at login", keywords: ["autostart", "startup"], highlightID: SettingsTab.general.highlightID(for: "Launch at login")),
+        LegacySettingsSearchEntry(tab: .general, title: "Show on all displays", keywords: ["multi-display", "external monitor"], highlightID: SettingsTab.general.highlightID(for: "Show on all displays")),
+        LegacySettingsSearchEntry(tab: .general, title: "Show on a specific display", keywords: ["preferred screen", "display picker"], highlightID: SettingsTab.general.highlightID(for: "Show on a specific display")),
+        LegacySettingsSearchEntry(tab: .general, title: "Automatically switch displays", keywords: ["auto switch", "displays"], highlightID: SettingsTab.general.highlightID(for: "Automatically switch displays")),
+        LegacySettingsSearchEntry(tab: .general, title: "Hide Notchly during screenshots & recordings", keywords: ["privacy", "screenshot", "recording"], highlightID: SettingsTab.general.highlightID(for: "Hide Notchly during screenshots & recordings")),
+        LegacySettingsSearchEntry(tab: .general, title: "Enable gestures", keywords: ["gestures", "trackpad"], highlightID: SettingsTab.general.highlightID(for: "Enable gestures")),
+        LegacySettingsSearchEntry(tab: .general, title: "Close gesture", keywords: ["pinch", "swipe"], highlightID: SettingsTab.general.highlightID(for: "Close gesture")),
+        LegacySettingsSearchEntry(tab: .general, title: "Reverse swipe gestures", keywords: ["reverse", "swipe", "media"], highlightID: SettingsTab.general.highlightID(for: "Reverse swipe gestures")),
+        LegacySettingsSearchEntry(tab: .general, title: "Reverse scroll gestures", keywords: ["reverse", "scroll", "open", "close"], highlightID: SettingsTab.general.highlightID(for: "Reverse scroll gestures")),
+        LegacySettingsSearchEntry(tab: .general, title: "Extend hover area", keywords: ["hover", "cursor"], highlightID: SettingsTab.general.highlightID(for: "Extend hover area")),
+        LegacySettingsSearchEntry(tab: .general, title: "Enable haptics", keywords: ["haptic", "feedback"], highlightID: SettingsTab.general.highlightID(for: "Enable haptics")),
+        LegacySettingsSearchEntry(tab: .general, title: "Open notch on hover", keywords: ["hover to open", "auto open"], highlightID: SettingsTab.general.highlightID(for: "Open notch on hover")),
+        LegacySettingsSearchEntry(tab: .general, title: "External display style", keywords: ["dynamic island", "pill", "external display", "non-notch", "floating", "capsule"], highlightID: SettingsTab.general.highlightID(for: "External display style")),
+        LegacySettingsSearchEntry(tab: .general, title: "Hide until hovered", keywords: ["hide", "hover", "external", "non-notch", "auto hide", "slide"], highlightID: SettingsTab.general.highlightID(for: "Hide until hovered")),
+        LegacySettingsSearchEntry(tab: .general, title: "Notch display height", keywords: ["display height", "menu bar size"], highlightID: SettingsTab.general.highlightID(for: "Notch display height")),
 
         // Live Activities
-        SettingsSearchEntry(tab: .liveActivities, title: "Enable Screen Recording Detection", keywords: ["screen recording", "indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Screen Recording Detection")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Show Recording Indicator", keywords: ["recording indicator", "red dot"], highlightID: SettingsTab.liveActivities.highlightID(for: "Show Recording Indicator")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Recording Controls", keywords: ["screen recording", "stop button", "indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Recording Controls")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Recording Hover Style", keywords: ["screen recording", "hover", "inline", "stop"], highlightID: SettingsTab.liveActivities.highlightID(for: "Recording Hover Style")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Enable Focus Detection", keywords: ["focus", "do not disturb", "dnd"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Focus Detection")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Show Focus Indicator", keywords: ["focus icon", "moon"], highlightID: SettingsTab.liveActivities.highlightID(for: "Show Focus Indicator")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Show Focus Label", keywords: ["focus label", "text"], highlightID: SettingsTab.liveActivities.highlightID(for: "Show Focus Label")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Enable Camera Detection", keywords: ["camera", "privacy indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Camera Detection")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Enable Microphone Detection", keywords: ["microphone", "privacy"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Microphone Detection")),
-        SettingsSearchEntry(tab: .liveActivities, title: "Enable music live activity", keywords: ["music", "now playing"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable music live activity")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Enable Screen Recording Detection", keywords: ["screen recording", "indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Screen Recording Detection")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Show Recording Indicator", keywords: ["recording indicator", "red dot"], highlightID: SettingsTab.liveActivities.highlightID(for: "Show Recording Indicator")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Recording Controls", keywords: ["screen recording", "stop button", "indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Recording Controls")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Recording Hover Style", keywords: ["screen recording", "hover", "inline", "stop"], highlightID: SettingsTab.liveActivities.highlightID(for: "Recording Hover Style")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Enable Focus Detection", keywords: ["focus", "do not disturb", "dnd"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Focus Detection")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Show Focus Indicator", keywords: ["focus icon", "moon"], highlightID: SettingsTab.liveActivities.highlightID(for: "Show Focus Indicator")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Show Focus Label", keywords: ["focus label", "text"], highlightID: SettingsTab.liveActivities.highlightID(for: "Show Focus Label")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Enable Camera Detection", keywords: ["camera", "privacy indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Camera Detection")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Enable Microphone Detection", keywords: ["microphone", "privacy"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Microphone Detection")),
+        LegacySettingsSearchEntry(tab: .liveActivities, title: "Enable music live activity", keywords: ["music", "now playing"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable music live activity")),
 
         // Battery (Charge)
-        SettingsSearchEntry(tab: .battery, title: "Show battery indicator", keywords: ["battery hud", "charge"], highlightID: SettingsTab.battery.highlightID(for: "Show battery indicator")),
-        SettingsSearchEntry(tab: .battery, title: "Show battery percentage", keywords: ["battery percent"], highlightID: SettingsTab.battery.highlightID(for: "Show battery percentage")),
-        SettingsSearchEntry(tab: .battery, title: "Show power status notifications", keywords: ["notifications", "power"], highlightID: SettingsTab.battery.highlightID(for: "Show power status notifications")),
-        SettingsSearchEntry(tab: .battery, title: "Show power status icons", keywords: ["power icons", "charging icon"], highlightID: SettingsTab.battery.highlightID(for: "Show power status icons")),
-        SettingsSearchEntry(tab: .battery, title: "Play low battery alert sound", keywords: ["low battery", "alert", "sound"], highlightID: SettingsTab.battery.highlightID(for: "Play low battery alert sound")),
-        SettingsSearchEntry(tab: .battery, title: "Charging HUD", keywords: ["battery", "charging", "temporary activity"], highlightID: SettingsTab.battery.highlightID(for: "Charging HUD")),
-        SettingsSearchEntry(tab: .battery, title: "Low battery HUD", keywords: ["battery", "low", "temporary activity"], highlightID: SettingsTab.battery.highlightID(for: "Low battery HUD")),
-        SettingsSearchEntry(tab: .battery, title: "Fully charged HUD", keywords: ["battery", "full", "temporary activity"], highlightID: SettingsTab.battery.highlightID(for: "Fully charged HUD")),
-        SettingsSearchEntry(tab: .battery, title: "Charging duration", keywords: ["charging", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Charging duration")),
-        SettingsSearchEntry(tab: .battery, title: "Low battery duration", keywords: ["low battery", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Low battery duration")),
-        SettingsSearchEntry(tab: .battery, title: "Full battery duration", keywords: ["full battery", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Full battery duration")),
-        SettingsSearchEntry(tab: .battery, title: "Test charging HUD", keywords: ["battery", "test", "charging", "preview"], highlightID: nil),
-        SettingsSearchEntry(tab: .battery, title: "Test low battery HUD", keywords: ["battery", "test", "low", "preview"], highlightID: nil),
-        SettingsSearchEntry(tab: .battery, title: "Test full battery HUD", keywords: ["battery", "test", "full", "preview"], highlightID: nil),
-        SettingsSearchEntry(tab: .battery, title: "Low battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Low battery style")),
-        SettingsSearchEntry(tab: .battery, title: "Low battery threshold", keywords: ["battery", "threshold", "percent"], highlightID: SettingsTab.battery.highlightID(for: "Low battery threshold")),
-        SettingsSearchEntry(tab: .battery, title: "Full battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Full battery style")),
-        SettingsSearchEntry(tab: .battery, title: "Full charge threshold", keywords: ["battery", "threshold", "full"], highlightID: SettingsTab.battery.highlightID(for: "Full charge threshold")),
-        SettingsSearchEntry(tab: .battery, title: "Show time remaining", keywords: ["battery","time remaining","time to full","eta"], highlightID: SettingsTab.battery.highlightID(for: "Show time remaining")),
-        SettingsSearchEntry(tab: .battery, title: "Show charger wattage", keywords: ["battery","charger","watts","adapter"], highlightID: SettingsTab.battery.highlightID(for: "Show charger wattage")),
-        SettingsSearchEntry(tab: .battery, title: "Show charging status", keywords: ["battery","fast charging","optimized","held"], highlightID: SettingsTab.battery.highlightID(for: "Show charging status")),
-        SettingsSearchEntry(tab: .battery, title: "Show battery health", keywords: ["battery","health","cycle count","capacity"], highlightID: SettingsTab.battery.highlightID(for: "Show battery health")),
-        SettingsSearchEntry(tab: .battery, title: "Critical battery HUD", keywords: ["battery","critical","alert"], highlightID: SettingsTab.battery.highlightID(for: "Critical battery HUD")),
-        SettingsSearchEntry(tab: .battery, title: "Charge limit reached HUD", keywords: ["battery","charge limit","optimized","held"], highlightID: SettingsTab.battery.highlightID(for: "Charge limit reached HUD")),
-        SettingsSearchEntry(tab: .battery, title: "Critical battery threshold", keywords: ["battery","critical","threshold","percent"], highlightID: SettingsTab.battery.highlightID(for: "Critical battery threshold")),
-        SettingsSearchEntry(tab: .battery, title: "Bluetooth low battery alert", keywords: ["bluetooth","airpods","mouse","keyboard","low battery"], highlightID: SettingsTab.battery.highlightID(for: "Bluetooth low battery alert")),
-        SettingsSearchEntry(tab: .battery, title: "Bluetooth low battery threshold", keywords: ["bluetooth","threshold","low battery","percent"], highlightID: SettingsTab.battery.highlightID(for: "Bluetooth low battery threshold")),
-        SettingsSearchEntry(tab: .battery, title: "Test critical battery HUD", keywords: ["battery", "test", "critical", "preview"], highlightID: nil),
-        SettingsSearchEntry(tab: .battery, title: "Test charge limit HUD", keywords: ["battery", "test", "charge limit", "preview"], highlightID: nil),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show battery indicator", keywords: ["battery hud", "charge"], highlightID: SettingsTab.battery.highlightID(for: "Show battery indicator")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show battery percentage", keywords: ["battery percent"], highlightID: SettingsTab.battery.highlightID(for: "Show battery percentage")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show power status notifications", keywords: ["notifications", "power"], highlightID: SettingsTab.battery.highlightID(for: "Show power status notifications")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show power status icons", keywords: ["power icons", "charging icon"], highlightID: SettingsTab.battery.highlightID(for: "Show power status icons")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Play low battery alert sound", keywords: ["low battery", "alert", "sound"], highlightID: SettingsTab.battery.highlightID(for: "Play low battery alert sound")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Charging HUD", keywords: ["battery", "charging", "temporary activity"], highlightID: SettingsTab.battery.highlightID(for: "Charging HUD")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Low battery HUD", keywords: ["battery", "low", "temporary activity"], highlightID: SettingsTab.battery.highlightID(for: "Low battery HUD")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Fully charged HUD", keywords: ["battery", "full", "temporary activity"], highlightID: SettingsTab.battery.highlightID(for: "Fully charged HUD")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Charging duration", keywords: ["charging", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Charging duration")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Low battery duration", keywords: ["low battery", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Low battery duration")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Full battery duration", keywords: ["full battery", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Full battery duration")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Test charging HUD", keywords: ["battery", "test", "charging", "preview"], highlightID: nil),
+        LegacySettingsSearchEntry(tab: .battery, title: "Test low battery HUD", keywords: ["battery", "test", "low", "preview"], highlightID: nil),
+        LegacySettingsSearchEntry(tab: .battery, title: "Test full battery HUD", keywords: ["battery", "test", "full", "preview"], highlightID: nil),
+        LegacySettingsSearchEntry(tab: .battery, title: "Low battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Low battery style")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Low battery threshold", keywords: ["battery", "threshold", "percent"], highlightID: SettingsTab.battery.highlightID(for: "Low battery threshold")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Full battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Full battery style")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Full charge threshold", keywords: ["battery", "threshold", "full"], highlightID: SettingsTab.battery.highlightID(for: "Full charge threshold")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show time remaining", keywords: ["battery","time remaining","time to full","eta"], highlightID: SettingsTab.battery.highlightID(for: "Show time remaining")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show charger wattage", keywords: ["battery","charger","watts","adapter"], highlightID: SettingsTab.battery.highlightID(for: "Show charger wattage")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show charging status", keywords: ["battery","fast charging","optimized","held"], highlightID: SettingsTab.battery.highlightID(for: "Show charging status")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Show battery health", keywords: ["battery","health","cycle count","capacity"], highlightID: SettingsTab.battery.highlightID(for: "Show battery health")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Critical battery HUD", keywords: ["battery","critical","alert"], highlightID: SettingsTab.battery.highlightID(for: "Critical battery HUD")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Charge limit reached HUD", keywords: ["battery","charge limit","optimized","held"], highlightID: SettingsTab.battery.highlightID(for: "Charge limit reached HUD")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Critical battery threshold", keywords: ["battery","critical","threshold","percent"], highlightID: SettingsTab.battery.highlightID(for: "Critical battery threshold")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Bluetooth low battery alert", keywords: ["bluetooth","airpods","mouse","keyboard","low battery"], highlightID: SettingsTab.battery.highlightID(for: "Bluetooth low battery alert")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Bluetooth low battery threshold", keywords: ["bluetooth","threshold","low battery","percent"], highlightID: SettingsTab.battery.highlightID(for: "Bluetooth low battery threshold")),
+        LegacySettingsSearchEntry(tab: .battery, title: "Test critical battery HUD", keywords: ["battery", "test", "critical", "preview"], highlightID: nil),
+        LegacySettingsSearchEntry(tab: .battery, title: "Test charge limit HUD", keywords: ["battery", "test", "charge limit", "preview"], highlightID: nil),
 
         // HUDs
-        SettingsSearchEntry(tab: .devices, title: "Show Bluetooth device connections", keywords: ["bluetooth", "hud"], highlightID: SettingsTab.devices.highlightID(for: "Show Bluetooth device connections")),
-        SettingsSearchEntry(tab: .devices, title: "Use circular battery indicator", keywords: ["battery", "circular"], highlightID: SettingsTab.devices.highlightID(for: "Use circular battery indicator")),
-        SettingsSearchEntry(tab: .devices, title: "Show battery percentage text in HUD", keywords: ["battery text"], highlightID: SettingsTab.devices.highlightID(for: "Show battery percentage text in HUD")),
-        SettingsSearchEntry(tab: .devices, title: "Scroll device name in HUD", keywords: ["marquee", "device name"], highlightID: SettingsTab.devices.highlightID(for: "Scroll device name in HUD")),
-        SettingsSearchEntry(tab: .devices, title: "Use 3D Bluetooth HUD icon", keywords: ["bluetooth", "3d", "animation", "mov"], highlightID: SettingsTab.devices.highlightID(for: "Use 3D Bluetooth HUD icon")),
-        SettingsSearchEntry(tab: .devices, title: "Color-coded battery display", keywords: ["color", "battery"], highlightID: SettingsTab.devices.highlightID(for: "Color-coded battery display")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Color-coded volume display", keywords: ["volume", "color"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Color-coded volume display")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Smooth color transitions", keywords: ["gradient", "smooth"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Smooth color transitions")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Show percentages beside progress bars", keywords: ["percentages", "progress"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Show percentages beside progress bars")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "HUD style", keywords: ["inline", "compact"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "HUD style")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Progressbar style", keywords: ["progress", "style"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Progressbar style")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Enable glowing effect", keywords: ["glow", "indicator"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable glowing effect")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Use accent color", keywords: ["accent", "color"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Use accent color")),
+        LegacySettingsSearchEntry(tab: .devices, title: "Show Bluetooth device connections", keywords: ["bluetooth", "hud"], highlightID: SettingsTab.devices.highlightID(for: "Show Bluetooth device connections")),
+        LegacySettingsSearchEntry(tab: .devices, title: "Use circular battery indicator", keywords: ["battery", "circular"], highlightID: SettingsTab.devices.highlightID(for: "Use circular battery indicator")),
+        LegacySettingsSearchEntry(tab: .devices, title: "Show battery percentage text in HUD", keywords: ["battery text"], highlightID: SettingsTab.devices.highlightID(for: "Show battery percentage text in HUD")),
+        LegacySettingsSearchEntry(tab: .devices, title: "Scroll device name in HUD", keywords: ["marquee", "device name"], highlightID: SettingsTab.devices.highlightID(for: "Scroll device name in HUD")),
+        LegacySettingsSearchEntry(tab: .devices, title: "Use 3D Bluetooth HUD icon", keywords: ["bluetooth", "3d", "animation", "mov"], highlightID: SettingsTab.devices.highlightID(for: "Use 3D Bluetooth HUD icon")),
+        LegacySettingsSearchEntry(tab: .devices, title: "Color-coded battery display", keywords: ["color", "battery"], highlightID: SettingsTab.devices.highlightID(for: "Color-coded battery display")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Color-coded volume display", keywords: ["volume", "color"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Color-coded volume display")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Smooth color transitions", keywords: ["gradient", "smooth"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Smooth color transitions")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Show percentages beside progress bars", keywords: ["percentages", "progress"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Show percentages beside progress bars")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "HUD style", keywords: ["inline", "compact"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "HUD style")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Progressbar style", keywords: ["progress", "style"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Progressbar style")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Enable glowing effect", keywords: ["glow", "indicator"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable glowing effect")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Use accent color", keywords: ["accent", "color"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Use accent color")),
 
         // Custom OSD
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Enable Custom OSD", keywords: ["osd", "on-screen display", "custom osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable Custom OSD")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Volume OSD", keywords: ["volume", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume OSD")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Brightness OSD", keywords: ["brightness", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness OSD")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Keyboard Backlight OSD", keywords: ["keyboard", "backlight", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Keyboard Backlight OSD")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Material", keywords: ["material", "frosted", "liquid", "glass", "solid", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Material")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Icon & Progress Color", keywords: ["color", "icon", "white", "black", "gray", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Icon & Progress Color")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Volume step", keywords: ["volume", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume step")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Volume fine step", keywords: ["volume", "fine", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume fine step")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Brightness step", keywords: ["brightness", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness step")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Brightness fine step", keywords: ["brightness", "fine", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness fine step")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC app integration", keywords: ["ddc", "third party", "external", "display", "betterdisplay", "lunar"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC app integration")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC provider", keywords: ["provider", "betterdisplay", "lunar", "integration", "refresh detection"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC provider")),
-        SettingsSearchEntry(tab: .hudAndOSD, title: "Enable external volume control listener", keywords: ["external volume", "ddc volume", "betterdisplay volume", "lunar volume", "disable native volume"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable external volume control listener")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Enable Custom OSD", keywords: ["osd", "on-screen display", "custom osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable Custom OSD")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Volume OSD", keywords: ["volume", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume OSD")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Brightness OSD", keywords: ["brightness", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness OSD")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Keyboard Backlight OSD", keywords: ["keyboard", "backlight", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Keyboard Backlight OSD")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Material", keywords: ["material", "frosted", "liquid", "glass", "solid", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Material")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Icon & Progress Color", keywords: ["color", "icon", "white", "black", "gray", "osd"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Icon & Progress Color")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Volume step", keywords: ["volume", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume step")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Volume fine step", keywords: ["volume", "fine", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume fine step")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Brightness step", keywords: ["brightness", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness step")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Brightness fine step", keywords: ["brightness", "fine", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness fine step")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC app integration", keywords: ["ddc", "third party", "external", "display", "betterdisplay", "lunar"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC app integration")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC provider", keywords: ["provider", "betterdisplay", "lunar", "integration", "refresh detection"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC provider")),
+        LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Enable external volume control listener", keywords: ["external volume", "ddc volume", "betterdisplay volume", "lunar volume", "disable native volume"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable external volume control listener")),
 
         // Media
-        SettingsSearchEntry(tab: .media, title: "Music Source", keywords: ["media source", "controller"], highlightID: SettingsTab.media.highlightID(for: "Music Source")),
-        SettingsSearchEntry(tab: .media, title: "Skip buttons", keywords: ["skip", "controls", "±10"], highlightID: SettingsTab.media.highlightID(for: "Skip buttons")),
-        SettingsSearchEntry(tab: .media, title: "Sneak Peek Style", keywords: ["sneak peek", "preview"], highlightID: SettingsTab.media.highlightID(for: "Sneak Peek Style")),
-        SettingsSearchEntry(tab: .media, title: "Pinned lyric context", keywords: ["pinned lyrics", "lyric context", "lyrics lines", "closed notch", "lyrics height"], highlightID: SettingsTab.media.highlightID(for: "Pinned lyric context")),
-        SettingsSearchEntry(tab: .media, title: "Keep lyrics under the closed notch", keywords: ["lyrics", "pin", "pinned", "closed notch", "always show"], highlightID: SettingsTab.media.highlightID(for: "Keep lyrics under the closed notch")),
-        SettingsSearchEntry(tab: .media, title: "Show lyrics", keywords: ["lyrics", "song text", "side panel", "hub", "inline"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
+        LegacySettingsSearchEntry(tab: .media, title: "Music Source", keywords: ["media source", "controller"], highlightID: SettingsTab.media.highlightID(for: "Music Source")),
+        LegacySettingsSearchEntry(tab: .media, title: "Skip buttons", keywords: ["skip", "controls", "±10"], highlightID: SettingsTab.media.highlightID(for: "Skip buttons")),
+        LegacySettingsSearchEntry(tab: .media, title: "Sneak Peek Style", keywords: ["sneak peek", "preview"], highlightID: SettingsTab.media.highlightID(for: "Sneak Peek Style")),
+        LegacySettingsSearchEntry(tab: .media, title: "Pinned lyric context", keywords: ["pinned lyrics", "lyric context", "lyrics lines", "closed notch", "lyrics height"], highlightID: SettingsTab.media.highlightID(for: "Pinned lyric context")),
+        LegacySettingsSearchEntry(tab: .media, title: "Keep lyrics under the closed notch", keywords: ["lyrics", "pin", "pinned", "closed notch", "always show"], highlightID: SettingsTab.media.highlightID(for: "Keep lyrics under the closed notch")),
+        LegacySettingsSearchEntry(tab: .media, title: "Show lyrics", keywords: ["lyrics", "song text", "side panel", "hub", "inline"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
         // Targets the lyrics toggle rather than the Highlight picker: the picker
         // only exists while lyrics are on, so a search result pointing at it
         // scrolls to nothing for anyone who has not turned them on yet -- which
         // is everyone, by default.
-        SettingsSearchEntry(tab: .media, title: "Lyric highlight", keywords: ["lyrics", "highlight", "sweep", "gradient", "solid", "karaoke", "animation"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
-        SettingsSearchEntry(tab: .media, title: "Side lyrics width", keywords: ["lyrics", "width", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics width")),
-        SettingsSearchEntry(tab: .media, title: "Side lyrics horizontal offset", keywords: ["lyrics", "offset", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics horizontal offset")),
-        SettingsSearchEntry(tab: .media, title: "Show live canvas in Notchly", keywords: ["canvas", "live canvas", "album art", "dynamic island", "spotify canvas"], highlightID: SettingsTab.media.highlightID(for: "Show live canvas in Notchly")),
-        SettingsSearchEntry(tab: .media, title: "Auto-hide inactive notch media player", keywords: ["auto hide", "inactive", "placeholder", "notch media"], highlightID: SettingsTab.media.highlightID(for: "Auto-hide inactive notch media player")),
-        SettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
-        SettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
+        LegacySettingsSearchEntry(tab: .media, title: "Lyric highlight", keywords: ["lyrics", "highlight", "sweep", "gradient", "solid", "karaoke", "animation"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
+        LegacySettingsSearchEntry(tab: .media, title: "Side lyrics width", keywords: ["lyrics", "width", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics width")),
+        LegacySettingsSearchEntry(tab: .media, title: "Side lyrics horizontal offset", keywords: ["lyrics", "offset", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics horizontal offset")),
+        LegacySettingsSearchEntry(tab: .media, title: "Show live canvas in Notchly", keywords: ["canvas", "live canvas", "album art", "dynamic island", "spotify canvas"], highlightID: SettingsTab.media.highlightID(for: "Show live canvas in Notchly")),
+        LegacySettingsSearchEntry(tab: .media, title: "Auto-hide inactive notch media player", keywords: ["auto hide", "inactive", "placeholder", "notch media"], highlightID: SettingsTab.media.highlightID(for: "Auto-hide inactive notch media player")),
+        LegacySettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
+        LegacySettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
 
         // Hub
-        SettingsSearchEntry(tab: .hub, title: "Show the Hub", keywords: ["hub", "clock", "centre", "center", "home"], highlightID: SettingsTab.hub.highlightID(for: "Show the Hub")),
-        SettingsSearchEntry(tab: .hub, title: "Show seconds", keywords: ["hub", "clock", "seconds"], highlightID: SettingsTab.hub.highlightID(for: "Show seconds")),
-        SettingsSearchEntry(tab: .hub, title: "Time format", keywords: ["hub", "clock", "12-hour", "24-hour", "am pm", "military"], highlightID: SettingsTab.hub.highlightID(for: "Time format")),
-        SettingsSearchEntry(tab: .hub, title: "Show the date", keywords: ["hub", "clock", "date", "day"], highlightID: SettingsTab.hub.highlightID(for: "Show the date")),
-        SettingsSearchEntry(tab: .hub, title: "Hub chips", keywords: ["hub", "chips", "timer", "battery", "stash", "focus", "paused music"], highlightID: SettingsTab.hub.highlightID(for: "Hub chips")),
+        LegacySettingsSearchEntry(tab: .hub, title: "Show the Hub", keywords: ["hub", "clock", "centre", "center", "home"], highlightID: SettingsTab.hub.highlightID(for: "Show the Hub")),
+        LegacySettingsSearchEntry(tab: .hub, title: "Show seconds", keywords: ["hub", "clock", "seconds"], highlightID: SettingsTab.hub.highlightID(for: "Show seconds")),
+        LegacySettingsSearchEntry(tab: .hub, title: "Time format", keywords: ["hub", "clock", "12-hour", "24-hour", "am pm", "military"], highlightID: SettingsTab.hub.highlightID(for: "Time format")),
+        LegacySettingsSearchEntry(tab: .hub, title: "Show the date", keywords: ["hub", "clock", "date", "day"], highlightID: SettingsTab.hub.highlightID(for: "Show the date")),
+        LegacySettingsSearchEntry(tab: .hub, title: "Hub chips", keywords: ["hub", "chips", "timer", "battery", "stash", "focus", "paused music"], highlightID: SettingsTab.hub.highlightID(for: "Hub chips")),
 
 
         // Appearance
-        SettingsSearchEntry(tab: .appearance, title: "Main screen style", keywords: ["dynamic island", "pill", "non-notch", "display style", "notch style"], highlightID: SettingsTab.appearance.highlightID(for: "Main screen style")),
-        SettingsSearchEntry(tab: .appearance, title: "Settings icon in notch", keywords: ["settings button", "toolbar"], highlightID: SettingsTab.appearance.highlightID(for: "Settings icon in notch")),
-        SettingsSearchEntry(tab: .appearance, title: "Enable window shadow", keywords: ["shadow", "appearance"], highlightID: SettingsTab.appearance.highlightID(for: "Enable window shadow")),
-        SettingsSearchEntry(tab: .appearance, title: "Corner radius scaling", keywords: ["corner radius", "shape"], highlightID: SettingsTab.appearance.highlightID(for: "Corner radius scaling")),
-        SettingsSearchEntry(tab: .appearance, title: "Use simpler close animation", keywords: ["close animation", "notch"], highlightID: SettingsTab.appearance.highlightID(for: "Use simpler close animation")),
-        SettingsSearchEntry(tab: .appearance, title: "Notch Width", keywords: ["expanded notch", "width", "resize"], highlightID: SettingsTab.appearance.highlightID(for: "Expanded notch width")),
-        SettingsSearchEntry(tab: .appearance, title: "Enable colored spectrograms", keywords: ["spectrogram", "audio"], highlightID: SettingsTab.appearance.highlightID(for: "Enable colored spectrograms")),
-        SettingsSearchEntry(tab: .appearance, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.appearance.highlightID(for: "Enable blur effect behind album art")),
-        SettingsSearchEntry(tab: .appearance, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.appearance.highlightID(for: "Slider color")),
-        SettingsSearchEntry(tab: .appearance, title: "Enable Dynamic mirror", keywords: ["mirror", "reflection"], highlightID: SettingsTab.appearance.highlightID(for: "Enable Dynamic mirror")),
-        SettingsSearchEntry(tab: .appearance, title: "Mirror shape", keywords: ["mirror shape", "circle", "rectangle"], highlightID: SettingsTab.appearance.highlightID(for: "Mirror shape")),
-        SettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
-        SettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Main screen style", keywords: ["dynamic island", "pill", "non-notch", "display style", "notch style"], highlightID: SettingsTab.appearance.highlightID(for: "Main screen style")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Settings icon in notch", keywords: ["settings button", "toolbar"], highlightID: SettingsTab.appearance.highlightID(for: "Settings icon in notch")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Enable window shadow", keywords: ["shadow", "appearance"], highlightID: SettingsTab.appearance.highlightID(for: "Enable window shadow")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Corner radius scaling", keywords: ["corner radius", "shape"], highlightID: SettingsTab.appearance.highlightID(for: "Corner radius scaling")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Use simpler close animation", keywords: ["close animation", "notch"], highlightID: SettingsTab.appearance.highlightID(for: "Use simpler close animation")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Notch Width", keywords: ["expanded notch", "width", "resize"], highlightID: SettingsTab.appearance.highlightID(for: "Expanded notch width")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Enable colored spectrograms", keywords: ["spectrogram", "audio"], highlightID: SettingsTab.appearance.highlightID(for: "Enable colored spectrograms")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.appearance.highlightID(for: "Enable blur effect behind album art")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.appearance.highlightID(for: "Slider color")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Enable Dynamic mirror", keywords: ["mirror", "reflection"], highlightID: SettingsTab.appearance.highlightID(for: "Enable Dynamic mirror")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Mirror shape", keywords: ["mirror shape", "circle", "rectangle"], highlightID: SettingsTab.appearance.highlightID(for: "Mirror shape")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
+        LegacySettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
 
         // Lock Screen
-        SettingsSearchEntry(tab: .lockScreen, title: "Enable lock screen live activity", keywords: ["lock screen", "live activity"], highlightID: SettingsTab.lockScreen.highlightID(for: "Enable lock screen live activity")),
-        SettingsSearchEntry(tab: .lockScreen, title: "Live activity icon", keywords: ["lock", "fingerprint", "touch id", "unlock", "biometric", "icon style"], highlightID: SettingsTab.lockScreen.highlightID(for: "Live activity icon")),
-        SettingsSearchEntry(tab: .lockScreen, title: "Play lock/unlock sounds", keywords: ["chime", "sound"], highlightID: SettingsTab.lockScreen.highlightID(for: "Play lock/unlock sounds")),
+        LegacySettingsSearchEntry(tab: .lockScreen, title: "Enable lock screen live activity", keywords: ["lock screen", "live activity"], highlightID: SettingsTab.lockScreen.highlightID(for: "Enable lock screen live activity")),
+        LegacySettingsSearchEntry(tab: .lockScreen, title: "Live activity icon", keywords: ["lock", "fingerprint", "touch id", "unlock", "biometric", "icon style"], highlightID: SettingsTab.lockScreen.highlightID(for: "Live activity icon")),
+        LegacySettingsSearchEntry(tab: .lockScreen, title: "Play lock/unlock sounds", keywords: ["chime", "sound"], highlightID: SettingsTab.lockScreen.highlightID(for: "Play lock/unlock sounds")),
 
         // Shortcuts
-        SettingsSearchEntry(tab: .shortcuts, title: "Enable global keyboard shortcuts", keywords: ["keyboard", "shortcut"], highlightID: SettingsTab.shortcuts.highlightID(for: "Enable global keyboard shortcuts")),
+        LegacySettingsSearchEntry(tab: .shortcuts, title: "Enable global keyboard shortcuts", keywords: ["keyboard", "shortcut"], highlightID: SettingsTab.shortcuts.highlightID(for: "Enable global keyboard shortcuts")),
 
         // Quick Actions
         // Stash
-        SettingsSearchEntry(tab: .stash, title: "Enable Stash", keywords: ["stash", "tray", "shelf", "clipboard", "drop", "files", "temporary"], highlightID: SettingsTab.stash.highlightID(for: "Enable Stash")),
-        SettingsSearchEntry(tab: .stash, title: "Keep items", keywords: ["stash", "retention", "expire", "hours", "days", "quit"], highlightID: SettingsTab.stash.highlightID(for: "Keep items")),
-        SettingsSearchEntry(tab: .stash, title: "Maximum items", keywords: ["stash", "cap", "limit", "oldest"], highlightID: SettingsTab.stash.highlightID(for: "Maximum items")),
-        SettingsSearchEntry(tab: .stash, title: "Link files larger than", keywords: ["stash", "size", "copy", "link", "megabytes", "big files"], highlightID: SettingsTab.stash.highlightID(for: "Link files larger than")),
-        SettingsSearchEntry(tab: .stash, title: "Clear when the Mac sleeps or locks", keywords: ["stash", "sleep", "lock", "privacy", "clear"], highlightID: SettingsTab.stash.highlightID(for: "Clear when the Mac sleeps or locks")),
-        SettingsSearchEntry(tab: .stash, title: "Hide previews until hover", keywords: ["stash", "privacy", "blur", "text", "preview"], highlightID: SettingsTab.stash.highlightID(for: "Hide previews until hover")),
-        SettingsSearchEntry(tab: .stash, title: "Stash clipboard shortcut", keywords: ["stash", "shortcut", "keyboard", "clipboard"], highlightID: SettingsTab.stash.highlightID(for: "Stash clipboard shortcut")),
-        SettingsSearchEntry(tab: .quickActions, title: "Show Quick Actions row", keywords: ["quick actions", "buttons", "row", "home"], highlightID: SettingsTab.quickActions.highlightID(for: "Show Quick Actions row")),
-        SettingsSearchEntry(tab: .quickActions, title: "Shortcut name", keywords: ["shortcuts", "focus", "do not disturb", "automation"], highlightID: SettingsTab.quickActions.highlightID(for: "Shortcut name")),
-        SettingsSearchEntry(tab: .quickActions, title: "Timer & stopwatch live activity", keywords: ["timer", "stopwatch", "live activity", "closed notch"], highlightID: SettingsTab.quickActions.highlightID(for: "Timer & stopwatch live activity")),
-        SettingsSearchEntry(tab: .quickActions, title: "Timer sound", keywords: ["timer", "sound", "alarm", "chime"], highlightID: SettingsTab.quickActions.highlightID(for: "Timer sound")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Enable Stash", keywords: ["stash", "tray", "shelf", "clipboard", "drop", "files", "temporary"], highlightID: SettingsTab.stash.highlightID(for: "Enable Stash")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Keep items", keywords: ["stash", "retention", "expire", "hours", "days", "quit"], highlightID: SettingsTab.stash.highlightID(for: "Keep items")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Maximum items", keywords: ["stash", "cap", "limit", "oldest"], highlightID: SettingsTab.stash.highlightID(for: "Maximum items")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Link files larger than", keywords: ["stash", "size", "copy", "link", "megabytes", "big files"], highlightID: SettingsTab.stash.highlightID(for: "Link files larger than")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Clear when the Mac sleeps or locks", keywords: ["stash", "sleep", "lock", "privacy", "clear"], highlightID: SettingsTab.stash.highlightID(for: "Clear when the Mac sleeps or locks")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Hide previews until hover", keywords: ["stash", "privacy", "blur", "text", "preview"], highlightID: SettingsTab.stash.highlightID(for: "Hide previews until hover")),
+        LegacySettingsSearchEntry(tab: .stash, title: "Stash clipboard shortcut", keywords: ["stash", "shortcut", "keyboard", "clipboard"], highlightID: SettingsTab.stash.highlightID(for: "Stash clipboard shortcut")),
+        LegacySettingsSearchEntry(tab: .quickActions, title: "Show Quick Actions row", keywords: ["quick actions", "buttons", "row", "home"], highlightID: SettingsTab.quickActions.highlightID(for: "Show Quick Actions row")),
+        LegacySettingsSearchEntry(tab: .quickActions, title: "Shortcut name", keywords: ["shortcuts", "focus", "do not disturb", "automation"], highlightID: SettingsTab.quickActions.highlightID(for: "Shortcut name")),
+        LegacySettingsSearchEntry(tab: .quickActions, title: "Timer & stopwatch live activity", keywords: ["timer", "stopwatch", "live activity", "closed notch"], highlightID: SettingsTab.quickActions.highlightID(for: "Timer & stopwatch live activity")),
+        LegacySettingsSearchEntry(tab: .quickActions, title: "Timer sound", keywords: ["timer", "sound", "alarm", "chime"], highlightID: SettingsTab.quickActions.highlightID(for: "Timer sound")),
     ]
 }
 
 final class SettingsHighlightCoordinator: ObservableObject {
     struct ScrollRequest: Identifiable, Equatable {
         let id: String
-        fileprivate let tab: SettingsTab
+        let tab: SettingsTab
     }
 
-    @Published fileprivate var pendingScrollRequest: ScrollRequest?
+    @Published var pendingScrollRequest: ScrollRequest?
     @Published private(set) var activeHighlightID: String?
 
     private var clearWorkItem: DispatchWorkItem?
 
-    fileprivate func focus(on entry: SettingsSearchEntry) {
-        guard let highlightID = entry.highlightID else { return }
-        pendingScrollRequest = ScrollRequest(id: highlightID, tab: entry.tab)
+    func focus(highlightID: String, tab: SettingsTab) {
+        pendingScrollRequest = ScrollRequest(id: highlightID, tab: tab)
         activateHighlight(id: highlightID)
     }
 
@@ -406,7 +364,7 @@ extension View {
     }
 }
 
-private struct SettingsForm<Content: View>: View {
+struct SettingsForm<Content: View>: View {
     let tab: SettingsTab
     @ViewBuilder var content: () -> Content
 
@@ -424,480 +382,6 @@ private struct SettingsForm<Content: View>: View {
                     }
                     highlightCoordinator.consumeScrollRequest(request)
                 }
-        }
-    }
-}
-
-struct SettingsView: View {
-    @State private var selectedTab: SettingsTab = .general
-    @State private var searchText: String = ""
-    @StateObject private var highlightCoordinator = SettingsHighlightCoordinator()
-    @Default(.enableMinimalisticUI) var enableMinimalisticUI
-
-    let updaterController: SPUStandardUpdaterController?
-
-    init(updaterController: SPUStandardUpdaterController? = nil) {
-        self.updaterController = updaterController
-    }
-
-    var body: some View {
-        NavigationSplitView {
-            VStack(spacing: 12) {
-                SettingsSidebarSearchBar(
-                    text: $searchText,
-                    suggestions: searchSuggestions,
-                    onSuggestionSelected: handleSearchSuggestionSelection
-                )
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
-
-                Divider()
-                    .padding(.horizontal, 12)
-
-                List(selection: selectionBinding) {
-                    ForEach(groupedFilteredTabs, id: \.group) { section in
-                        Section {
-                            ForEach(section.tabs) { tab in
-                                NavigationLink(value: tab) {
-                                    sidebarRow(for: tab)
-                                }
-                            }
-                        } header: {
-                            if let title = section.group.title {
-                                Text(title)
-                            }
-                        }
-                    }
-                }
-                .listStyle(SidebarListStyle())
-                .frame(minWidth: 200)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .toolbar(removing: .sidebarToggle)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 240)
-                .environment(\.defaultMinListRowHeight, 44)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        } detail: {
-            // A quick crossfade with a small lift when the section changes.
-            ZStack {
-                detailView(for: resolvedSelection)
-                    .id(resolvedSelection)
-                    .transition(.settingsPage)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(NotchlyTheme.Motion.spring, value: resolvedSelection)
-        }
-        .navigationSplitViewStyle(.balanced)
-        .toolbar(removing: .sidebarToggle)
-        .toolbar { toolbarSpacingShim }
-        .environmentObject(highlightCoordinator)
-        .formStyle(.grouped)
-        .frame(width: 700)
-        .onChange(of: searchText) { _, newValue in
-            let matches = tabsMatchingSearch(newValue)
-            guard let firstMatch = matches.first else { return }
-            if !matches.contains(resolvedSelection) {
-                selectedTab = firstMatch
-            }
-        }
-        .background {
-            Group {
-                if #available(macOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .glassEffect(
-                            .clear
-                                .tint(Color.white.opacity(0.1))
-                                .interactive(),
-                            in: .rect(cornerRadius: 18)
-                        )
-                } else {
-                    ZStack {
-                        Color(NSColor.windowBackgroundColor)
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    }
-                }
-            }
-            .ignoresSafeArea()
-        }
-    }
-
-    private var resolvedSelection: SettingsTab {
-        availableTabs.contains(selectedTab) ? selectedTab : (availableTabs.first ?? .general)
-    }
-
-    @ToolbarContentBuilder
-    private var toolbarSpacingShim: some ToolbarContent {
-        if #available(macOS 26.0, *) {
-            ToolbarItem(placement: .primaryAction) {
-                toolbarSpacerView
-            }
-            .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .primaryAction) {
-                toolbarSpacerView
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var toolbarSpacerView: some View {
-        Color.clear
-            .frame(width: 96, height: 32)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-
-    private var filteredTabs: [SettingsTab] {
-        tabsMatchingSearch(searchText)
-    }
-
-    private var selectionBinding: Binding<SettingsTab> {
-        Binding(
-            get: { resolvedSelection },
-            set: { newValue in
-                selectedTab = newValue
-            }
-        )
-    }
-
-    @ViewBuilder
-    private func sidebarIcon(for tab: SettingsTab) -> some View {
-        // Soft-glass tile: neutral fill and hairline that adapt to light / dark.
-        RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
-            .fill(Color.primary.opacity(0.09))
-            .overlay {
-                RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.12), .clear],
-                            startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.6)
-                        )
-                    )
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.16), lineWidth: NotchlyTheme.Stroke.hairline)
-            }
-            .frame(width: 26, height: 26)
-            .overlay {
-                Image(systemName: tab.systemImage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.primary.opacity(0.85))
-            }
-    }
-
-    @ViewBuilder
-    private func sidebarRow(for tab: SettingsTab) -> some View {
-        HStack(spacing: 10) {
-            sidebarIcon(for: tab)
-            Text(LocalizedStringKey(tab.title))
-            if tab == .downloads {
-                Spacer()
-                Text("BETA")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.primary.opacity(0.8))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.primary.opacity(0.1))
-                            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.16), lineWidth: NotchlyTheme.Stroke.hairline))
-                    )
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var availableTabs: [SettingsTab] {
-        // Ordered to match group layout: core → media & display → system →
-        // productivity → utilities → info.
-        let ordered: [SettingsTab] = [
-            // Core
-            .general,
-            .appearance,
-            // Media & Display
-            .media,
-            .liveActivities,
-            .lockScreen,
-            .devices,
-            // System
-            .hudAndOSD,
-            .battery,
-            // Productivity
-            .hub,
-            .quickActions,
-            .stash,
-            // Utilities
-            .downloads,
-            .shortcuts,
-            // Info
-            .about
-        ]
-
-        return ordered.filter { isTabVisible($0) }
-    }
-
-    /// Groups the filtered tabs into sidebar sections, preserving both
-    /// the group order and the per-group tab order from `availableTabs`.
-    private var groupedFilteredTabs: [(group: SettingsTabGroup, tabs: [SettingsTab])] {
-        let visible = filteredTabs
-        var result: [(group: SettingsTabGroup, tabs: [SettingsTab])] = []
-
-        for group in SettingsTabGroup.allCases {
-            let tabs = visible.filter { $0.group == group }
-            if !tabs.isEmpty {
-                result.append((group: group, tabs: tabs))
-            }
-        }
-
-        return result
-    }
-
-    private func tabsMatchingSearch(_ query: String) -> [SettingsTab] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return availableTabs }
-
-        let entryMatches = searchEntries(matching: trimmed)
-        let matchingTabs = Set(entryMatches.map(\.tab))
-
-        return availableTabs.filter { tab in
-            tab.title.localizedCaseInsensitiveContains(trimmed) || matchingTabs.contains(tab)
-        }
-    }
-
-    private var searchSuggestions: [SettingsSearchEntry] {
-        Array(searchEntries(matching: searchText).filter { $0.tab != .downloads }.prefix(8))
-    }
-
-    private func handleSearchSuggestionSelection(_ suggestion: SettingsSearchEntry) {
-        guard suggestion.tab != .downloads else { return }
-        highlightCoordinator.focus(on: suggestion)
-        selectedTab = suggestion.tab
-    }
-
-    private struct SettingsSidebarSearchBar: View {
-        @Binding var text: String
-        let suggestions: [SettingsSearchEntry]
-        let onSuggestionSelected: (SettingsSearchEntry) -> Void
-
-        @FocusState private var isFocused: Bool
-        @State private var hoveredSuggestionID: SettingsSearchEntry.ID?
-
-        var body: some View {
-            VStack(spacing: 6) {
-                searchField
-                if showSuggestions {
-                    suggestionList
-                }
-            }
-            .animation(.easeInOut(duration: 0.15), value: showSuggestions)
-        }
-
-        private var showSuggestions: Bool {
-            isFocused && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !suggestions.isEmpty
-        }
-
-        private var searchField: some View {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Color.secondary)
-
-                TextField("Search Settings", text: $text)
-                    .textFieldStyle(.plain)
-                    .focused($isFocused)
-                    .onSubmit(triggerFirstSuggestion)
-
-                if !text.isEmpty {
-                    Button {
-                        text = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Clear search")
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: NotchlyTheme.Stroke.hairline)
-            )
-        }
-
-        private var suggestionList: some View {
-            VStack(spacing: 0) {
-                ForEach(suggestions) { suggestion in
-                    Button {
-                        selectSuggestion(suggestion)
-                    } label: {
-                        HStack(spacing: 10) {
-                            RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
-                                .fill(Color.primary.opacity(0.09))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: NotchlyTheme.Radius.sm, style: .continuous)
-                                        .strokeBorder(Color.primary.opacity(0.16), lineWidth: NotchlyTheme.Stroke.hairline)
-                                }
-                                .frame(width: 28, height: 28)
-                                .overlay {
-                                    Image(systemName: suggestion.tab.systemImage)
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(Color.primary.opacity(0.85))
-                                }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(LocalizedStringKey(suggestion.title))
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color.primary)
-                                Text(LocalizedStringKey(suggestion.tab.title))
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(Color.secondary)
-                            }
-
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .contentShape(Rectangle())
-                        .background(rowBackground(for: suggestion))
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { hovering in
-                        hoveredSuggestionID = hovering ? suggestion.id : (hoveredSuggestionID == suggestion.id ? nil : hoveredSuggestionID)
-                    }
-
-                    if suggestion.id != suggestions.last?.id {
-                        Divider()
-                            .padding(.leading, 48)
-                    }
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.08))
-            )
-            .shadow(color: Color.black.opacity(0.2), radius: 8, y: 4)
-            .transition(.opacity.combined(with: .move(edge: .top)))
-        }
-
-        private func rowBackground(for suggestion: SettingsSearchEntry) -> some View {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(hoveredSuggestionID == suggestion.id ? Color.white.opacity(0.08) : Color.clear)
-        }
-
-        private func selectSuggestion(_ suggestion: SettingsSearchEntry) {
-            onSuggestionSelected(suggestion)
-            isFocused = false
-        }
-
-        private func triggerFirstSuggestion() {
-            guard let first = suggestions.first else { return }
-            selectSuggestion(first)
-        }
-    }
-
-    private func searchEntries(matching query: String) -> [SettingsSearchEntry] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
-
-        return settingsSearchIndex
-            .filter { availableTabs.contains($0.tab) }
-            .filter { entry in
-                entry.title.localizedCaseInsensitiveContains(trimmed) ||
-                entry.keywords.contains { $0.localizedCaseInsensitiveContains(trimmed) }
-            }
-    }
-
-    private var settingsSearchIndex: [SettingsSearchEntry] {
-        SettingsSearchIndex.entries
-    }
-
-    private func isTabVisible(_ tab: SettingsTab) -> Bool {
-        switch tab {
-        case .quickActions:
-            return !enableMinimalisticUI
-        default:
-            return true
-        }
-    }
-
-    @ViewBuilder
-    private func detailView(for tab: SettingsTab) -> some View {
-        switch tab {
-        case .general:
-            SettingsForm(tab: .general) {
-                GeneralSettings()
-            }
-        case .liveActivities:
-            SettingsForm(tab: .liveActivities) {
-                LiveActivitiesSettings()
-            }
-        case .appearance:
-            SettingsForm(tab: .appearance) {
-                Appearance()
-            }
-        case .lockScreen:
-            SettingsForm(tab: .lockScreen) {
-                LockScreenSettings()
-            }
-        case .media:
-            SettingsForm(tab: .media) {
-                Media()
-            }
-        case .devices:
-            SettingsForm(tab: .devices) {
-                DevicesSettingsView()
-            }
-        case .quickActions:
-            SettingsForm(tab: .quickActions) {
-                QuickActionsSettings()
-            }
-        case .stash:
-            SettingsForm(tab: .stash) {
-                StashSettings()
-            }
-        case .hub:
-            SettingsForm(tab: .hub) {
-                HubSettings()
-            }
-        case .hudAndOSD:
-            SettingsForm(tab: .hudAndOSD) {
-                HUDAndOSDSettingsView()
-            }
-        case .battery:
-            SettingsForm(tab: .battery) {
-                Charge()
-            }
-        case .downloads:
-            SettingsForm(tab: .downloads) {
-                Downloads()
-            }
-        case .shortcuts:
-            SettingsForm(tab: .shortcuts) {
-                Shortcuts()
-            }
-        case .about:
-            if let controller = updaterController {
-                SettingsForm(tab: .about) {
-                    About(updaterController: controller)
-                }
-            } else {
-                SettingsForm(tab: .about) {
-                    About(updaterController: SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil))
-                }
-            }
         }
     }
 }
@@ -1080,13 +564,6 @@ struct GeneralSettings: View {
 
             gestureControls()
         }
-        .toolbar {
-            Button("Quit app") {
-                NSApp.terminate(self)
-            }
-            .controlSize(.extraLarge)
-        }
-        .navigationTitle("General")
         .onChange(of: openNotchOnHover) {
             if !openNotchOnHover {
                 enableGestures = true
@@ -1572,7 +1049,6 @@ struct Charge: View {
         .animation(NotchlyTheme.Motion.snappy, value: showLowBatteryHUD)
         .animation(NotchlyTheme.Motion.snappy, value: showFullBatteryHUD)
         .animation(NotchlyTheme.Motion.snappy, value: showCriticalBatteryHUD)
-        .navigationTitle("Battery")
     }
 }
 
@@ -1640,7 +1116,6 @@ struct Downloads: View {
                 Text("Shows a live activity in the notch while a file is downloading. Works with Safari, Firefox, and Chrome and the browsers built on it — Edge, Brave, Arc, Vivaldi and Opera. Only your Downloads folder is watched, so a file saved anywhere else will not appear.")
             }
         }
-        .navigationTitle("Downloads")
     }
 
     struct DownloadStyleButton: View {
@@ -1823,7 +1298,7 @@ extension View {
     }
 }
 
-private struct HUDAndOSDSettingsView: View {
+struct HUDAndOSDSettingsView: View {
     @State private var selectedTab: Tab = {
         if Defaults[.enableSystemHUD] { return .hud }
         if Defaults[.enableCustomOSD] { return .osd }
@@ -2278,7 +1753,6 @@ private struct HUDAndOSDSettingsView: View {
             // Third-party display integrations (shared across all HUD variants)
             ExternalDisplayIntegrationsSection()
         }
-        .navigationTitle("Controls")
         .onAppear {
             if #unavailable(macOS 26.0), verticalHUDMaterial == .liquid {
                 verticalHUDMaterial = .frosted
@@ -2584,7 +2058,7 @@ private struct HUDSelectionCard<Preview: View>: View {
     }
 }
 
-private struct DevicesSettingsView: View {
+struct DevicesSettingsView: View {
     @Default(.progressBarStyle) var progressBarStyle
     @Default(.useBluetoothHUD3DIcon) private var useBluetoothHUD3DIcon
 
@@ -2674,7 +2148,6 @@ private struct DevicesSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Devices")
     }
 }
 
@@ -2823,7 +2296,6 @@ struct HUD: View {
                 }
             }
         }
-        .navigationTitle("Controls")
         .onAppear {
             accessibilityPermission.refreshStatus()
         }
@@ -3358,7 +2830,6 @@ struct Media: View {
                 Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
             }
         }
-        .navigationTitle("Media")
     }
 
     // Only show controller options that are available on this macOS version
@@ -3439,7 +2910,6 @@ struct HubSettings: View {
             }
         }
         .animation(NotchlyTheme.Motion.snappy, value: enableHub)
-        .navigationTitle("Hub")
     }
 
     private func visibilityBinding(for chip: HubChip) -> Binding<Bool> {
@@ -3451,161 +2921,6 @@ struct HubSettings: View {
                 hiddenChips = updated
             }
         )
-    }
-}
-
-struct About: View {
-    @State private var showBuildNumber: Bool = false
-    @Default(.updateChannel) var updateChannel
-    let updaterController: SPUStandardUpdaterController
-    @Environment(\.openWindow) var openWindow
-    var body: some View {
-        VStack {
-            Form {
-                Section {
-                    HStack {
-                        Text("Release name")
-                        Spacer()
-                        Text(Defaults[.releaseName])
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("Version")
-                        Spacer()
-
-                        // Channel badge
-                        Text(UpdateChannel.buildChannel.displayName)
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(UpdateChannel.buildChannel.badgeColor).opacity(0.2))
-                            .foregroundStyle(Color(UpdateChannel.buildChannel.badgeColor))
-                            .clipShape(Capsule())
-
-                        if showBuildNumber {
-                            Text("(\(Bundle.main.buildVersionNumber ?? ""))")
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(Bundle.main.releaseVersionNumber ?? "unkown")
-                            .foregroundStyle(.secondary)
-                    }
-                    .onTapGesture {
-                        withAnimation {
-                            showBuildNumber.toggle()
-                        }
-                    }
-                } header: {
-                    Text("Version info")
-                }
-
-                UpdaterSettingsView(updater: updaterController.updater)
-
-                HStack(spacing: 30) {
-                    Spacer(minLength: 0)
-                    Button {
-                        NSWorkspace.shared.open(sponsorPage)
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: "cup.and.saucer.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                            Text("Donate")
-                                .foregroundStyle(.primary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        NSWorkspace.shared.open(productPage)
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image("Github")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 18)
-                                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                            Text("GitHub")
-                                .foregroundStyle(.primary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    Spacer(minLength: 0)
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                Text("Donations go to Atoll's original author, Ebullioscopic.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom, 5)
-
-                Section {
-                    ForEach(UpdateChannel.availableChannels) { channel in
-                        Button {
-                            updateChannel = channel
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: channel.badgeIcon)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color(channel.badgeColor))
-                                    .frame(width: 20, alignment: .center)
-
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(channel.displayName)
-                                        .foregroundStyle(.primary)
-                                    Text(channel.description)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                if updateChannel == channel {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Color(channel.badgeColor))
-                                }
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Text("Current build: \(UpdateChannel.buildChannel.displayName)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text("Update channel")
-                }
-                VStack(spacing: 0) {
-                    Divider()
-                        .padding(.bottom, 5)
-                    Text("Notchly is a fork of [Atoll](https://github.com/Ebullioscopic/Atoll) by Ebullioscopic (GPL-3.0)")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 10)
-                        .tint(.white.opacity(0.85))
-                    Text("Atoll builds on [boring.notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .padding(.bottom, 7)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 10)
-                        .tint(.white.opacity(0.7))
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
-        .toolbar {
-            //            Button("Welcome window") {
-            //                openWindow(id: "onboarding")
-            //            }
-            //            .controlSize(.extraLarge)
-            CheckForUpdatesView(updater: updaterController.updater)
-        }
-        .navigationTitle("About")
     }
 }
 
@@ -4000,7 +3315,6 @@ struct LiveActivitiesSettings: View {
         .animation(NotchlyTheme.Motion.snappy, value: recordingControlMode)
         .animation(NotchlyTheme.Motion.snappy, value: enableDoNotDisturbDetection)
         .animation(NotchlyTheme.Motion.snappy, value: focusIndicatorNonPersistent)
-        .navigationTitle("Live Activities")
         .onAppear {
             fullDiskAccessPermission.refreshStatus()
         }
@@ -4420,7 +3734,6 @@ struct Appearance: View {
                 iconImportError = "Icon import was canceled or failed."
             }
         }
-        .navigationTitle("Appearance")
     }
 
     private func defaultAppIconImage() -> NSImage? {
@@ -4850,7 +4163,6 @@ struct LockScreenSettings: View {
                 Text("Collect the latest crash report to share with the developer when reporting lock screen or overlay issues.")
             }
         }
-        .navigationTitle("Lock Screen")
     }
 }
 
@@ -5019,7 +4331,6 @@ struct Shortcuts: View {
                 }
             }
         }
-        .navigationTitle("Shortcuts")
     }
 }
 
@@ -5117,7 +4428,6 @@ struct QuickActionsSettings: View {
                 soundSection
             }
         }
-        .navigationTitle("Quick Actions")
     }
 
     // MARK: Actions
@@ -5451,7 +4761,6 @@ struct CustomOSDSettings: View {
                 }
             }
         }
-        .navigationTitle("Custom OSD")
         .onAppear {
             accessibilityPermission.refreshStatus()
             if #unavailable(macOS 26.0), osdMaterial == .liquid {
@@ -5672,6 +4981,90 @@ struct StashSettings: View {
                 }
             }
         }
-        .navigationTitle("Stash")
     }
+}
+
+
+// MARK: - Bridge to the Notchly settings shell
+//
+// The pages themselves are still the legacy section views (stages 2-3 migrate
+// them row by row); the shell reaches them, their search entries and their
+// highlight anchors through the declarations below.
+
+extension SettingsTab {
+    /// The Notchly page this legacy tab now lives on.
+    var page: NotchlySettingsPage {
+        switch self {
+        case .general: return .general
+        case .appearance: return .appearance
+        case .hub, .quickActions: return .homeHub
+        case .media: return .music
+        case .liveActivities, .lockScreen, .devices, .battery, .hudAndOSD, .downloads: return .liveActivities
+        case .stash: return .stash
+        case .shortcuts: return .shortcuts
+        }
+    }
+
+    /// Label used by the sub-section picker on pages that hold several legacy tabs.
+    var sectionTitle: String {
+        switch self {
+        case .liveActivities: return String(localized: "Activities")
+        case .hudAndOSD: return String(localized: "Volume & Brightness")
+        case .hub: return String(localized: "Hub")
+        default: return title
+        }
+    }
+
+    /// The legacy page content, hosted by the Notchly shell.
+    @ViewBuilder
+    var legacyContent: some View {
+        switch self {
+        case .general: SettingsForm(tab: .general) { GeneralSettings() }
+        case .liveActivities: SettingsForm(tab: .liveActivities) { LiveActivitiesSettings() }
+        case .appearance: SettingsForm(tab: .appearance) { Appearance() }
+        case .lockScreen: SettingsForm(tab: .lockScreen) { LockScreenSettings() }
+        case .media: SettingsForm(tab: .media) { Media() }
+        case .devices: SettingsForm(tab: .devices) { DevicesSettingsView() }
+        case .quickActions: SettingsForm(tab: .quickActions) { QuickActionsSettings() }
+        case .stash: SettingsForm(tab: .stash) { StashSettings() }
+        case .hub: SettingsForm(tab: .hub) { HubSettings() }
+        case .hudAndOSD: SettingsForm(tab: .hudAndOSD) { HUDAndOSDSettingsView() }
+        case .battery: SettingsForm(tab: .battery) { Charge() }
+        case .downloads: SettingsForm(tab: .downloads) { Downloads() }
+        case .shortcuts: SettingsForm(tab: .shortcuts) { Shortcuts() }
+        }
+    }
+}
+
+extension NotchlySettingsPage {
+    /// Legacy tabs hosted on this page, in display order.
+    var legacySections: [SettingsTab] {
+        switch self {
+        case .general: return [.general]
+        case .appearance: return [.appearance]
+        case .homeHub: return [.hub, .quickActions]
+        case .music: return [.media]
+        case .liveActivities: return [.liveActivities, .battery, .hudAndOSD, .devices, .lockScreen, .downloads]
+        case .stash: return [.stash]
+        case .shortcuts: return [.shortcuts]
+        case .about: return []
+        }
+    }
+}
+
+extension SettingsSearchIndex {
+    /// Every page, plus every legacy row (mapped onto its page and section).
+    static let shared: SettingsSearchIndex = {
+        let pages = NotchlySettingsPage.allCases.map(SettingsSearchEntry.entry(for:))
+        let rows = LegacySettingsSearchCatalog.entries.map { entry in
+            SettingsSearchEntry(
+                title: entry.title,
+                keywords: entry.keywords,
+                page: entry.tab.page,
+                sectionID: entry.tab.rawValue,
+                highlightID: entry.highlightID
+            )
+        }
+        return SettingsSearchIndex(entries: pages + rows)
+    }()
 }
