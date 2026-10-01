@@ -1,4 +1,5 @@
 import AppKit
+import Defaults
 import SwiftUI
 import XCTest
 @testable import Notchly
@@ -130,7 +131,14 @@ final class NotchlySettingsTests: XCTestCase {
             XCTAssertTrue(page.legacySections.isEmpty, "\(page) is native")
             let items = page.nativeItems
             XCTAssertFalse(items.isEmpty, "\(page) has no search items")
-            XCTAssertEqual(Set(items.map(\.highlightID)).count, items.count, "\(page) duplicate highlight ids")
+            let own = items.filter { $0.anchorTitle == nil }
+            XCTAssertEqual(Set(own.map(\.highlightID)).count, own.count, "\(page) duplicate highlight ids")
+            XCTAssertEqual(Set(items.map(\.title)).count, items.count, "\(page) duplicate titles")
+            // An anchored item has to point at a row that exists on the same page.
+            for item in items where item.anchorTitle != nil {
+                XCTAssertTrue(own.contains { $0.title == item.anchorTitle }, "\(item.title) is anchored to a missing row")
+                XCTAssertNil(item.rowHighlightID)
+            }
             for item in items {
                 XCTAssertEqual(item.page, page, item.title)
                 XCTAssertFalse(item.keywords.isEmpty, "\(item.title) needs keywords")
@@ -166,6 +174,22 @@ final class NotchlySettingsTests: XCTestCase {
         XCTAssertEqual(shared.search("paused music").first?.entry.page, .homeHub)
     }
 
+    func testMusicPageSearch() {
+        let shared = SettingsSearchIndex.shared
+        XCTAssertEqual(shared.search("lyrics").first?.entry.page, .music)
+        XCTAssertEqual(shared.search("sneak peek style").first?.entry.highlightID, NotchlyMusicPage.Item.sneakPeekStyle.highlightID)
+        XCTAssertEqual(shared.search("spotify like").first?.entry.page, .music)
+        XCTAssertEqual(shared.search("parallax").first?.entry.page, .music)
+        // Rows that only exist while lyrics are on scroll to the lyrics toggle instead.
+        XCTAssertEqual(NotchlyMusicPage.Item.lyricHighlight.highlightID, NotchlyMusicPage.Item.lyrics.highlightID)
+        XCTAssertEqual(shared.search("lyric highlight").first?.entry.highlightID, NotchlyMusicPage.Item.lyrics.highlightID)
+    }
+
+    func testRemovedLegacyRowsAreGone() {
+        // Dead experiments that used to be listed under Appearance.
+        XCTAssertTrue(SettingsSearchIndex.shared.search("custom visualizers lottie").isEmpty)
+    }
+
     func testGeneralPageSearch() {
         let shared = SettingsSearchIndex.shared
         XCTAssertEqual(shared.search("launch at login").first?.entry.page, .general)
@@ -188,6 +212,20 @@ final class NotchlySettingsTests: XCTestCase {
             .split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
         let pages = NotchlySettingsPage.allCases.filter { wanted?.contains($0.rawValue) ?? true }
         let heights = ProcessInfo.processInfo.environment["NOTCHLY_RENDER_HEIGHT"].flatMap(Double.init) ?? 1500
+
+        // Optional state overrides so conditional rows can be looked at; restored afterwards.
+        let env = ProcessInfo.processInfo.environment
+        let savedSource = Defaults[.mediaController]
+        let savedLyrics = Defaults[.enableLyrics]
+        let savedIdle = Defaults[.showNotHumanFace]
+        defer {
+            Defaults[.mediaController] = savedSource
+            Defaults[.enableLyrics] = savedLyrics
+            Defaults[.showNotHumanFace] = savedIdle
+        }
+        if let raw = env["NOTCHLY_RENDER_SOURCE"], let source = MediaControllerType(rawValue: raw) { Defaults[.mediaController] = source }
+        if env["NOTCHLY_RENDER_LYRICS"] == "1" { Defaults[.enableLyrics] = true }
+        if env["NOTCHLY_RENDER_IDLE"] == "1" { Defaults[.showNotHumanFace] = true }
 
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
         for page in pages {

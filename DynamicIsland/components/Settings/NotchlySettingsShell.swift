@@ -169,6 +169,8 @@ struct NotchlySettingsView: View {
             NotchlyAppearancePage()
         } else if selectedPage == .homeHub {
             NotchlyHomeHubPage()
+        } else if selectedPage == .music {
+            NotchlyMusicPage()
         } else if let section = currentSection {
             // Legacy section views are grouped Forms; they keep scrolling themselves.
             section.legacyContent

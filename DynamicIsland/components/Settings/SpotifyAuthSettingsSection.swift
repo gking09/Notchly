@@ -1,5 +1,5 @@
 /*
- * Atoll (DynamicIsland)
+ * Notchly (forked from Atoll by Ebullioscopic)
  * Copyright (C) 2024-2026 Atoll Contributors
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,104 +20,101 @@ import AppKit
 import Defaults
 import SwiftUI
 
+/// Settings card for the Spotify Canvas cookie session.
 struct SpotifyAuthSettingsSection: View {
     @Default(.spotifySPDCCookie) private var spotifySPDCCookie
     @ObservedObject private var spotifyAuthManager = SpotifyAuthManager.shared
     @State private var showingLoginSheet = false
+    @State private var showingManualSteps = false
 
     private var hasCookie: Bool {
         !SpotifyAuthManager.sanitizeCookie(spotifySPDCCookie).isEmpty
     }
 
-    var body: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Sign in to Spotify to capture the `sp_dc` cookie automatically, or paste it in below.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    private var statusColor: Color {
+        if spotifyAuthManager.isAuthenticated { return Color(nsColor: .systemGreen) }
+        return hasCookie ? Color(nsColor: .systemOrange) : NotchlySettingsStyle.textTertiary
+    }
 
+    var body: some View {
+        NotchlySettingsCard(
+            "Spotify canvas session",
+            footer: "Notchly uses the local sp_dc cookie only to ask Spotify's web player for a token and fetch the Canvas of the current track."
+        ) {
+            NotchlySettingRow("Sign in with Spotify", subtitle: "Captures the sp_dc cookie for you.") {
                 Button {
                     showingLoginSheet = true
                 } label: {
-                    Label("Sign in with Spotify", systemImage: "person.crop.circle.badge.checkmark")
+                    Label("Sign in", systemImage: "person.crop.circle.badge.checkmark")
                 }
-                .buttonStyle(.borderedProminent)
-
-                TextField("sp_dc cookie", text: $spotifySPDCCookie, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.caption.monospaced())
-                    .lineLimit(2...4)
-                    .textSelection(.enabled)
+                .buttonStyle(.notchly(.prominent))
             }
 
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(spotifyAuthManager.isAuthenticated ? Color.green : (hasCookie ? Color.orange : Color.secondary))
-                    .frame(width: 8, height: 8)
+            NotchlySettingRow("Session", subtitle: spotifyAuthManager.sessionStatusText) {
+                Circle().fill(statusColor).frame(width: 9, height: 9)
+            }
 
-                Text(spotifyAuthManager.sessionStatusText)
-                    .foregroundStyle(.secondary)
+            NotchlySettingRow("sp_dc cookie", subtitle: "Signing in fills this in, or paste it yourself.") {
+                NotchlyTextField(placeholder: "sp_dc cookie", text: $spotifySPDCCookie, width: 220, monospaced: true)
             }
 
             if let authErrorMessage = spotifyAuthManager.authErrorMessage, !authErrorMessage.isEmpty {
-                Text(authErrorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                NotchlyNoticeRow(text: authErrorMessage, isError: true)
             }
 
-            HStack {
-                Button("Paste from Clipboard") {
-                    pasteCookieFromClipboard()
-                }
+            NotchlySettingRow("Cookie") {
+                HStack(spacing: 6) {
+                    Button("Paste") { pasteCookieFromClipboard() }
+                        .buttonStyle(.notchly(.standard))
 
-                Button(spotifyAuthManager.isAuthorizing ? "Validating..." : "Validate Cookie") {
-                    spotifySPDCCookie = SpotifyAuthManager.sanitizeCookie(spotifySPDCCookie)
-                    Task {
-                        await spotifyAuthManager.validateSession()
+                    Button(spotifyAuthManager.isAuthorizing ? "Validating..." : "Validate") {
+                        spotifySPDCCookie = SpotifyAuthManager.sanitizeCookie(spotifySPDCCookie)
+                        Task { await spotifyAuthManager.validateSession() }
                     }
-                }
-                .disabled(!hasCookie || spotifyAuthManager.isAuthorizing)
+                    .buttonStyle(.notchly(.standard))
+                    .disabled(!hasCookie || spotifyAuthManager.isAuthorizing)
 
-                Button("Clear") {
-                    spotifySPDCCookie = ""
-                    spotifyAuthManager.clearSession()
+                    Button("Clear") {
+                        spotifySPDCCookie = ""
+                        spotifyAuthManager.clearSession()
+                    }
+                    .buttonStyle(.notchly(.quiet))
+                    .disabled(!hasCookie && !spotifyAuthManager.isAuthenticated)
                 }
-                .disabled(!hasCookie && !spotifyAuthManager.isAuthenticated)
             }
 
-            DisclosureGroup("Get the cookie manually") {
+            NotchlyActionRow(
+                title: "Get the cookie manually",
+                subtitle: showingManualSteps ? nil : "Steps for copying it from your browser.",
+                symbol: showingManualSteps ? "chevron.up" : "chevron.down"
+            ) {
+                withAnimation(NotchlyTheme.Motion.snappy) { showingManualSteps.toggle() }
+            }
+
+            if showingManualSteps {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("1. Open Spotify in a browser and log in")
-                        .font(.caption)
-                    Text("2. Developer Tools -> Application/Storage -> Cookies -> https://open.spotify.com")
-                        .font(.caption)
-                    Text("3. Copy the value of `sp_dc` and paste it here")
-                        .font(.caption)
-
-                    HStack(spacing: 12) {
+                    Text("2. Developer Tools, Application or Storage, Cookies, https://open.spotify.com")
+                    Text("3. Copy the value of sp_dc and paste it above")
+                    HStack(spacing: 14) {
                         Link("Open Spotify Web Player", destination: URL(string: "https://open.spotify.com")!)
                         Link("Method source", destination: URL(string: "https://github.com/Paxsenix0/Spotify-Canvas-API")!)
                     }
-                    .font(.caption)
+                    .padding(.top, 2)
                 }
-                .padding(.top, 4)
+                .font(.system(size: 11.5))
+                .foregroundStyle(NotchlySettingsStyle.textSecondary)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .transition(.opacity)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        } header: {
-            Text("Spotify Canvas Session")
-        } footer: {
-            Text("Notchly uses the local `sp_dc` cookie only to request Spotify's internal web-player token and fetch the matching Canvas for the current track.")
-                .foregroundStyle(.secondary)
-                .font(.caption)
         }
         .sheet(isPresented: $showingLoginSheet) {
             SpotifyLoginSheet { capturedValue in
                 let sanitized = SpotifyAuthManager.sanitizeCookie(capturedValue)
                 spotifySPDCCookie = sanitized
-                Task {
-                    await spotifyAuthManager.validateSession()
-                }
+                Task { await spotifyAuthManager.validateSession() }
             }
         }
     }

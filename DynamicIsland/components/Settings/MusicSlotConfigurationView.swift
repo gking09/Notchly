@@ -38,9 +38,19 @@ struct MusicSlotConfigurationView: View {
         VStack(alignment: .leading, spacing: 12) {
             header
             layoutPreview
-            Divider()
+            Rectangle()
+                .fill(NotchlySettingsStyle.divider)
+                .frame(height: NotchlyTheme.Stroke.hairline)
             palette
             resetButton
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(NotchlySettingsStyle.divider)
+                .frame(height: NotchlyTheme.Stroke.hairline)
+                .padding(.leading, 14)
         }
         .onAppear {
             ensureSlotCapacity(slotCount)
@@ -53,11 +63,11 @@ struct MusicSlotConfigurationView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Layout Preview")
-                .font(.headline)
+            Text("Layout preview")
+                .font(.system(size: 13, weight: .medium))
             Text("Drag items between slots or drop from the palette to remap controls.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11.5))
+                .foregroundStyle(NotchlySettingsStyle.textSecondary)
         }
     }
 
@@ -69,13 +79,13 @@ struct MusicSlotConfigurationView: View {
                 }
             }
             .padding(12)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .background(NotchlySettingsStyle.controlFill)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(trashDropIsTargeted ? Color.red.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+                        .fill(trashDropIsTargeted ? Color.red.opacity(0.2) : NotchlySettingsStyle.controlFill)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(trashDropIsTargeted ? Color.red : .clear, lineWidth: trashDropIsTargeted ? 2 : 0)
@@ -103,14 +113,14 @@ struct MusicSlotConfigurationView: View {
     private var palette: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text("Control Palette")
-                    .font(.headline)
+                Text("Control palette")
+                    .font(.system(size: 13, weight: .medium))
                 Spacer()
                 ScrollHintIndicator()
             }
             Text("Drag a control onto a slot or tap to place it in the first empty slot.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11.5))
+                .foregroundStyle(NotchlySettingsStyle.textSecondary)
 
             ScrollView(.horizontal, showsIndicators: true) {
                 HStack(spacing: 12) {
@@ -135,7 +145,7 @@ struct MusicSlotConfigurationView: View {
                     musicControlSlots = MusicControlButton.defaultLayout
                 }
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.notchly(.quiet))
         }
     }
 
@@ -197,7 +207,7 @@ struct MusicSlotConfigurationView: View {
 
         return VStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
+                .fill(NotchlySettingsStyle.controlFill)
                 .frame(width: 44, height: 44)
                 .overlay {
                     Image(systemName: control.iconName)
@@ -213,7 +223,7 @@ struct MusicSlotConfigurationView: View {
 
             Text(control.label)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(NotchlySettingsStyle.textSecondary)
                 .frame(width: 72)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -256,13 +266,13 @@ struct MusicSlotConfigurationView: View {
     private func previewIconColor(for slot: MusicControlButton) -> Color {
         switch slot {
         case .shuffle:
-            return musicManager.isShuffled ? .red : .primary
+            return musicManager.isShuffled ? NotchlySettingsStyle.accent : .primary
         case .repeatMode:
-            return musicManager.repeatMode == .off ? .primary : .red
+            return musicManager.repeatMode == .off ? .primary : NotchlySettingsStyle.accent
         case .lyrics:
-            return Defaults[.enableLyrics] ? .accentColor : .primary
+            return Defaults[.enableLyrics] ? NotchlySettingsStyle.accent : .primary
         case .likeTrack:
-            return musicManager.isCurrentTrackLiked == true ? .accentColor : .primary
+            return musicManager.isCurrentTrackLiked == true ? NotchlySettingsStyle.accent : .primary
         default:
             return .primary
         }
@@ -336,18 +346,18 @@ struct MusicSlotConfigurationView: View {
 
     private func slotBackgroundColor(isHovered: Bool, isTargeted: Bool) -> Color {
         if isTargeted {
-            return Color.accentColor.opacity(0.25)
+            return NotchlySettingsStyle.accent.opacity(0.25)
         } else if isHovered {
-            return Color.accentColor.opacity(0.15)
+            return NotchlySettingsStyle.accent.opacity(0.15)
         }
-        return Color(nsColor: .controlBackgroundColor)
+        return NotchlySettingsStyle.controlFill
     }
 
     private func slotBorderColor(isHovered: Bool, isTargeted: Bool) -> Color {
         if isTargeted {
-            return Color.accentColor
+            return NotchlySettingsStyle.accent
         } else if isHovered {
-            return Color.accentColor.opacity(0.8)
+            return NotchlySettingsStyle.accent.opacity(0.8)
         }
         return .clear
     }
@@ -386,9 +396,9 @@ struct ScrollHintIndicator: View {
             Image(systemName: "chevron.right")
         }
         .font(.caption2.weight(.medium))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(NotchlySettingsStyle.textSecondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.primary.opacity(0.08), in: Capsule())
+        .background(NotchlySettingsStyle.controlFill, in: Capsule())
     }
 }

@@ -806,11 +806,11 @@ struct NotchlyActionRow: View {
 /// `NotchlySettingItem`, so a row and its search entry always agree.
 extension NotchlySettingItem {
     func toggle(_ subtitle: String? = nil, help: String? = nil, isEnabled: Bool = true, isOn: Binding<Bool>) -> NotchlyToggleRow {
-        NotchlyToggleRow(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, isOn: isOn)
+        NotchlyToggleRow(title, subtitle: subtitle, help: help, highlightID: rowHighlightID, isEnabled: isEnabled, isOn: isOn)
     }
 
     func toggle(_ subtitle: String? = nil, help: String? = nil, isEnabled: Bool = true, key: Defaults.Key<Bool>) -> some View {
-        NotchlyToggleRow.defaults(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, key: key)
+        NotchlyToggleRow.defaults(title, subtitle: subtitle, help: help, highlightID: rowHighlightID, isEnabled: isEnabled, key: key)
     }
 
     func slider(
@@ -822,7 +822,7 @@ extension NotchlySettingItem {
         valueLabel: @escaping (Double) -> String = { String(format: "%g", ($0 * 100).rounded() / 100) }
     ) -> NotchlySliderRow {
         NotchlySliderRow(
-            title: title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            title: title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled,
             value: value, range: range, step: step, valueLabel: valueLabel
         )
     }
@@ -836,7 +836,7 @@ extension NotchlySettingItem {
         valueLabel: @escaping (Double) -> String = { String(format: "%g", ($0 * 100).rounded() / 100) }
     ) -> some View {
         NotchlySliderRow.defaults(
-            title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled,
             key: key, range: range, step: step, valueLabel: valueLabel
         )
     }
@@ -850,7 +850,7 @@ extension NotchlySettingItem {
         label: @escaping (Value) -> String
     ) -> NotchlyPickerRow<Value> {
         NotchlyPickerRow(
-            title: title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            title: title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled,
             selection: selection, options: options, label: label, style: style
         )
     }
@@ -864,7 +864,7 @@ extension NotchlySettingItem {
         label: @escaping (Value) -> String
     ) -> some View {
         NotchlyPickerRow.defaults(
-            title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            title, subtitle: subtitle, highlightID: rowHighlightID, isEnabled: isEnabled,
             key: key, options: options, style: style, label: label
         )
     }
@@ -875,7 +875,7 @@ extension NotchlySettingItem {
         isEnabled: Bool = true,
         @ViewBuilder trailing: @escaping () -> Trailing
     ) -> NotchlySettingRow<Trailing> {
-        NotchlySettingRow(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, trailing: trailing)
+        NotchlySettingRow(title, subtitle: subtitle, help: help, highlightID: rowHighlightID, isEnabled: isEnabled, trailing: trailing)
     }
 }
 
@@ -886,13 +886,15 @@ struct NotchlyTextField: View {
     let placeholder: String
     @Binding var text: String
     var width: CGFloat = 200
+    var isSecure = false
+    var monospaced = false
 
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        TextField(placeholder, text: $text)
+        field
             .textFieldStyle(.plain)
-            .font(.system(size: 12.5))
+            .font(monospaced ? .system(size: 11.5, design: .monospaced) : .system(size: 12.5))
             .focused($isFocused)
             .padding(.horizontal, 11)
             .padding(.vertical, 5)
@@ -909,5 +911,46 @@ struct NotchlyTextField: View {
                     }
             }
             .animation(NotchlyTheme.Motion.snappy, value: isFocused)
+    }
+
+    @ViewBuilder
+    private var field: some View {
+        if isSecure {
+            SecureField(placeholder, text: $text)
+        } else {
+            TextField(placeholder, text: $text)
+        }
+    }
+}
+
+// MARK: - Notice row
+
+/// A short line of text inside a card, for errors and hints that belong to the
+/// rows around them.
+struct NotchlyNoticeRow: View {
+    let text: String
+    var isError = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if isError {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            Text(text)
+                .font(.system(size: 11.5))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(isError ? Color(nsColor: .systemRed) : NotchlySettingsStyle.textSecondary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(NotchlySettingsStyle.divider)
+                .frame(height: NotchlyTheme.Stroke.hairline)
+                .padding(.leading, 14)
+        }
     }
 }

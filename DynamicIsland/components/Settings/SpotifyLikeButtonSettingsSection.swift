@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import AppKit
 import Defaults
 import SwiftUI
 
@@ -24,61 +25,53 @@ struct SpotifyLikeButtonSettingsSection: View {
     @ObservedObject private var libraryManager = SpotifyLibraryManager.shared
 
     var body: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("The like button needs its own Spotify app registration (the Canvas cookie session cannot modify your library). Create a free app at developer.spotify.com, add the redirect URI below, then paste the app's Client ID here.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                TextField("Client ID", text: $clientID)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.caption.monospaced())
-
-                HStack(spacing: 6) {
-                    Text("Redirect URI:")
-                        .foregroundStyle(.secondary)
-                    Text(SpotifyLibraryManager.redirectURI)
-                        .textSelection(.enabled)
-                        .monospaced()
-                }
-                .font(.caption)
+        NotchlySettingsCard(
+            "Spotify like button",
+            footer: "Uses Spotify's official Web API with access limited to reading and changing your Liked Songs. Add the Like Song control to a media slot to show the button."
+        ) {
+            NotchlySettingRow(
+                "Client ID",
+                subtitle: "The like button needs its own free Spotify app (the Canvas cookie cannot change your library). Create one at developer.spotify.com, add the redirect URI below, and paste its Client ID."
+            ) {
+                NotchlyTextField(placeholder: "Client ID", text: $clientID, width: 220, monospaced: true)
             }
 
-            HStack(spacing: 10) {
+            NotchlySettingRow("Redirect URI", subtitle: "Add this exactly in your Spotify app settings.") {
+                Text(SpotifyLibraryManager.redirectURI)
+                    .font(.system(size: 11.5, design: .monospaced))
+                    .foregroundStyle(NotchlySettingsStyle.textSecondary)
+                    .textSelection(.enabled)
+            }
+
+            NotchlySettingRow("Status", subtitle: statusText) {
                 Circle()
-                    .fill(libraryManager.isAuthenticated ? Color.green : Color.secondary)
-                    .frame(width: 8, height: 8)
-
-                Text(statusText)
-                    .foregroundStyle(.secondary)
+                    .fill(libraryManager.isAuthenticated ? Color(nsColor: .systemGreen) : NotchlySettingsStyle.textTertiary)
+                    .frame(width: 9, height: 9)
             }
 
-            if let error = libraryManager.error {
-                Text(message(for: error))
-                    .font(.caption)
-                    .foregroundStyle(.red)
+            if let error = libraryManager.error, !message(for: error).isEmpty {
+                NotchlyNoticeRow(text: message(for: error), isError: true)
             }
 
-            HStack {
-                Button(libraryManager.isAuthorizing ? "Connecting..." : "Connect Spotify Account") {
-                    libraryManager.connect()
+            NotchlySettingRow("Account") {
+                HStack(spacing: 6) {
+                    Button(libraryManager.isAuthorizing ? "Connecting..." : "Connect") {
+                        libraryManager.connect()
+                    }
+                    .buttonStyle(.notchly(.prominent))
+                    .disabled(clientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || libraryManager.isAuthorizing)
+
+                    Button("Disconnect") {
+                        libraryManager.disconnect()
+                    }
+                    .buttonStyle(.notchly(.standard))
+                    .disabled(!libraryManager.isAuthenticated)
                 }
-                .disabled(clientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || libraryManager.isAuthorizing)
-
-                Button("Disconnect") {
-                    libraryManager.disconnect()
-                }
-                .disabled(!libraryManager.isAuthenticated)
-
-                Link("Open Developer Dashboard", destination: URL(string: "https://developer.spotify.com/dashboard")!)
-                    .font(.caption)
             }
-        } header: {
-            Text("Spotify Like Button")
-        } footer: {
-            Text("Uses Spotify's official Web API (OAuth) with access limited to reading and changing your Liked Songs. Add the 'Like Song' control to a media slot to show the button.")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+
+            NotchlyActionRow(title: "Open Developer Dashboard") {
+                NSWorkspace.shared.open(URL(string: "https://developer.spotify.com/dashboard")!)
+            }
         }
     }
 

@@ -28,24 +28,19 @@ struct CiderFavoritingSettingsSection: View {
     @State private var token: String = CiderTokenStore.shared.token
 
     var body: some View {
-        Section {
-            // No `settingsHighlight` here: `SettingsTab` is private to
-            // SettingsView, and the sibling Spotify sections do without it too.
-            SecureField(String(localized: "API token"), text: $token)
-                .textFieldStyle(.roundedBorder)
-                .onChange(of: token) { _, value in
-                    CiderTokenStore.shared.setToken(value)
-                }
-        } header: {
-            Text("Favorite Song in Cider")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Playback needs none of this. The Favorite Song control does, because favouriting is not something macOS Now Playing can carry -- Notchly has to ask Cider itself.")
-
-                Text("In Cider, open Settings > Connectivity > Manage External Application Access, switch the API on, and paste the token it generates here. If you turn its authentication off instead, leave this empty.")
+        NotchlySettingsCard(
+            "Favorite song in Cider",
+            footer: "In Cider, open Settings > Connectivity > Manage External Application Access, switch the API on, and paste the token it generates. If you turn its authentication off instead, leave this empty."
+        ) {
+            NotchlySettingRow(
+                "API token",
+                subtitle: "Playback needs none of this. Only the Favorite Song control does, because macOS Now Playing cannot carry favourites."
+            ) {
+                NotchlyTextField(placeholder: String(localized: "API token"), text: $token, width: 220, isSecure: true)
+                    .onChange(of: token) { _, value in
+                        CiderTokenStore.shared.setToken(value)
+                    }
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
     }
 }

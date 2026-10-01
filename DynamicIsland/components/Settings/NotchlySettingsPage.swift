@@ -83,7 +83,7 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .homeHub:
             return ["hub", "clock", "date", "chips", "quick actions", "timer", "stopwatch", "home", "centre", "center", "mirror", "webcam", "camera", "clock"]
         case .music:
-            return ["media", "now playing", "lyrics", "spotify", "apple music", "album art", "player", "source", "canvas"]
+            return ["media", "now playing", "lyrics", "spotify", "apple music", "album art", "player", "source", "canvas", "visualizer", "sneak peek", "controls", "skip"]
         case .liveActivities:
             return ["battery", "charging", "bluetooth", "devices", "hud", "osd", "volume", "brightness", "recording", "focus", "camera", "microphone", "lock screen", "downloads", "controls"]
         case .stash:
@@ -110,14 +110,22 @@ struct NotchlySettingItem: Equatable {
     let page: NotchlySettingsPage
     let title: String
     let keywords: [String]
+    /// Title of the row to scroll to when this item's own row is only present
+    /// while something else is switched on (so searching for it still lands
+    /// somewhere visible).
+    let anchorTitle: String?
 
-    init(_ page: NotchlySettingsPage, _ title: String, keywords: [String] = []) {
+    init(_ page: NotchlySettingsPage, _ title: String, keywords: [String] = [], anchoredTo anchor: NotchlySettingItem? = nil) {
         self.page = page
         self.title = title
         self.keywords = keywords
+        self.anchorTitle = anchor?.title
     }
 
-    var highlightID: String { "\(page.rawValue)/\(title)" }
+    var highlightID: String { "\(page.rawValue)/\(anchorTitle ?? title)" }
+
+    /// What the item's own row registers: nothing when it borrows another row's anchor.
+    var rowHighlightID: String? { anchorTitle == nil ? highlightID : nil }
 
     var searchEntry: SettingsSearchEntry {
         SettingsSearchEntry(title: title, keywords: keywords, page: page, highlightID: highlightID)
@@ -129,7 +137,7 @@ extension NotchlySettingsPage {
     /// a legacy `Form` section hosted by the shell).
     var isNative: Bool {
         switch self {
-        case .general, .appearance, .homeHub, .about: return true
+        case .general, .appearance, .homeHub, .music, .about: return true
         default: return false
         }
     }
@@ -140,6 +148,7 @@ extension NotchlySettingsPage {
         case .general: return NotchlyGeneralPage.items
         case .appearance: return NotchlyAppearancePage.items
         case .homeHub: return NotchlyHomeHubPage.items
+        case .music: return NotchlyMusicPage.items
         default: return []
         }
     }

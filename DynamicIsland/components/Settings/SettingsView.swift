@@ -18,7 +18,6 @@ import UniformTypeIdentifiers
 enum SettingsTab: String, CaseIterable, Identifiable {
     case liveActivities
     case lockScreen
-    case media
     case devices
     case stash
     case hudAndOSD
@@ -32,7 +31,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .liveActivities: return String(localized: "Live Activities")
         case .lockScreen: return String(localized: "Lock Screen")
-        case .media: return String(localized: "Media")
         case .devices: return String(localized: "Devices")
         case .stash: return String(localized: "Stash")
         case .hudAndOSD: return String(localized: "Controls")
@@ -46,7 +44,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .liveActivities: return "waveform.path.ecg"
         case .lockScreen: return "lock.laptopcomputer"
-        case .media: return "play.laptopcomputer"
         case .devices: return "headphones"
         case .stash: return "tray.and.arrow.down.fill"
         case .hudAndOSD: return "dial.medium.fill"
@@ -60,7 +57,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .liveActivities: return .pink
         case .lockScreen: return .orange
-        case .media: return .green
         case .devices: return Color(red: 0.1, green: 0.11, blue: 0.12)
         case .stash: return .teal
         case .hudAndOSD: return .indigo
@@ -172,23 +168,10 @@ private enum LegacySettingsSearchCatalog {
         LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC provider", keywords: ["provider", "betterdisplay", "lunar", "integration", "refresh detection"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC provider")),
         LegacySettingsSearchEntry(tab: .hudAndOSD, title: "Enable external volume control listener", keywords: ["external volume", "ddc volume", "betterdisplay volume", "lunar volume", "disable native volume"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable external volume control listener")),
 
-        // Media
-        LegacySettingsSearchEntry(tab: .media, title: "Music Source", keywords: ["media source", "controller"], highlightID: SettingsTab.media.highlightID(for: "Music Source")),
-        LegacySettingsSearchEntry(tab: .media, title: "Skip buttons", keywords: ["skip", "controls", "±10"], highlightID: SettingsTab.media.highlightID(for: "Skip buttons")),
-        LegacySettingsSearchEntry(tab: .media, title: "Sneak Peek Style", keywords: ["sneak peek", "preview"], highlightID: SettingsTab.media.highlightID(for: "Sneak Peek Style")),
-        LegacySettingsSearchEntry(tab: .media, title: "Pinned lyric context", keywords: ["pinned lyrics", "lyric context", "lyrics lines", "closed notch", "lyrics height"], highlightID: SettingsTab.media.highlightID(for: "Pinned lyric context")),
-        LegacySettingsSearchEntry(tab: .media, title: "Keep lyrics under the closed notch", keywords: ["lyrics", "pin", "pinned", "closed notch", "always show"], highlightID: SettingsTab.media.highlightID(for: "Keep lyrics under the closed notch")),
-        LegacySettingsSearchEntry(tab: .media, title: "Show lyrics", keywords: ["lyrics", "song text", "side panel", "hub", "inline"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
         // Targets the lyrics toggle rather than the Highlight picker: the picker
         // only exists while lyrics are on, so a search result pointing at it
         // scrolls to nothing for anyone who has not turned them on yet -- which
         // is everyone, by default.
-        LegacySettingsSearchEntry(tab: .media, title: "Lyric highlight", keywords: ["lyrics", "highlight", "sweep", "gradient", "solid", "karaoke", "animation"], highlightID: SettingsTab.media.highlightID(for: "Show lyrics")),
-        LegacySettingsSearchEntry(tab: .media, title: "Side lyrics width", keywords: ["lyrics", "width", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics width")),
-        LegacySettingsSearchEntry(tab: .media, title: "Side lyrics horizontal offset", keywords: ["lyrics", "offset", "panel"], highlightID: SettingsTab.media.highlightID(for: "Side lyrics horizontal offset")),
-        LegacySettingsSearchEntry(tab: .media, title: "Show live canvas in Notchly", keywords: ["canvas", "live canvas", "album art", "dynamic island", "spotify canvas"], highlightID: SettingsTab.media.highlightID(for: "Show live canvas in Notchly")),
-        LegacySettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
-        LegacySettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
 
         // Hub
 
@@ -1950,541 +1933,6 @@ struct HUD: View {
     }
 }
 
-private struct MusicSourceSelector: View {
-    @Binding var selection: MediaControllerType
-    let controllers: [MediaControllerType]
-
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    ForEach(controllers) { controller in
-                        MusicSourceCard(
-                            controller: controller,
-                            isSelected: selection == controller
-                        ) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                selection = controller
-                            }
-                        }
-                        .id(controller)
-                    }
-                }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 3)
-            }
-            .onAppear {
-                proxy.scrollTo(selection, anchor: .center)
-            }
-            .onChange(of: selection) { _, controller in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    proxy.scrollTo(controller, anchor: .center)
-                }
-            }
-        }
-        .frame(height: 112)
-    }
-}
-
-private struct MusicSourceCard: View {
-    let controller: MediaControllerType
-    let isSelected: Bool
-    let action: () -> Void
-
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 9) {
-                // Every source shows the app's own icon, so the row does not
-                // mix real icons for the apps we happen to ship a logo for
-                // with flat brand marks for the rest. The bundled logo is the
-                // fallback for when the app is not installed, which is better
-                // than the generic symbol that used to stand in there.
-                AppIconImage(
-                    bundleIdentifiers: controller.applicationBundleIdentifiers,
-                    assetFallback: controller.officialLogoAssetName,
-                    symbolFallback: controller.fallbackSymbol,
-                    symbolColor: controller.fallbackColor,
-                    size: 42
-                )
-                .font(.system(size: 24, weight: .semibold))
-                .frame(width: 42, height: 42)
-
-                Text(controller.localizedName)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-            .frame(width: 112, height: 92)
-            .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(backgroundColor)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(borderColor, lineWidth: isSelected ? 2.5 : 1)
-            }
-            .scaleEffect(isHovering && !isSelected ? 1.015 : 1)
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovering = hovering
-            }
-        }
-        .accessibilityLabel(controller.localizedName)
-    }
-
-    private var backgroundColor: Color {
-        if isSelected {
-            return Color.accentColor.opacity(0.16)
-        }
-        if isHovering {
-            return Color(nsColor: .controlBackgroundColor).opacity(0.92)
-        }
-        return Color(nsColor: .controlBackgroundColor).opacity(0.7)
-    }
-
-    private var borderColor: Color {
-        if isSelected {
-            return .accentColor
-        }
-        return Color(nsColor: .separatorColor).opacity(isHovering ? 0.8 : 0.45)
-    }
-}
-
-private extension MediaControllerType {
-    var officialLogoAssetName: String? {
-        switch self {
-        case .youtubeMusic: return "YouTubeMusicLogo"
-        case .amazonMusic: return "AmazonMusicLogo"
-        case .tidal: return "TidalLogo"
-        case .cider: return "CiderLogo"
-        default: return nil
-        }
-    }
-
-    var applicationBundleIdentifiers: [String] {
-        switch self {
-        case .nowPlaying:
-            return []
-        case .appleMusic:
-            return ["com.apple.Music"]
-        case .spotify:
-            return ["com.spotify.client"]
-        case .youtubeMusic:
-            return ["com.github.th-ch.youtube-music"]
-        case .amazonMusic:
-            return ["com.amazon.music"]
-        case .tidal:
-            return [TidalController.bundleIdentifier]
-        case .cider:
-            return ["sh.cider.genten.mac"]
-        }
-    }
-
-    var fallbackSymbol: String {
-        switch self {
-        case .nowPlaying: return "waveform"
-        case .appleMusic: return "music.note"
-        case .spotify: return "dot.radiowaves.left.and.right"
-        case .youtubeMusic: return "play.rectangle.fill"
-        case .amazonMusic: return "music.note.list"
-        case .tidal: return "waveform.path"
-        case .cider: return "cup.and.saucer.fill"
-        }
-    }
-
-    var fallbackColor: Color {
-        switch self {
-        case .nowPlaying: return .accentColor
-        case .appleMusic: return .pink
-        case .spotify: return .green
-        case .youtubeMusic: return .red
-        case .amazonMusic: return .cyan
-        case .tidal: return .primary
-        case .cider: return .orange
-        }
-    }
-}
-
-struct Media: View {
-    @Default(.waitInterval) var waitInterval
-    @Default(.mediaController) var mediaController
-    @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.hideNotchOption) var hideNotchOption
-    @Default(.enableSneakPeek) private var enableSneakPeek
-    @Default(.sneakPeekStyles) var sneakPeekStyles
-    @Default(.enableMinimalisticUI) var enableMinimalisticUI
-    @Default(.showShuffleAndRepeat) private var showShuffleAndRepeat
-    @Default(.showMediaOutputControl) private var showMediaOutputControl
-    @Default(.musicSkipBehavior) private var musicSkipBehavior
-    @Default(.musicControlWindowEnabled) private var musicControlWindowEnabled
-    @Default(.showSneakPeekOnTrackChange) private var showSneakPeekOnTrackChange
-    @Default(.showStandardMediaControls) private var showStandardMediaControls
-    @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
-    @Default(.enableHub) private var enableHub
-    @Default(.enableLyrics) private var enableLyrics
-    @Default(.pinLyricsWhenClosed) private var pinLyricsWhenClosed
-    @Default(.pinnedLyricContext) private var pinnedLyricContext
-    @Default(.lyricHighlightStyle) private var lyricHighlightStyle
-    @Default(.lyricsPanelWidth) private var lyricsPanelWidth
-    @Default(.lyricsPanelOffset) private var lyricsPanelOffset
-    @Default(.visualizerBarCount) private var visualizerBarCount
-    @Default(.enableWaveformScrubber) private var enableWaveformScrubber
-    @Default(.colorExtractionMode) private var colorExtractionMode
-    @Default(.parallaxEffectIntensity) private var parallaxEffectIntensity
-
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.media.highlightID(for: title)
-    }
-
-    private var standardControlsSuppressed: Bool {
-        !showStandardMediaControls && !enableMinimalisticUI
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Text("Music Source")
-                            .font(.system(size: 13, weight: .semibold))
-                        MediaSourceCapabilitiesButton(controllers: availableMediaControllers)
-                        Spacer()
-                        ScrollHintIndicator()
-                    }
-
-                    MusicSourceSelector(
-                        selection: $mediaController,
-                        controllers: availableMediaControllers
-                    )
-                }
-                .onChange(of: mediaController) { _, _ in
-                    NotificationCenter.default.post(
-                        name: Notification.Name.mediaControllerChanged,
-                        object: nil
-                    )
-                }
-                .settingsHighlight(id: highlightID("Music Source"))
-            } header: {
-                Text("Media Source")
-            } footer: {
-                if MusicManager.shared.isNowPlayingDeprecated {
-                    HStack {
-                        Text("YouTube Music requires this third-party app to be installed: ")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                        Link("https://github.com/th-ch/youtube-music", destination: URL(string: "https://github.com/th-ch/youtube-music")!)
-                            .font(.caption)
-                            .foregroundColor(.blue) // Ensures it's visibly a link
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(String(localized: "'Now Playing' was the only option on previous versions and works with all media apps."))
-                        if mediaController == .amazonMusic || mediaController == .tidal || mediaController == .cider {
-                            Text(mediaController.description)
-                        }
-                    }
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                }
-            }
-
-            if mediaController == .spotify {
-                SpotifyAuthSettingsSection()
-                SpotifyLikeButtonSettingsSection()
-            }
-
-            if mediaController == .cider {
-                CiderFavoritingSettingsSection()
-            }
-
-            Section {
-                Defaults.Toggle(key: .showStandardMediaControls) {
-                    Text("Show media controls in Notchly")
-                }
-                .disabled(enableMinimalisticUI)
-                .settingsHighlight(id: highlightID("Show media controls in Notchly"))
-
-                Defaults.Toggle(key: .autoHideInactiveNotchMediaPlayer) {
-                    Text("Auto-hide inactive notch media player")
-                }
-                .disabled(enableMinimalisticUI || !showStandardMediaControls)
-                .settingsHighlight(id: highlightID("Auto-hide inactive notch media player"))
-
-                if enableMinimalisticUI {
-                    Text("Disable Minimalistic UI to configure the standard notch media controls.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if standardControlsSuppressed {
-                    Text("Standard notch media controls are hidden. Re-enable the toggle above to restore them.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if !autoHideInactiveNotchMediaPlayer {
-                    Text("When disabled, the notch music player stays visible with placeholder metadata even when playback is inactive.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } header: {
-                Text("Notchly Visibility")
-            }
-            Section {
-                Defaults.Toggle(key: .showShuffleAndRepeat) {
-                    HStack {
-                        Text("Enable customizable controls")
-                        customBadge(text: "Beta")
-                    }
-                }
-                if showShuffleAndRepeat {
-                    Defaults.Toggle(key: .showMediaOutputControl) {
-                        Text("Show \"Change Media Output\" control")
-                    }
-                    .settingsHighlight(id: highlightID("Show Change Media Output control"))
-                    .help("Adds the AirPlay/route picker button back to the customizable controls palette.")
-                    MusicSlotConfigurationView()
-                } else {
-                    Text("Turn on customizable controls to rearrange media buttons.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
-                }
-            } header: {
-                Text("Media controls")
-            }
-
-            Section {
-                SettingsSegmentedPicker(
-                    "Skip buttons",
-                    selection: $musicSkipBehavior,
-                    items: Array(MusicSkipBehavior.allCases)
-                ) { $0.displayName }
-                .settingsHighlight(id: highlightID("Skip buttons"))
-
-                Text(musicSkipBehavior.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } header: {
-                Text("Skip button behaviour")
-            } footer: {
-                Text("Applies everywhere the transport controls appear: the notch player and the floating window.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section {
-                Toggle(
-                    "Enable music live activity",
-                    isOn: $coordinator.musicLiveActivityEnabled.animation()
-                )
-                .disabled(standardControlsSuppressed)
-                .help(standardControlsSuppressed ? "Standard notch media controls are hidden while this toggle is off." : "")
-                Defaults.Toggle(key: .musicControlWindowEnabled) {
-                    Text("Show floating media controls")
-                }
-                .disabled(!coordinator.musicLiveActivityEnabled || standardControlsSuppressed)
-                .help("Displays play/pause and skip buttons beside the notch while music is active. Disabled by default.")
-                Toggle("Enable sneak peek", isOn: $enableSneakPeek)
-                Toggle("Show sneak peek on playback changes", isOn: $showSneakPeekOnTrackChange)
-                    .disabled(!enableSneakPeek)
-                Defaults.Toggle(key: .enableLyrics) {
-                    Text("Show lyrics")
-                }
-                .disabled(enableMinimalisticUI || !showStandardMediaControls)
-                .opacity(enableMinimalisticUI || !showStandardMediaControls ? 0.5 : 1)
-                .help(
-                    enableMinimalisticUI
-                        ? "Disable Minimalistic UI to show lyrics."
-                        : !showStandardMediaControls
-                            ? "Enable Notchly media controls to show lyrics."
-                            : ""
-                )
-                .settingsHighlight(id: highlightID("Show lyrics"))
-
-                if enableLyrics && !enableMinimalisticUI && showStandardMediaControls {
-                    // Caption inside the row rather than after it: a Form gives
-                    // every top-level view its own row and a divider, so the
-                    // explanation was being ruled off from the control it
-                    // explains and read as belonging to nothing.
-                    VStack(alignment: .leading, spacing: 6) {
-                        SettingsSegmentedPicker(
-                            "Highlight",
-                            selection: $lyricHighlightStyle,
-                            items: Array(LyricHighlightStyle.allCases)
-                        ) { $0.localizedName }
-
-                        Text(lyricHighlightStyle.explanation)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .settingsHighlight(id: highlightID("Lyric highlight"))
-                }
-
-                if enableLyrics && !enableMinimalisticUI && showStandardMediaControls {
-                    Defaults.Toggle(key: .pinLyricsWhenClosed) {
-                        Text("Keep lyrics under the closed notch")
-                    }
-                    .settingsHighlight(id: highlightID("Keep lyrics under the closed notch"))
-
-                    SettingsSegmentedPicker(
-                        "Pinned lyric context",
-                        selection: $pinnedLyricContext,
-                        items: Array(PinnedLyricContext.allCases)
-                    ) { $0.localizedName }
-                    .disabled(!pinLyricsWhenClosed)
-                    .settingsHighlight(id: highlightID("Pinned lyric context"))
-
-
-                    Text("Shows timed lyrics below the closed notch with the selected context. Keeps the space during instrumental breaks; hides the words while a HUD is on screen. Can also be toggled from the pin on the lyrics panel.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Text(
-                    enableHub
-                        ? "Lyrics sit on one line under the artist name, since the Hub is using the rest of the notch. Turn the Hub off to give them a full panel beside the player."
-                        : "Lyrics get their own panel beside the player. Turn the Hub on to move them under the artist name instead."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                if enableMinimalisticUI {
-                    Text("Disable Minimalistic UI to use lyrics.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if !showStandardMediaControls {
-                    Text("Enable Notchly media controls to use lyrics.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if enableLyrics && !enableMinimalisticUI && !enableHub && showStandardMediaControls {
-                    Slider(value: $lyricsPanelWidth, in: 180...420, step: 10) {
-                        HStack {
-                            Text("Side lyrics width")
-                            Spacer()
-                            Text("\(Int(lyricsPanelWidth)) px")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Side lyrics width"))
-
-                    Slider(value: $lyricsPanelOffset, in: -100...100, step: 1) {
-                        HStack {
-                            Text("Side lyrics horizontal offset")
-                            Spacer()
-                            Text("\(lyricsPanelOffset >= 0 ? "+" : "")\(Int(lyricsPanelOffset)) px")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Side lyrics horizontal offset"))
-
-                    Text("These controls apply when the Hub is turned off.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Defaults.Toggle(key: .showLiveCanvasInDynamicIsland) {
-                    Text("Show live canvas in Notchly")
-                }
-                .settingsHighlight(id: highlightID("Show live canvas in Notchly"))
-                .help("Replaces the artwork tile with the live canvas when the current app provides one, and reuses that moving canvas for the surrounding lighting effect.")
-                
-                //Parallax Effect Intensity to control how much parallax is wanted
-                Slider(value: $parallaxEffectIntensity, in: 0...12, step: 1.0) {
-                    HStack {
-                        Text("Parallax Effect Intensity")
-                        Spacer()
-                        Text("\(parallaxEffectIntensity, specifier: "%0.1f")")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .settingsHighlight(id: highlightID("Enable album art parallax effect"))
-                
-                Picker("Sneak Peek Style", selection: $sneakPeekStyles){
-                    ForEach(SneakPeekStyle.allCases) { style in
-                        Text(style.localizedName).tag(style)
-                    }
-                }
-                .disabled(!enableSneakPeek)
-                .settingsHighlight(id: highlightID("Sneak Peek Style"))
-
-                HStack {
-                    Stepper(value: $waitInterval, in: 0...10, step: 1) {
-                        HStack {
-                            Text("Media inactivity timeout")
-                            Spacer()
-                            Text("\(Defaults[.waitInterval], specifier: "%.0f") seconds")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                
-                Defaults.Toggle(key: .showSongMetadataInClosedNotch) {
-                    Text("Show song title and artist on non-notch displays")
-                }
-                .settingsHighlight(id: highlightID("Show song title and artist in closed notch"))
-            } header: {
-                Text("Media playback live activity")
-            }
-
-            Section {
-                Defaults.Toggle(key: .enableRealTimeWaveform) {
-                    HStack {
-                        Text("Enable real-time waveform")
-                        customBadge(text: "Beta")
-                    }
-                }
-                .settingsHighlight(id: highlightID("Enable real-time waveform"))
-                
-                Picker("Visualizer candles", selection: $visualizerBarCount) {
-                    Text("4").tag(4)
-                    Text("5").tag(5)
-                    Text("6").tag(6)
-                }
-                
-                Picker("Color extraction", selection: $colorExtractionMode) {
-                    Text("Legacy").tag(ColorExtractionMode.legacy)
-                    Text("Vibrant").tag(ColorExtractionMode.vibrant)
-                }
-                
-                Toggle("Scrubbable real-time waveform", isOn: $enableWaveformScrubber)
-            } header: {
-                Text("Music Visualizer")
-            } footer: {
-                Text("When enabled, the music visualizer displays real-time audio spectrum data synced to your music. Requires macOS 14.2+ and uses minimal CPU/GPU resources via the Accelerate framework.")
-            }
-
-            Picker(selection: $hideNotchOption, label:
-                    HStack {
-                Text("Hide Notchly Options")
-                customBadge(text: "Beta")
-            }) {
-                Text("Always hide in fullscreen").tag(HideNotchOption.always)
-                Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
-                Text("Never hide").tag(HideNotchOption.never)
-            }
-            .onChange(of: hideNotchOption) {
-                Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
-            }
-        }
-    }
-
-    // Only show controller options that are available on this macOS version
-    private var availableMediaControllers: [MediaControllerType] {
-        if MusicManager.shared.isNowPlayingDeprecated {
-            return MediaControllerType.allCases.filter { $0 != .nowPlaying }
-        } else {
-            return MediaControllerType.allCases
-        }
-    }
-}
-
 private extension DevicesSettingsView {
     enum BluetoothHUDIconStyle: String {
         case symbol
@@ -3739,7 +3187,6 @@ extension SettingsTab {
     /// The Notchly page this legacy tab now lives on.
     var page: NotchlySettingsPage {
         switch self {
-        case .media: return .music
         case .liveActivities, .lockScreen, .devices, .battery, .hudAndOSD, .downloads: return .liveActivities
         case .stash: return .stash
         case .shortcuts: return .shortcuts
@@ -3761,7 +3208,6 @@ extension SettingsTab {
         switch self {
         case .liveActivities: SettingsForm(tab: .liveActivities) { LiveActivitiesSettings() }
         case .lockScreen: SettingsForm(tab: .lockScreen) { LockScreenSettings() }
-        case .media: SettingsForm(tab: .media) { Media() }
         case .devices: SettingsForm(tab: .devices) { DevicesSettingsView() }
         case .stash: SettingsForm(tab: .stash) { StashSettings() }
         case .hudAndOSD: SettingsForm(tab: .hudAndOSD) { HUDAndOSDSettingsView() }
@@ -3779,7 +3225,7 @@ extension NotchlySettingsPage {
         case .general: return []
         case .appearance: return []
         case .homeHub: return []
-        case .music: return [.media]
+        case .music: return []
         case .liveActivities: return [.liveActivities, .battery, .hudAndOSD, .devices, .lockScreen, .downloads]
         case .stash: return [.stash]
         case .shortcuts: return [.shortcuts]
