@@ -17,6 +17,7 @@
 		A1C0DE0000000000000000A1 /* TimerClockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE0000000000000000B1 /* TimerClockTests.swift */; };
 		A1C0DE00000000000000BA01 /* BatteryExtrasTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */; };
 		A1C0DE00000000000000F0A2 /* NotchlySettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000F0B2 /* NotchlySettingsTests.swift */; };
+		A1C0DE00000000000000F1022 /* OnboardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000F1021 /* OnboardingTests.swift */; };
 		A1C0DE00000000000000F1012 /* StatusMenuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000F1011 /* StatusMenuTests.swift */; };
 		A1C0DE0000000000000000A2 /* QuickActionsLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */; };
 		7E1ADF1D2EA209B1001DA867 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7E61181E2E24071E0050006C /* SkyLightWindow */; };
@@ -90,6 +91,7 @@
 		A1C0DE0000000000000000B1 /* TimerClockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerClockTests.swift; sourceTree = "<group>"; };
 		A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryExtrasTests.swift; sourceTree = "<group>"; };
 		A1C0DE00000000000000F0B2 /* NotchlySettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchlySettingsTests.swift; sourceTree = "<group>"; };
+		A1C0DE00000000000000F1021 /* OnboardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTests.swift; sourceTree = "<group>"; };
 		A1C0DE00000000000000F1011 /* StatusMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuTests.swift; sourceTree = "<group>"; };
 		A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsLayoutTests.swift; sourceTree = "<group>"; };
 		47C39E67B09152F6665ED683 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -232,6 +234,7 @@
 				A1C0DE0000000000000000B1 /* TimerClockTests.swift */,
 				A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */,
 				A1C0DE00000000000000F0B2 /* NotchlySettingsTests.swift */,
+				A1C0DE00000000000000F1021 /* OnboardingTests.swift */,
 				A1C0DE00000000000000F1011 /* StatusMenuTests.swift */,
 				A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */,
 				A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */,
@@ -492,6 +495,7 @@
 				A1C0DE0000000000000000A1 /* TimerClockTests.swift in Sources */,
 				A1C0DE00000000000000BA01 /* BatteryExtrasTests.swift in Sources */,
 				A1C0DE00000000000000F0A2 /* NotchlySettingsTests.swift in Sources */,
+				A1C0DE00000000000000F1022 /* OnboardingTests.swift in Sources */,
 				A1C0DE00000000000000F1012 /* StatusMenuTests.swift in Sources */,
 				A1C0DE0000000000000000A2 /* QuickActionsLayoutTests.swift in Sources */,
 				A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */,

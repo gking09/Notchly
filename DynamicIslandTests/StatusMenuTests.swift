@@ -138,6 +138,24 @@ final class StatusMenuTests: XCTestCase {
         XCTAssertEqual(rendered.filter(\.isSeparatorItem).count, model.filter { $0.kind == .separator }.count)
     }
 
+    // MARK: Live controller
+
+    @MainActor
+    func testControllerBuildsItsMenuFromLiveState() {
+        let controller = StatusBarController()
+        controller.menuNeedsUpdate(controller.menu)
+        let titles = controller.menu.items.map(\.title)
+        XCTAssertTrue(titles.first?.hasPrefix("Notchly ") == true, "\(titles)")
+        XCTAssertTrue(titles.contains("Open Notch") || titles.contains("Close Notch"), "\(titles)")
+        XCTAssertTrue(titles.contains("Settings…"))
+        XCTAssertEqual(titles.last, "Quit Notchly")
+
+        // Opening it twice must not duplicate anything.
+        let count = controller.menu.items.count
+        controller.menuNeedsUpdate(controller.menu)
+        XCTAssertEqual(controller.menu.items.count, count)
+    }
+
     // MARK: About panel
 
     func testAboutCreditsMentionLicenseAndLineage() {

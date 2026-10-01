@@ -109,7 +109,7 @@ enum StatusMenuRenderer {
 @MainActor
 final class StatusBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
-    private let menu = NSMenu(title: "Notchly")
+    let menu = NSMenu(title: "Notchly")
     private var cancellables = Set<AnyCancellable>()
 
     override init() {

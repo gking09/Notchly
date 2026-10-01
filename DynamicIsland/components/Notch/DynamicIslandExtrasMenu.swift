@@ -70,26 +70,6 @@ struct DynamicIslandExtrasMenu : View {
         }
     }
     
-    var github: some View {
-        DynamicIslandLargeButtons(
-            action: {
-                NSWorkspace.shared.open(productPage)
-            },
-            icon: Image(.github),
-            title: "Checkout"
-        )
-    }
-    
-    var donate: some View {
-        DynamicIslandLargeButtons(
-            action: {
-                NSWorkspace.shared.open(sponsorPage)
-            },
-            icon: Image(systemName: "heart.fill"),
-            title: "Love Us"
-        )
-    }
-    
     var settings: some View {
         Button(action: {
             SettingsWindowController.shared.showWindow()

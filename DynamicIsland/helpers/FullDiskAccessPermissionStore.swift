@@ -75,7 +75,7 @@ final class FullDiskAccessPermissionStore: ObservableObject {
 #if os(macOS)
         let alert = NSAlert()
         alert.messageText = String(localized: "Full Disk Access Required")
-        alert.informativeText = String(localized: "Dynamic Island needs Full Disk Access to detect custom Focus indicators. Click Continue to open Full Disk Access settings, then press the + button and select Dynamic Island (we'll reveal it in Finder for you).")
+        alert.informativeText = String(localized: "Notchly needs Full Disk Access to detect custom Focus indicators. Click Continue to open Full Disk Access settings, then press the + button and select Notchly (we will reveal it in Finder for you).")
         alert.alertStyle = .informational
         alert.addButton(withTitle: String(localized: "Continue"))
         alert.addButton(withTitle: String(localized: "Cancel"))

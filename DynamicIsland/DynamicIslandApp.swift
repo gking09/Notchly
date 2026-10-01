@@ -75,7 +75,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
     let vm: DynamicIslandViewModel = .init()
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    var whatsNewWindow: NSWindow?
     var timer: Timer?
     let webcamManager = WebcamManager.shared
     let dndManager = DoNotDisturbManager.shared  // NEW: DND detection
@@ -1336,19 +1335,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     
     
-    private func showOnboardingWindow() {
+    /// Shows the welcome flow. On first launch it also seeds the starting defaults; a replay
+    /// from Settings leaves the user's choices alone.
+    func showOnboardingWindow(isReplay: Bool = false) {
         if onboardingWindowController == nil {
+            let size = OnboardingView.windowSize
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 600),
+                contentRect: NSRect(origin: .zero, size: NSSize(width: size.width, height: size.height)),
                 styleMask: [.titled, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.center()
-            window.title = "Onboarding"
+            window.title = "Welcome to Notchly"
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
+            window.isMovableByWindowBackground = true
             window.contentView = NSHostingView(rootView: OnboardingView(
+                applyFirstLaunchDefaults: !isReplay,
                 onFinish: {
                     window.orderOut(nil)
                     NSApp.setActivationPolicy(.accessory)

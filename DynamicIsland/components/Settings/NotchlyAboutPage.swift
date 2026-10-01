@@ -75,6 +75,7 @@ struct NotchlyAboutPage: View {
                 licenseCard
                 lineageCard
                 acknowledgementsCard
+                welcomeCard
             }
             .padding(.horizontal, 28)
             .padding(.top, 4)
@@ -158,6 +159,18 @@ struct NotchlyAboutPage: View {
         ) {
             ForEach(NotchlyCredits.dependencies) { credit in
                 creditRow(credit, subtitle: credit.author)
+            }
+        }
+    }
+
+    private var welcomeCard: some View {
+        NotchlySettingsCard {
+            NotchlyActionRow(
+                title: "Show Welcome Again",
+                subtitle: "Replay the first-launch introduction.",
+                symbol: "arrow.counterclockwise"
+            ) {
+                AppDelegate.shared?.showOnboardingWindow(isReplay: true)
             }
         }
     }
