@@ -109,6 +109,11 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
+    // Stash tab
+    if Defaults[.enableStash] && !Defaults[.enableMinimalisticUI] {
+        count += 1
+    }
+
     return count
 }
 

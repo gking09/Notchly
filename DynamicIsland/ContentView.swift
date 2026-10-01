@@ -58,9 +58,14 @@ struct ContentView: View {
     /// the offset that follows does not change it, so there is no feedback.
     @State private var closedContentWidth: CGFloat = 0
     @ObservedObject var capsLockManager = CapsLockManager.shared
+    @ObservedObject var stashManager = StashManager.shared
+    /// The notch was opened by a drag arriving over it, so a drag leaving should close it again.
+    @State private var stashOpenedByDrag = false
+    @State private var stashDragExitTask: Task<Void, Never>?
     @State private var downloadManager = DownloadManager.shared
     
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
+    @Default(.enableStash) var enableStash
     @Default(.enableHorizontalMusicGestures) var enableHorizontalMusicGestures
     @Default(.reminderPresentationStyle) var reminderPresentationStyle
     @Default(.showCapsLockLabel) var showCapsLockLabel
@@ -750,6 +755,7 @@ struct ContentView: View {
         .animation(nil, value: vm.notchState)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environmentObject(privacyManager)
+        .background(stashDropDetector)
         .environmentObject(vm)
         .environmentObject(webcamManager)
     }
@@ -986,6 +992,7 @@ struct ContentView: View {
         var focus: Bool
         var privacy: Bool
         var idleFace: Bool
+        var stash: Bool
     }
 
     private var closedActivitySignature: ClosedActivitySignature {
@@ -1000,7 +1007,8 @@ struct ContentView: View {
             download: downloadManager.isDownloading,
             focus: doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing,
             privacy: privacyManager.hasAnyIndicator,
-            idleFace: !musicManager.isPlaying && musicManager.isPlayerIdle
+            idleFace: !musicManager.isPlaying && musicManager.isPlayerIdle,
+            stash: stashClosedNoticeVisible
         )
     }
 
@@ -1077,6 +1085,10 @@ struct ContentView: View {
                                       ? closedLiveActivitySwapTransition
                                       : AnyTransition.hudReveal
                               )
+                      } else if stashClosedNoticeVisible, let notice = stashManager.closedNotice {
+                          StashClosedActivity(notice: notice)
+                              .id(notice.id)
+                              .transition(closedLiveActivitySwapTransition)
                       } else if vm.notchState == .closed && capsLockManager.isCapsLockActive && Defaults[.enableCapsLockIndicator] && !vm.hideOnClosed && !lockScreenManager.isLocked {
                           InlineHUD(type: .constant(.capsLock), value: .constant(1.0), icon: .constant(""), hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(closedLiveActivitySwapTransition)
@@ -1189,6 +1201,8 @@ struct ContentView: View {
                               switch coordinator.currentView {
                                   case .home:
                                       NotchHomeView(albumArtNamespace: albumArtNamespace)
+                                  case .stash:
+                                      StashView()
                               }
                           }
                           .id(coordinator.currentView)
@@ -2018,7 +2032,79 @@ struct ContentView: View {
     }
 
     private func shouldPreventAutoClose() -> Bool {
-        coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || SharingStateManager.shared.preventNotchClose
+        // Dragging a stash item out takes the cursor off the notch; closing it then
+        // would tear down the view that is acting as the drag source.
+        coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || SharingStateManager.shared.preventNotchClose || stashManager.isDraggingOut
+    }
+
+    // MARK: - Stash drag and drop
+
+    /// Whether the closed-notch "+1" confirmation is showing on this notch.
+    private var stashClosedNoticeVisible: Bool {
+        stashManager.closedNotice != nil
+            && enableStash
+            && vm.notchState == .closed
+            && !vm.hideOnClosed
+            && !lockScreenManager.isLocked
+    }
+
+    private var stashAcceptsDrops: Bool {
+        enableStash && !enableMinimalisticUI && !lockScreenManager.isLocked && !coordinator.firstLaunch
+    }
+
+    /// A transparent layer over the whole notch window that takes drops of files,
+    /// text, links and images. A drag over the closed notch opens it on the Stash
+    /// tab; dropping adds the items.
+    private var stashDropDetector: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onDrop(of: StashDropReader.acceptedTypes, delegate: StashDropDelegate(
+                isEnabled: { stashAcceptsDrops },
+                onTargetChange: { targeted in handleStashDropTarget(targeted) },
+                onDrop: { providers in stashManager.ingest(providers: providers) }
+            ))
+            .onChange(of: stashManager.isDraggingOut) { _, dragging in
+                guard !dragging else { return }
+                // The drag has ended; if the pointer is not on the notch, let it close.
+                runAfter(0.3) {
+                    if vm.notchState == .open && !isHovering && !shouldPreventAutoClose() && !isPointInsideNotchWindow() {
+                        vm.close()
+                    }
+                }
+            }
+    }
+
+    private func handleStashDropTarget(_ targeted: Bool) {
+        stashManager.isDropTargeted = targeted
+        stashDragExitTask?.cancel()
+
+        if targeted {
+            if coordinator.currentView != .stash {
+                withAnimation(NotchlyTheme.Motion.spring) { coordinator.currentView = .stash }
+            }
+            if vm.notchState == .closed {
+                stashOpenedByDrag = true
+                openNotch()
+            }
+            return
+        }
+
+        // Leaving can be the notch resizing under the pointer rather than the
+        // drag actually leaving, so wait a beat and look again.
+        stashDragExitTask = Task {
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                defer { stashOpenedByDrag = false }
+                guard stashOpenedByDrag,
+                      !stashManager.isDropTargeted,
+                      vm.notchState == .open,
+                      !isPointInsideNotchWindow(),
+                      !shouldPreventAutoClose() else { return }
+                vm.close()
+            }
+        }
     }
     
     // Helper to prevent rapid haptic feedback

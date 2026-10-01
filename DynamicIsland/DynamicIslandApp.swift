@@ -265,6 +265,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop AudioTap capture
         AudioTap.shared.stopCapture()
 
+        // End any Stash undo window and honour "Until I quit".
+        StashManager.shared.appWillTerminate()
+
         // Restore Lunar's native OSD if integration was active
         LunarManager.shared.appWillTerminate()
     }
@@ -893,6 +896,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(onScreenUnlocked(_:)),
             name: NSNotification.Name(rawValue: "com.apple.screenIsUnlocked"), object: nil)
+
+        StashManager.shared.start()
+
+        KeyboardShortcuts.onKeyDown(for: .stashClipboard) {
+            guard Defaults[.enableShortcuts] else { return }
+            Task { @MainActor in StashManager.shared.addFromClipboard() }
+        }
 
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
             guard let self = self else { return }

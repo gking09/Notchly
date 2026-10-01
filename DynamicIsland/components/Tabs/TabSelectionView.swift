@@ -44,6 +44,8 @@ struct TabSelectionView: View {
     @Default(.showMirror) private var showMirror
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.enableMinimalisticUI) private var enableMinimalisticUI
+    @Default(.enableStash) private var enableStash
+    @ObservedObject private var stashStore = StashManager.shared.store
     @Namespace var animation
     
     private var tabs: [TabModel] {
@@ -53,6 +55,10 @@ struct TabSelectionView: View {
             tabsArray.append(TabModel(label: "Home", icon: "house.fill", view: .home))
         }
 
+        if enableStash && !enableMinimalisticUI {
+            tabsArray.append(TabModel(label: "Stash", icon: "tray.and.arrow.down", view: .stash))
+        }
+
         return tabsArray
     }
     var body: some View {
@@ -60,7 +66,7 @@ struct TabSelectionView: View {
             ForEach(tabs) { tab in
                 let isSelected = isSelected(tab)
 
-                TabButton(label: tab.label, icon: tab.icon, selected: isSelected) {
+                TabButton(label: tab.label, icon: tab.icon, selected: isSelected, badge: badge(for: tab)) {
                     withAnimation(NotchlyTheme.Motion.spring) {
                         coordinator.currentView = tab.view
                     }
@@ -102,6 +108,10 @@ struct TabSelectionView: View {
             return true
         }
         return showStandardMediaControls || showCalendar || showMirror
+    }
+
+    private func badge(for tab: TabModel) -> Int {
+        tab.view == .stash ? stashStore.items.count : 0
     }
 
     private func isSelected(_ tab: TabModel) -> Bool {

@@ -26,16 +26,28 @@ struct TabButton: View {
     let label: String
     let icon: String
     let selected: Bool
+    /// A count shown beside the icon; hidden at zero.
+    var badge: Int = 0
     let onClick: () -> Void
-    
+
     var body: some View {
         Button(action: onClick) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
-                .frame(minWidth: 30)
-                .padding(.horizontal, NotchlyTheme.Spacing.sm)
-                .frame(maxHeight: .infinity)
-                .contentShape(Capsule())
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .medium))
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
+            }
+            .frame(minWidth: 30)
+            .padding(.horizontal, NotchlyTheme.Spacing.sm)
+            .frame(maxHeight: .infinity)
+            .contentShape(Capsule())
+            .animation(NotchlyTheme.Motion.spring, value: badge)
         }
         .buttonStyle(NotchlyTabButtonStyle(isSelected: selected))
         .help(label)
@@ -43,7 +55,7 @@ struct TabButton: View {
 }
 
 #Preview {
-    TabButton(label: "Home", icon: "tray.fill", selected: true) {
+    TabButton(label: "Home", icon: "tray.fill", selected: true, badge: 3) {
         print("Tapped")
     }
 }

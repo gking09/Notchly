@@ -40,6 +40,7 @@ Notchly is a **notch-only** app. The non-notch features of the project it was fo
 - Timer with presets and a ruler-style picker.
 - Calendar with events and reminders.
 - Webcam mirror.
+- Stash: a temporary tray in the notch for text, links, images and files. Drop things on the notch (or add the clipboard on demand), click to copy back, drag out to other apps; items expire on a retention you choose.
 - Global keyboard shortcuts, gesture controls (swipe to open/close, horizontal swipes to skip), haptics, and per-feature toggles in Settings.
 
 ## Requirements
@@ -58,7 +59,7 @@ The Xcode target and scheme keep the internal name `DynamicIsland`. Open `Dynami
 
 ## Quick start
 - Hover near the notch to expand it; click to interact.
-- Use the tab selector for Home and Timer.
+- Use the tab selector for Home and Stash.
 - Adjust layout, appearance, HUDs and shortcuts from Settings (gear icon in the expanded notch).
 
 ## Gesture controls

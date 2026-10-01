@@ -72,6 +72,7 @@ public enum NotchState {
 
 public enum NotchViews {
     case home
+    case stash
 }
 
 enum SettingsEnum {

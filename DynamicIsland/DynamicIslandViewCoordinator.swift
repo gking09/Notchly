@@ -64,7 +64,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home]
+    private static let tabOrder: [NotchViews] = [.home, .stash]
     
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
@@ -132,13 +132,23 @@ class DynamicIslandViewCoordinator: ObservableObject {
             Defaults.publisher(.showStandardMediaControls).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showMirror).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher()
+            Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableStash).map { _ in () }.eraseToAnyPublisher()
         )
         .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
         .sink { _ in
             enforceMinimumNotchWidth()
         }
         .store(in: &cancellables)
+
+        // Turning the Stash off while it is showing sends the notch back home.
+        Defaults.publisher(.enableStash)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] change in
+                guard !change.newValue, self?.currentView == .stash else { return }
+                withAnimation(NotchlyTheme.Motion.spring) { self?.currentView = .home }
+            }
+            .store(in: &cancellables)
 
         // Enforce minimum width on launch for existing configurations
         enforceMinimumNotchWidth()

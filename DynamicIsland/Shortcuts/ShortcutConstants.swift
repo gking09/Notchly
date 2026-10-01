@@ -27,5 +27,7 @@ extension KeyboardShortcuts.Name {
     static let decreaseBacklight = Self("decreaseBacklight", default: .init(.f1, modifiers: [.command]))
     static let increaseBacklight = Self("increaseBacklight", default: .init(.f2, modifiers: [.command]))
     static let toggleSneakPeek = Self("toggleSneakPeek", default: .init(.h, modifiers: [.command, .shift]))
+    /// Stashes whatever is on the clipboard. No default: the user chooses one.
+    static let stashClipboard = Self("stashClipboard")
     static let toggleNotchOpen = Self("toggleNotchOpen", default: .init(.i, modifiers: [.command, .shift]))
 }
