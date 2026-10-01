@@ -20,18 +20,15 @@ import AppKit
 import Defaults
 import SwiftUI
 
-// MARK: - Old tab -> new page map
+// MARK: - Pages
 //
-// Every legacy settings tab is still reachable. Pages that hold more than one
-// legacy tab show a sub-section picker under the page header.
+// Native pages (General, Appearance, Home & Hub, Music, About) are built from the
+// `NotchlySettingsCard` components and register their rows with the search index
+// through `NotchlySettingItem`. The pages that are still legacy `Form` sections
+// are hosted below until stage 3 migrates them:
 //
-//   old tab          new page         sub-section
+//   old tab          page             sub-section
 //   ---------------  ---------------  ---------------------------
-//   General          General          -
-//   Appearance       Appearance       -
-//   Hub              Home & Hub       Hub
-//   Quick Actions    Home & Hub       Quick Actions (hidden in minimalistic UI, as before)
-//   Media            Music            -
 //   Live Activities  Live Activities  Activities
 //   Battery          Live Activities  Battery
 //   Controls (HUD)   Live Activities  Volume & Brightness
@@ -40,10 +37,6 @@ import SwiftUI
 //   Downloads        Live Activities  Downloads
 //   Stash            Stash            -
 //   Shortcuts        Shortcuts        -
-//   About            About            (new page, native to the shell; reached from the
-//                                     "Credits & License" link in the sidebar footer)
-//
-// Stages 2-3 migrate the legacy rows onto `NotchlySettingsCard` / `NotchlySettingRow`.
 
 // MARK: - Navigation requests
 

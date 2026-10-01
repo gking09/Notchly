@@ -289,7 +289,7 @@ struct AnimationPreviewCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .strokeBorder(
-                                isSelected ? Color.accentColor : Color.clear,
+                                isSelected ? NotchlySettingsStyle.accent : Color.clear,
                                 lineWidth: 2.5
                             )
                     )
@@ -337,12 +337,12 @@ struct AnimationPreviewCard: View {
                     Text("Selected")
                         .font(.system(size: 10))
                         .fontWeight(.medium)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(NotchlySettingsStyle.onAccent)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(Color.accentColor)
+                                .fill(NotchlySettingsStyle.accent)
                         )
                 } else if animation.isBuiltIn {
                     Text("Built-in")
