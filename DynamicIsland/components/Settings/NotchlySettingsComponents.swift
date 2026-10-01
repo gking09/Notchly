@@ -226,6 +226,42 @@ struct NotchlySettingRow<Trailing: View>: View {
     }
 }
 
+// MARK: - Native page container
+
+/// Scrolling body of a native settings page: a padded column of cards that also
+/// scrolls to (and lets rows pulse) whichever row a search result points at.
+struct NotchlyPageScroll<Content: View>: View {
+    let page: NotchlySettingsPage
+    @ViewBuilder var content: () -> Content
+
+    @EnvironmentObject private var highlightCoordinator: SettingsHighlightCoordinator
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    content()
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 4)
+                .padding(.bottom, 32)
+                .frame(maxWidth: 760, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollContentBackground(.hidden)
+            .onReceive(highlightCoordinator.$pendingScrollRequest.compactMap { request -> SettingsHighlightCoordinator.ScrollRequest? in
+                guard let request, request.scope == page.rawValue else { return nil }
+                return request
+            }) { request in
+                withAnimation(.easeInOut(duration: 0.45)) {
+                    proxy.scrollTo(request.id, anchor: .center)
+                }
+                highlightCoordinator.consumeScrollRequest(request)
+            }
+        }
+    }
+}
+
 // MARK: - Defaults binding helper
 
 /// Reads a `Defaults` key reactively and hands the content a `Binding` to it.
@@ -747,5 +783,84 @@ struct NotchlyActionRow: View {
         .buttonStyle(.plain)
         .animation(NotchlyTheme.Motion.snappy, value: isHovering)
         .onHover { isHovering = $0 }
+    }
+}
+
+// MARK: - Rows built from a search item
+
+/// Row builders that take their title and highlight anchor from a
+/// `NotchlySettingItem`, so a row and its search entry always agree.
+extension NotchlySettingItem {
+    func toggle(_ subtitle: String? = nil, help: String? = nil, isEnabled: Bool = true, isOn: Binding<Bool>) -> NotchlyToggleRow {
+        NotchlyToggleRow(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, isOn: isOn)
+    }
+
+    func toggle(_ subtitle: String? = nil, help: String? = nil, isEnabled: Bool = true, key: Defaults.Key<Bool>) -> some View {
+        NotchlyToggleRow.defaults(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, key: key)
+    }
+
+    func slider(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        step: Double? = nil,
+        valueLabel: @escaping (Double) -> String = { String(format: "%g", ($0 * 100).rounded() / 100) }
+    ) -> NotchlySliderRow {
+        NotchlySliderRow(
+            title: title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            value: value, range: range, step: step, valueLabel: valueLabel
+        )
+    }
+
+    func slider(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        key: Defaults.Key<Double>,
+        range: ClosedRange<Double>,
+        step: Double? = nil,
+        valueLabel: @escaping (Double) -> String = { String(format: "%g", ($0 * 100).rounded() / 100) }
+    ) -> some View {
+        NotchlySliderRow.defaults(
+            title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            key: key, range: range, step: step, valueLabel: valueLabel
+        )
+    }
+
+    func picker<Value: Hashable>(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        selection: Binding<Value>,
+        options: [Value],
+        style: NotchlyPickerRow<Value>.Style = .menu,
+        label: @escaping (Value) -> String
+    ) -> NotchlyPickerRow<Value> {
+        NotchlyPickerRow(
+            title: title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            selection: selection, options: options, label: label, style: style
+        )
+    }
+
+    func picker<Value: Hashable & Defaults.Serializable>(
+        _ subtitle: String? = nil,
+        isEnabled: Bool = true,
+        key: Defaults.Key<Value>,
+        options: [Value],
+        style: NotchlyPickerRow<Value>.Style = .menu,
+        label: @escaping (Value) -> String
+    ) -> some View {
+        NotchlyPickerRow.defaults(
+            title, subtitle: subtitle, highlightID: highlightID, isEnabled: isEnabled,
+            key: key, options: options, style: style, label: label
+        )
+    }
+
+    func row<Trailing: View>(
+        _ subtitle: String? = nil,
+        help: String? = nil,
+        isEnabled: Bool = true,
+        @ViewBuilder trailing: @escaping () -> Trailing
+    ) -> NotchlySettingRow<Trailing> {
+        NotchlySettingRow(title, subtitle: subtitle, help: help, highlightID: highlightID, isEnabled: isEnabled, trailing: trailing)
     }
 }

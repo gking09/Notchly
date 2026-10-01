@@ -164,6 +164,8 @@ struct NotchlySettingsView: View {
     private var pageBody: some View {
         if selectedPage == .about {
             NotchlyAboutPage()
+        } else if selectedPage == .general {
+            NotchlyGeneralPage()
         } else if let section = currentSection {
             // Legacy section views are grouped Forms; they keep scrolling themselves.
             section.legacyContent
@@ -188,7 +190,7 @@ struct NotchlySettingsView: View {
 
     private var sectionBinding: Binding<SettingsTab> {
         Binding(
-            get: { currentSection ?? .general },
+            get: { currentSection ?? .liveActivities },
             set: { selectedSections[selectedPage] = $0 }
         )
     }
@@ -217,8 +219,8 @@ struct NotchlySettingsView: View {
             }
         }
         searchText = ""
-        if let highlightID = entry.highlightID, let sectionID = entry.sectionID, let section = SettingsTab(rawValue: sectionID) {
-            focus(highlightID: highlightID, in: section)
+        if let highlightID = entry.highlightID {
+            focus(highlightID: highlightID, scope: entry.sectionID ?? entry.page.rawValue)
         }
     }
 
@@ -227,15 +229,16 @@ struct NotchlySettingsView: View {
             selectedPage = request.page
             if let section = request.section { selectedSections[request.page] = section }
         }
-        if let highlightID = request.highlightID, let section = request.section ?? request.page.legacySections.first {
-            focus(highlightID: highlightID, in: section)
+        if let highlightID = request.highlightID {
+            let scope = (request.section ?? request.page.legacySections.first)?.rawValue ?? request.page.rawValue
+            focus(highlightID: highlightID, scope: scope)
         }
     }
 
     /// Scroll + pulse the row once its page has had a moment to mount.
-    private func focus(highlightID: String, in section: SettingsTab) {
+    private func focus(highlightID: String, scope: String) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            highlightCoordinator.focus(highlightID: highlightID, tab: section)
+            highlightCoordinator.focus(highlightID: highlightID, scope: scope)
         }
     }
 }

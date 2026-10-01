@@ -16,7 +16,6 @@ import SwiftUIIntrospect
 import UniformTypeIdentifiers
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general
     case liveActivities
     case appearance
     case lockScreen
@@ -34,7 +33,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return String(localized: "General")
         case .liveActivities: return String(localized: "Live Activities")
         case .appearance: return String(localized: "Appearance")
         case .lockScreen: return String(localized: "Lock Screen")
@@ -52,7 +50,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
-        case .general: return "gear"
         case .liveActivities: return "waveform.path.ecg"
         case .appearance: return "paintpalette"
         case .lockScreen: return "lock.laptopcomputer"
@@ -70,7 +67,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var tint: Color {
         switch self {
-        case .general: return .blue
         case .liveActivities: return .pink
         case .appearance: return .purple
         case .lockScreen: return .orange
@@ -114,24 +110,6 @@ private struct LegacySettingsSearchEntry: Identifiable {
 
 private enum LegacySettingsSearchCatalog {
     static let entries: [LegacySettingsSearchEntry] = [
-        // General
-        LegacySettingsSearchEntry(tab: .general, title: "Enable Minimalistic UI", keywords: ["minimalistic", "ui mode", "general"], highlightID: SettingsTab.general.highlightID(for: "Enable Minimalistic UI")),
-        LegacySettingsSearchEntry(tab: .general, title: "Menubar icon", keywords: ["menu bar", "status bar", "icon"], highlightID: SettingsTab.general.highlightID(for: "Menubar icon")),
-        LegacySettingsSearchEntry(tab: .general, title: "Launch at login", keywords: ["autostart", "startup"], highlightID: SettingsTab.general.highlightID(for: "Launch at login")),
-        LegacySettingsSearchEntry(tab: .general, title: "Show on all displays", keywords: ["multi-display", "external monitor"], highlightID: SettingsTab.general.highlightID(for: "Show on all displays")),
-        LegacySettingsSearchEntry(tab: .general, title: "Show on a specific display", keywords: ["preferred screen", "display picker"], highlightID: SettingsTab.general.highlightID(for: "Show on a specific display")),
-        LegacySettingsSearchEntry(tab: .general, title: "Automatically switch displays", keywords: ["auto switch", "displays"], highlightID: SettingsTab.general.highlightID(for: "Automatically switch displays")),
-        LegacySettingsSearchEntry(tab: .general, title: "Hide Notchly during screenshots & recordings", keywords: ["privacy", "screenshot", "recording"], highlightID: SettingsTab.general.highlightID(for: "Hide Notchly during screenshots & recordings")),
-        LegacySettingsSearchEntry(tab: .general, title: "Enable gestures", keywords: ["gestures", "trackpad"], highlightID: SettingsTab.general.highlightID(for: "Enable gestures")),
-        LegacySettingsSearchEntry(tab: .general, title: "Close gesture", keywords: ["pinch", "swipe"], highlightID: SettingsTab.general.highlightID(for: "Close gesture")),
-        LegacySettingsSearchEntry(tab: .general, title: "Reverse swipe gestures", keywords: ["reverse", "swipe", "media"], highlightID: SettingsTab.general.highlightID(for: "Reverse swipe gestures")),
-        LegacySettingsSearchEntry(tab: .general, title: "Reverse scroll gestures", keywords: ["reverse", "scroll", "open", "close"], highlightID: SettingsTab.general.highlightID(for: "Reverse scroll gestures")),
-        LegacySettingsSearchEntry(tab: .general, title: "Extend hover area", keywords: ["hover", "cursor"], highlightID: SettingsTab.general.highlightID(for: "Extend hover area")),
-        LegacySettingsSearchEntry(tab: .general, title: "Enable haptics", keywords: ["haptic", "feedback"], highlightID: SettingsTab.general.highlightID(for: "Enable haptics")),
-        LegacySettingsSearchEntry(tab: .general, title: "Open notch on hover", keywords: ["hover to open", "auto open"], highlightID: SettingsTab.general.highlightID(for: "Open notch on hover")),
-        LegacySettingsSearchEntry(tab: .general, title: "External display style", keywords: ["dynamic island", "pill", "external display", "non-notch", "floating", "capsule"], highlightID: SettingsTab.general.highlightID(for: "External display style")),
-        LegacySettingsSearchEntry(tab: .general, title: "Hide until hovered", keywords: ["hide", "hover", "external", "non-notch", "auto hide", "slide"], highlightID: SettingsTab.general.highlightID(for: "Hide until hovered")),
-        LegacySettingsSearchEntry(tab: .general, title: "Notch display height", keywords: ["display height", "menu bar size"], highlightID: SettingsTab.general.highlightID(for: "Notch display height")),
 
         // Live Activities
         LegacySettingsSearchEntry(tab: .liveActivities, title: "Enable Screen Recording Detection", keywords: ["screen recording", "indicator"], highlightID: SettingsTab.liveActivities.highlightID(for: "Enable Screen Recording Detection")),
@@ -275,7 +253,8 @@ private enum LegacySettingsSearchCatalog {
 final class SettingsHighlightCoordinator: ObservableObject {
     struct ScrollRequest: Identifiable, Equatable {
         let id: String
-        let tab: SettingsTab
+        /// Which page body should scroll: a legacy tab's raw value, or a native page's raw value.
+        let scope: String
     }
 
     @Published var pendingScrollRequest: ScrollRequest?
@@ -283,9 +262,13 @@ final class SettingsHighlightCoordinator: ObservableObject {
 
     private var clearWorkItem: DispatchWorkItem?
 
-    func focus(highlightID: String, tab: SettingsTab) {
-        pendingScrollRequest = ScrollRequest(id: highlightID, tab: tab)
+    func focus(highlightID: String, scope: String) {
+        pendingScrollRequest = ScrollRequest(id: highlightID, scope: scope)
         activateHighlight(id: highlightID)
+    }
+
+    func focus(highlightID: String, tab: SettingsTab) {
+        focus(highlightID: highlightID, scope: tab.rawValue)
     }
 
     func consumeScrollRequest(_ request: ScrollRequest) {
@@ -331,17 +314,16 @@ private struct SettingsHighlightModifier: ViewModifier {
     }
 
     private var highlightBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .stroke(
-                Color.accentColor.opacity(isActive ? (animatePulse ? 0.95 : 0.4) : 0),
-                lineWidth: 2
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .strokeBorder(
+                NotchlySettingsStyle.accent.opacity(isActive ? (animatePulse ? 0.8 : 0.3) : 0),
+                lineWidth: 1.5
             )
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.accentColor.opacity(isActive ? 0.08 : 0))
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(NotchlySettingsStyle.accent.opacity(isActive ? 0.08 : 0))
             )
-            .padding(-4)
-            .shadow(color: Color.accentColor.opacity(isActive ? 0.25 : 0), radius: animatePulse ? 8 : 2)
+            .padding(2)
             .animation(
                 isActive ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true) : .default,
                 value: animatePulse
@@ -374,7 +356,7 @@ struct SettingsForm<Content: View>: View {
         ScrollViewReader { proxy in
             content()
                 .onReceive(highlightCoordinator.$pendingScrollRequest.compactMap { request -> SettingsHighlightCoordinator.ScrollRequest? in
-                    guard let request, request.tab == tab else { return nil }
+                    guard let request, request.scope == tab.rawValue else { return nil }
                     return request
                 }) { request in
                     withAnimation(.easeInOut(duration: 0.45)) {
@@ -382,309 +364,6 @@ struct SettingsForm<Content: View>: View {
                     }
                     highlightCoordinator.consumeScrollRequest(request)
                 }
-        }
-    }
-}
-
-struct GeneralSettings: View {
-    @State private var screens: [String] = NSScreen.screens.compactMap { $0.localizedName }
-    @EnvironmentObject var vm: DynamicIslandViewModel
-    @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.mirrorShape) var mirrorShape
-    @Default(.showEmojis) var showEmojis
-    @Default(.gestureSensitivity) var gestureSensitivity
-    @Default(.minimumHoverDuration) var minimumHoverDuration
-    @Default(.nonNotchHeight) var nonNotchHeight
-    @Default(.nonNotchHeightMode) var nonNotchHeightMode
-    @Default(.notchHeight) var notchHeight
-    @Default(.closedNotchWidth) var closedNotchWidth
-    @Default(.customizePhysicalNotchWidth) var customizePhysicalNotchWidth
-    @Default(.notchHeightMode) var notchHeightMode
-    @Default(.showOnAllDisplays) var showOnAllDisplays
-    @Default(.automaticallySwitchDisplay) var automaticallySwitchDisplay
-    @Default(.enableGestures) var enableGestures
-    @Default(.openNotchOnHover) var openNotchOnHover
-    @Default(.enableMinimalisticUI) var enableMinimalisticUI
-    @Default(.showBatteryIndicator) var showBatteryIndicator
-    @Default(.showMinimalisticBatteryIndicator) var showMinimalisticBatteryIndicator
-    @Default(.enableHorizontalMusicGestures) var enableHorizontalMusicGestures
-    @Default(.musicGestureBehavior) var musicGestureBehavior
-    @Default(.reverseSwipeGestures) var reverseSwipeGestures
-    @Default(.reverseScrollGestures) var reverseScrollGestures
-    @Default(.externalDisplayStyle) var externalDisplayStyle
-    @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.general.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableMinimalisticUI) {
-                    Text("Enable Minimalistic UI")
-                }
-                .onChange(of: enableMinimalisticUI) { _, newValue in
-                    if newValue {
-                        // Auto-enable simpler animation mode
-                        Defaults[.useModernCloseAnimation] = true
-                    }
-                }
-                .settingsHighlight(id: highlightID("Enable Minimalistic UI"))
-
-                Defaults.Toggle(key: .showMinimalisticBatteryIndicator) {
-                    Text("Show battery indicator")
-                }
-                .disabled(!enableMinimalisticUI)
-                .settingsHighlight(id: highlightID("Show battery indicator in Minimalistic UI"))
-
-                Defaults.Toggle(key: .showBatteryPercentInside) {
-                    Text("Show battery percentage inside icon")
-                }
-                // Draws inside whichever battery the notch is showing, so it is
-                // gated on there being one -- not on Minimalistic UI, which only
-                // decides which of the two gets drawn.
-                // Read through the observed properties, not Defaults directly:
-                // a plain read is not a dependency, so switching the battery
-                // indicator on left this row disabled until something else
-                // redrew the view.
-                .disabled(!showBatteryIndicator
-                    || (enableMinimalisticUI && !showMinimalisticBatteryIndicator))
-                .settingsHighlight(id: highlightID("Show battery percentage inside icon"))
-            } header: {
-                Text("UI Mode")
-            } footer: {
-                Text("Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations.")
-            }
-
-            Section {
-                Defaults.Toggle(key: .menubarIcon) {
-                    Text("Menubar icon")
-                }
-                .settingsHighlight(id: highlightID("Menubar icon"))
-                LaunchAtLogin.Toggle {
-                    Text("Launch at login")
-                }
-                .settingsHighlight(id: highlightID("Launch at login"))
-                Defaults.Toggle(key: .showOnAllDisplays) {
-                    Text("Show on all displays")
-                }
-                .onChange(of: showOnAllDisplays) {
-                    NotificationCenter.default.post(name: Notification.Name.showOnAllDisplaysChanged, object: nil)
-                }
-                .settingsHighlight(id: highlightID("Show on all displays"))
-                Picker("Show on a specific display", selection: $coordinator.preferredScreen) {
-                    ForEach(screens, id: \.self) { screen in
-                        Text(screen)
-                    }
-                }
-                .onChange(of: NSScreen.screens) {
-                    screens =  NSScreen.screens.compactMap({$0.localizedName})
-                }
-                .disabled(showOnAllDisplays)
-                .settingsHighlight(id: highlightID("Show on a specific display"))
-                Defaults.Toggle(key: .automaticallySwitchDisplay) {
-                    Text("Automatically switch displays")
-                }
-                .onChange(of: automaticallySwitchDisplay) {
-                    NotificationCenter.default.post(name: Notification.Name.automaticallySwitchDisplayChanged, object: nil)
-                }
-                .disabled(showOnAllDisplays)
-                .settingsHighlight(id: highlightID("Automatically switch displays"))
-                Defaults.Toggle(key: .hideDynamicIslandFromScreenCapture) {
-                    Text("Hide Notchly during screenshots & recordings")
-                }
-                .settingsHighlight(id: highlightID("Hide Notchly during screenshots & recordings"))
-            } header: {
-                Text("System features")
-            }
-
-            Section {
-                Picker(selection: $notchHeightMode, label:
-                        Text("Notch display height")) {
-                    Text("Match real notch size")
-                        .tag(WindowHeightMode.matchRealNotchSize)
-                    Text("Match menubar height")
-                        .tag(WindowHeightMode.matchMenuBar)
-                    Text("Custom height")
-                        .tag(WindowHeightMode.custom)
-                }
-                        .onChange(of: notchHeightMode) {
-                            switch notchHeightMode {
-                            case .matchRealNotchSize:
-                                notchHeight = 38
-                            case .matchMenuBar:
-                                notchHeight = 44
-                            case .custom:
-                                notchHeight = 38
-                            }
-                            NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                        }
-                        .settingsHighlight(id: highlightID("Notch display height"))
-                if notchHeightMode == .custom {
-                    Slider(value: $notchHeight, in: 15...45, step: 1) {
-                        Text("Custom notch size - \(notchHeight, specifier: "%.0f")")
-                    }
-                    .onChange(of: notchHeight) {
-                        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                    }
-                }
-                Picker("Non-notch display height", selection: $nonNotchHeightMode) {
-                    Text("Match menubar height")
-                        .tag(WindowHeightMode.matchMenuBar)
-                    Text("Match real notch size")
-                        .tag(WindowHeightMode.matchRealNotchSize)
-                    Text("Custom height")
-                        .tag(WindowHeightMode.custom)
-                }
-                .onChange(of: nonNotchHeightMode) {
-                    switch nonNotchHeightMode {
-                    case .matchMenuBar:
-                        nonNotchHeight = 24
-                    case .matchRealNotchSize:
-                        nonNotchHeight = 32
-                    case .custom:
-                        nonNotchHeight = 32
-                    }
-                    NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                }
-                if nonNotchHeightMode == .custom {
-                    Slider(value: $nonNotchHeight, in: 0...40, step: 1) {
-                        Text("Custom notch size - \(nonNotchHeight, specifier: "%.0f")")
-                    }
-                    .onChange(of: nonNotchHeight) {
-                        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                    }
-                }
-            } header: {
-                Text("Notch Height")
-            }
-
-            NotchBehaviour()
-
-            gestureControls()
-        }
-        .onChange(of: openNotchOnHover) {
-            if !openNotchOnHover {
-                enableGestures = true
-            }
-        }
-    }
-
-    @ViewBuilder
-    func gestureControls() -> some View {
-        Section {
-            Defaults.Toggle(key: .enableGestures) {
-                Text("Enable gestures")
-            }
-            .disabled(!openNotchOnHover)
-            .settingsHighlight(id: highlightID("Enable gestures"))
-            if enableGestures {
-                Defaults.Toggle(key: .enableHorizontalMusicGestures) {
-                    Text("Media change with horizontal gestures")
-                }
-                .settingsHighlight(id: highlightID("Horizontal media gestures"))
-
-                if enableHorizontalMusicGestures {
-                    SettingsSegmentedPicker(
-                        "Gesture skip behavior",
-                        selection: $musicGestureBehavior,
-                        items: Array(MusicSkipBehavior.allCases)
-                    ) { $0.displayName }
-                    .settingsHighlight(id: highlightID("Gesture skip behavior"))
-
-                    Text(musicGestureBehavior.description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Defaults.Toggle(key: .reverseSwipeGestures) {
-                        Text("Reverse swipe gestures")
-                    }
-                    .settingsHighlight(id: highlightID("Reverse swipe gestures"))
-                }
-
-                Defaults.Toggle(key: .closeGestureEnabled) {
-                    Text("Close gesture")
-                }
-                .settingsHighlight(id: highlightID("Close gesture"))
-                Slider(value: $gestureSensitivity, in: 100...300, step: 100) {
-                    HStack {
-                        Text("Gesture sensitivity")
-                        Spacer()
-                        Text(Defaults[.gestureSensitivity] == 100 ? "High" : Defaults[.gestureSensitivity] == 200 ? "Medium" : "Low")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Defaults.Toggle(key: .reverseScrollGestures) {
-                    Text("Reverse open/close scroll gestures")
-                }
-                .settingsHighlight(id: highlightID("Reverse scroll gestures"))
-            }
-        } header: {
-            HStack {
-                Text("Gesture control")
-                customBadge(text: "Beta")
-            }
-        } footer: {
-            Text("Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled")
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(.secondary)
-                .font(.caption)
-        }
-    }
-
-    @ViewBuilder
-    func NotchBehaviour() -> some View {
-        Section {
-            Defaults.Toggle(key: .extendHoverArea) {
-                Text("Extend hover area")
-            }
-            .settingsHighlight(id: highlightID("Extend hover area"))
-            Defaults.Toggle(key: .enableHaptics) {
-                Text("Enable haptics")
-            }
-            .settingsHighlight(id: highlightID("Enable haptics"))
-            Defaults.Toggle(key: .openNotchOnHover) {
-                Text("Open notch on hover")
-            }
-            .settingsHighlight(id: highlightID("Open notch on hover"))
-            Toggle("Remember last tab", isOn: $coordinator.openLastTabByDefault)
-            if openNotchOnHover {
-                Slider(value: $minimumHoverDuration, in: 0...1, step: 0.1) {
-                    HStack {
-                        Text("Minimum hover duration")
-                        Spacer()
-                        Text("\(minimumHoverDuration, specifier: "%.1f")s")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .onChange(of: minimumHoverDuration) {
-                    NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                }
-            }
-            Picker("External display style", selection: $externalDisplayStyle) {
-                ForEach(ExternalDisplayStyle.allCases) { style in
-                    Text(style.localizedName)
-                        .tag(style)
-                }
-            }
-            .onChange(of: externalDisplayStyle) {
-                NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-            }
-            .settingsHighlight(id: highlightID("External display style"))
-            Text(externalDisplayStyle.description)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Defaults.Toggle(key: .hideNonNotchUntilHover) {
-                Text("Hide until hovered on non-notch displays")
-            }
-            .settingsHighlight(id: highlightID("Hide until hovered"))
-            Text("When enabled, the notch slides up and hides on external (non-notch) displays until you hover over it.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } header: {
-            Text("Notch behavior")
         }
     }
 }
@@ -4995,7 +4674,6 @@ extension SettingsTab {
     /// The Notchly page this legacy tab now lives on.
     var page: NotchlySettingsPage {
         switch self {
-        case .general: return .general
         case .appearance: return .appearance
         case .hub, .quickActions: return .homeHub
         case .media: return .music
@@ -5019,7 +4697,6 @@ extension SettingsTab {
     @ViewBuilder
     var legacyContent: some View {
         switch self {
-        case .general: SettingsForm(tab: .general) { GeneralSettings() }
         case .liveActivities: SettingsForm(tab: .liveActivities) { LiveActivitiesSettings() }
         case .appearance: SettingsForm(tab: .appearance) { Appearance() }
         case .lockScreen: SettingsForm(tab: .lockScreen) { LockScreenSettings() }
@@ -5040,7 +4717,7 @@ extension NotchlySettingsPage {
     /// Legacy tabs hosted on this page, in display order.
     var legacySections: [SettingsTab] {
         switch self {
-        case .general: return [.general]
+        case .general: return []
         case .appearance: return [.appearance]
         case .homeHub: return [.hub, .quickActions]
         case .music: return [.media]
@@ -5056,6 +4733,7 @@ extension SettingsSearchIndex {
     /// Every page, plus every legacy row (mapped onto its page and section).
     static let shared: SettingsSearchIndex = {
         let pages = NotchlySettingsPage.allCases.map(SettingsSearchEntry.entry(for:))
+        let native = NotchlySettingsPage.allCases.flatMap { $0.nativeItems.map(\.searchEntry) }
         let rows = LegacySettingsSearchCatalog.entries.map { entry in
             SettingsSearchEntry(
                 title: entry.title,
@@ -5065,6 +4743,6 @@ extension SettingsSearchIndex {
                 highlightID: entry.highlightID
             )
         }
-        return SettingsSearchIndex(entries: pages + rows)
+        return SettingsSearchIndex(entries: pages + native + rows)
     }()
 }

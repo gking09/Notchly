@@ -101,6 +101,48 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+// MARK: - Native setting items
+
+/// One row on a native page: its title, search keywords and the anchor used to
+/// scroll to and highlight it. Pages declare their items once and use the same
+/// value for the row and for the search index, so the two cannot drift apart.
+struct NotchlySettingItem: Equatable {
+    let page: NotchlySettingsPage
+    let title: String
+    let keywords: [String]
+
+    init(_ page: NotchlySettingsPage, _ title: String, keywords: [String] = []) {
+        self.page = page
+        self.title = title
+        self.keywords = keywords
+    }
+
+    var highlightID: String { "\(page.rawValue)/\(title)" }
+
+    var searchEntry: SettingsSearchEntry {
+        SettingsSearchEntry(title: title, keywords: keywords, page: page, highlightID: highlightID)
+    }
+}
+
+extension NotchlySettingsPage {
+    /// Whether the page is built from the native Notchly components (as opposed to
+    /// a legacy `Form` section hosted by the shell).
+    var isNative: Bool {
+        switch self {
+        case .general, .about: return true
+        default: return false
+        }
+    }
+
+    /// Search items of the pages that are already native.
+    var nativeItems: [NotchlySettingItem] {
+        switch self {
+        case .general: return NotchlyGeneralPage.items
+        default: return []
+        }
+    }
+}
+
 // MARK: - Search index
 
 /// One searchable thing in settings: a whole page, or a single row inside one.

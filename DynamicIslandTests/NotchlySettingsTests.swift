@@ -1,3 +1,5 @@
+import AppKit
+import SwiftUI
 import XCTest
 @testable import Notchly
 
@@ -119,5 +121,83 @@ final class NotchlySettingsTests: XCTestCase {
         }
         let ids = SettingsSearchIndex.shared.entries.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count, "duplicate search entry ids")
+    }
+
+    // MARK: Native pages
+
+    func testNativePagesHaveNoLegacySectionsAndUniqueItems() {
+        for page in NotchlySettingsPage.allCases where page.isNative && page != .about {
+            XCTAssertTrue(page.legacySections.isEmpty, "\(page) is native")
+            let items = page.nativeItems
+            XCTAssertFalse(items.isEmpty, "\(page) has no search items")
+            XCTAssertEqual(Set(items.map(\.highlightID)).count, items.count, "\(page) duplicate highlight ids")
+            for item in items {
+                XCTAssertEqual(item.page, page, item.title)
+                XCTAssertFalse(item.keywords.isEmpty, "\(item.title) needs keywords")
+            }
+        }
+    }
+
+    func testEveryNativeItemIsSearchableAndJumpsToItsRow() {
+        for page in NotchlySettingsPage.allCases {
+            for item in page.nativeItems {
+                let hit = SettingsSearchIndex.shared.search(item.title, limit: 20).first { $0.entry.highlightID == item.highlightID }
+                XCTAssertNotNil(hit, "\(item.title) not found by its own title")
+                XCTAssertEqual(hit?.entry.page, page)
+            }
+        }
+    }
+
+    func testGeneralPageSearch() {
+        let shared = SettingsSearchIndex.shared
+        XCTAssertEqual(shared.search("launch at login").first?.entry.page, .general)
+        XCTAssertEqual(shared.search("haptic").first?.entry.page, .general)
+        XCTAssertEqual(shared.search("hover delay").first?.entry.highlightID, NotchlyGeneralPage.Item.hoverDelay.highlightID)
+    }
+
+    // MARK: Visual check (opt-in)
+
+    /// Renders pages of the settings window to PNGs for eyeballing. Skipped unless
+    /// `NOTCHLY_RENDER_DIR` is set (pass it through xcodebuild as
+    /// `TEST_RUNNER_NOTCHLY_RENDER_DIR=/some/dir`). `NOTCHLY_RENDER_PAGES` is an
+    /// optional comma separated list of page raw values; the default is every page.
+    @MainActor
+    func testRenderSettingsPagesToPNG() throws {
+        guard let directory = ProcessInfo.processInfo.environment["NOTCHLY_RENDER_DIR"], !directory.isEmpty else {
+            throw XCTSkip("NOTCHLY_RENDER_DIR not set")
+        }
+        let wanted = ProcessInfo.processInfo.environment["NOTCHLY_RENDER_PAGES"]?
+            .split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+        let pages = NotchlySettingsPage.allCases.filter { wanted?.contains($0.rawValue) ?? true }
+        let heights = ProcessInfo.processInfo.environment["NOTCHLY_RENDER_HEIGHT"].flatMap(Double.init) ?? 1500
+
+        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        for page in pages {
+            for dark in [false, true] {
+                let size = CGSize(width: 1000, height: heights)
+                let host = NSHostingView(rootView: NotchlySettingsView(initialPage: page))
+                host.frame = NSRect(origin: .zero, size: size)
+                let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+                window.contentView = host
+                host.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+                host.layoutSubtreeIfNeeded()
+
+                guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { continue }
+                host.cacheDisplay(in: host.bounds, to: rep)
+
+                let image = NSImage(size: size)
+                image.lockFocus()
+                (dark ? NSColor(white: 0.14, alpha: 1) : NSColor(white: 0.93, alpha: 1)).setFill()
+                NSRect(origin: .zero, size: size).fill()
+                rep.draw(in: NSRect(origin: .zero, size: size))
+                image.unlockFocus()
+
+                guard let tiff = image.tiffRepresentation,
+                      let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { continue }
+                try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("\(page.rawValue)-\(dark ? "dark" : "light").png"))
+            }
+        }
     }
 }
