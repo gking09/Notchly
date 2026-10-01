@@ -26,44 +26,32 @@ import SkyLightWindow
 @main
 struct DynamicNotchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @Default(.menubarIcon) var showMenuBarIcon
-    @Environment(\.openWindow) var openWindow
 
+    // The menu-bar icon and its menu are an NSStatusItem owned by the app delegate
+    // (see StatusBarController); this scene only exists to give the app a main menu.
     var body: some Scene {
-        MenuBarExtra("dynamic.island", systemImage: "mountain.2.fill", isInserted: $showMenuBarIcon) {
-            Button("Settings") {
-                SettingsWindowController.shared.showWindow()
-            }
-            Divider()
-            Button("Restart Notchly") {
-                guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
-
-                let workspace = NSWorkspace.shared
-
-                if let appURL = workspace.urlForApplication(withBundleIdentifier: bundleIdentifier)
-                {
-
-                    let configuration = NSWorkspace.OpenConfiguration()
-                    configuration.createsNewApplicationInstance = true
-
-                    workspace.openApplication(at: appURL, configuration: configuration)
-                }
-
-                NSApplication.shared.terminate(self)
-            }
-            Button("Quit", role: .destructive) {
-                NSApplication.shared.terminate(self)
-            }
-            .keyboardShortcut(KeyEquivalent("Q"), modifiers: .command)
+        Settings {
+            EmptyView()
+        }
+        .commands {
+            NotchlyCommands()
         }
     }
+}
 
-    @CommandsBuilder
-    var commands: some Commands {
+/// The app menu: "About Notchly", "Settings…" (Command-comma) and the standard Quit.
+struct NotchlyCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Notchly") {
+                NotchlyAboutPanel.show()
+            }
+        }
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") {
                 SettingsWindowController.shared.showWindow()
             }
+            .keyboardShortcut(",", modifiers: .command)
         }
     }
 }
@@ -81,7 +69,7 @@ extension AppDelegate {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var statusItem: NSStatusItem?
+    private(set) var statusBarController: StatusBarController?
     var windows: [NSScreen: NSWindow] = [:]
     var viewModels: [NSScreen: DynamicIslandViewModel] = [:]
     var window: NSWindow?
@@ -647,6 +635,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
         
+        statusBarController = StatusBarController()
+
         // Initialize idle animations (load bundled + built-in face)
         idleAnimationManager.initializeDefaultAnimations()
 
@@ -883,38 +873,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.onKeyDown(for: .toggleNotchOpen) { [weak self] in
             guard let self = self else { return }
             guard Defaults[.enableShortcuts] else { return }
-
-            let mouseLocation = NSEvent.mouseLocation
-
-            var viewModel = self.vm
-
-            if Defaults[.showOnAllDisplays] {
-                for screen in NSScreen.screens {
-                    if screen.frame.contains(mouseLocation) {
-                        if let screenViewModel = self.viewModels[screen] {
-                            viewModel = screenViewModel
-                            break
-                        }
-                    }
-                }
-            }
-
-            self.closeNotchWorkItem?.cancel()
-            self.closeNotchWorkItem = nil
-
-            switch viewModel.notchState {
-            case .closed:
-                viewModel.open()
-
-                let workItem = DispatchWorkItem { [weak viewModel] in
-                    viewModel?.close()
-                }
-                self.closeNotchWorkItem = workItem
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
-            case .open:
-                viewModel.close()
-            }
+            self.toggleNotchOnActiveScreen()
         }
 
         KeyboardShortcuts.isEnabled = Defaults[.enableShortcuts]
@@ -941,9 +900,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     }
 
+    // MARK: - Notch open / close (shortcut and status-bar menu)
+
+    /// The notch the user is most likely pointing at: the one on the screen under the
+    /// mouse when every display has its own, otherwise the single shared one.
+    private func notchViewModelOnActiveScreen() -> DynamicIslandViewModel {
+        guard Defaults[.showOnAllDisplays] else { return vm }
+        let mouseLocation = NSEvent.mouseLocation
+        for screen in NSScreen.screens where screen.frame.contains(mouseLocation) {
+            if let screenViewModel = viewModels[screen] {
+                return screenViewModel
+            }
+        }
+        return vm
+    }
+
+    var isNotchOpenOnActiveScreen: Bool {
+        notchViewModelOnActiveScreen().notchState == .open
+    }
+
+    /// Opens the notch for a few seconds, or closes it if it is already open.
+    func toggleNotchOnActiveScreen() {
+        let viewModel = notchViewModelOnActiveScreen()
+
+        closeNotchWorkItem?.cancel()
+        closeNotchWorkItem = nil
+
+        switch viewModel.notchState {
+        case .closed:
+            viewModel.open()
+
+            let workItem = DispatchWorkItem { [weak viewModel] in
+                viewModel?.close()
+            }
+            closeNotchWorkItem = workItem
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
+        case .open:
+            viewModel.close()
+        }
+    }
+
+    func closeNotchOnActiveScreen() {
+        closeNotchWorkItem?.cancel()
+        closeNotchWorkItem = nil
+        let viewModel = notchViewModelOnActiveScreen()
+        if viewModel.notchState == .open {
+            viewModel.close()
+        }
+    }
+
     private func installTopMenuItemsIfNeeded() {
         guard let mainMenu = NSApp.mainMenu else { return }
-        if mainMenu.items.contains(where: { $0.identifier?.rawValue == "Atoll.Focus.Menu" }) {
+        if mainMenu.items.contains(where: { $0.identifier?.rawValue == "Notchly.Focus.Menu" }) {
             updateFocusMenuState()
             return
         }
@@ -951,7 +960,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let insertionIndex = preferredMenuInsertionIndex(in: mainMenu)
 
         let focusMenuItem = NSMenuItem(title: String(localized: "Focus"), action: nil, keyEquivalent: "")
-        focusMenuItem.identifier = NSUserInterfaceItemIdentifier("Atoll.Focus.Menu")
+        focusMenuItem.identifier = NSUserInterfaceItemIdentifier("Notchly.Focus.Menu")
         let focusSubmenu = NSMenu(title: "Focus")
 
         let withoutDevTools = NSMenuItem(
@@ -977,7 +986,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         focusUseDevToolsMenuItem = useDevTools
 
         let accessibilityMenuItem = NSMenuItem(title: String(localized: "Accessibility"), action: nil, keyEquivalent: "")
-        accessibilityMenuItem.identifier = NSUserInterfaceItemIdentifier("Atoll.Accessibility.Menu")
+        accessibilityMenuItem.identifier = NSUserInterfaceItemIdentifier("Notchly.Accessibility.Menu")
         let accessibilitySubmenu = NSMenu(title: "Accessibility")
 
         let requestAccessibility = NSMenuItem(
@@ -1000,7 +1009,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.insertItem(accessibilityMenuItem, at: insertionIndex + 1)
 
         let permissionsMenuItem = NSMenuItem(title: String(localized: "Permissions"), action: nil, keyEquivalent: "")
-        permissionsMenuItem.identifier = NSUserInterfaceItemIdentifier("Atoll.Permissions.Menu")
+        permissionsMenuItem.identifier = NSUserInterfaceItemIdentifier("Notchly.Permissions.Menu")
         let permissionsSubmenu = NSMenu(title: "Permissions")
 
         let requestFullDisk = NSMenuItem(
@@ -1032,11 +1041,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.insertItem(permissionsMenuItem, at: insertionIndex + 2)
 
         let toolsMenuItem = NSMenuItem(title: String(localized: "Tools"), action: nil, keyEquivalent: "")
-        toolsMenuItem.identifier = NSUserInterfaceItemIdentifier("Atoll.Tools.Menu")
+        toolsMenuItem.identifier = NSUserInterfaceItemIdentifier("Notchly.Tools.Menu")
         let toolsSubmenu = NSMenu(title: "Tools")
 
         let loggingLevelItem = NSMenuItem(title: String(localized: "Logging Level"), action: nil, keyEquivalent: "")
-        loggingLevelItem.identifier = NSUserInterfaceItemIdentifier("Atoll.Tools.LoggingLevel")
+        loggingLevelItem.identifier = NSUserInterfaceItemIdentifier("Notchly.Tools.LoggingLevel")
         let loggingLevelSubmenu = NSMenu(title: "Logging Level")
         
         // Dispatched by tag, so the titles are safe to localize.
@@ -1132,9 +1141,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Look these up by identifier: the titles are localized.
         guard let mainMenu = NSApp.mainMenu,
-              let toolsItem = mainMenu.items.first(where: { $0.identifier?.rawValue == "Atoll.Tools.Menu" }),
+              let toolsItem = mainMenu.items.first(where: { $0.identifier?.rawValue == "Notchly.Tools.Menu" }),
               let toolsMenu = toolsItem.submenu,
-              let loggingItem = toolsMenu.items.first(where: { $0.identifier?.rawValue == "Atoll.Tools.LoggingLevel" }),
+              let loggingItem = toolsMenu.items.first(where: { $0.identifier?.rawValue == "Notchly.Tools.LoggingLevel" }),
               let loggingSubmenu = loggingItem.submenu else { return }
               
         for item in loggingSubmenu.items {
@@ -1144,7 +1153,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func exportLogs() {
         let savePanel = NSSavePanel()
-        savePanel.nameFieldStringValue = "Atoll_Logs.zip"
+        savePanel.nameFieldStringValue = "Notchly_Logs.zip"
         savePanel.title = "Export Logs & Crash Reports"
         
         savePanel.begin { response in
@@ -1158,7 +1167,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     let logsFile = tempDir.appendingPathComponent("app_logs.txt")
                     let logProcess = Process()
                     logProcess.executableURL = URL(fileURLWithPath: "/usr/bin/log")
-                    logProcess.arguments = ["show", "--predicate", "subsystem == 'com.Ebullioscopic.Atoll' OR subsystem == 'com.Ebullioscopic.Atoll.dev'", "--info", "--debug", "--last", "2d"]
+                    logProcess.arguments = ["show", "--predicate", "subsystem BEGINSWITH[c] 'com.ebullioscopic.atoll'", "--info", "--debug", "--last", "2d"]
                     
                     let pipe = Pipe()
                     logProcess.standardOutput = pipe
@@ -1170,13 +1179,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     
                     let diagDir = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Logs/DiagnosticReports")
                     let allFiles = (try? FileManager.default.contentsOfDirectory(at: diagDir, includingPropertiesForKeys: nil)) ?? []
-                    for file in allFiles where file.lastPathComponent.contains("Atoll") {
+                    for file in allFiles where NotchlyLogExport.isCrashReport(file.lastPathComponent) {
                         try? FileManager.default.copyItem(at: file, to: tempDir.appendingPathComponent(file.lastPathComponent))
                     }
                     
                     let sysDiagDir = URL(fileURLWithPath: "/Library/Logs/DiagnosticReports")
                     let sysFiles = (try? FileManager.default.contentsOfDirectory(at: sysDiagDir, includingPropertiesForKeys: nil)) ?? []
-                    for file in sysFiles where file.lastPathComponent.contains("Atoll") {
+                    for file in sysFiles where NotchlyLogExport.isCrashReport(file.lastPathComponent) {
                         try? FileManager.default.copyItem(at: file, to: tempDir.appendingPathComponent(file.lastPathComponent))
                     }
                     
@@ -1319,10 +1328,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             window?.orderFrontRegardless()
         }
-    }
-    
-    @objc func showMenu() {
-        statusItem?.menu?.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
     
     @objc func quitAction() {

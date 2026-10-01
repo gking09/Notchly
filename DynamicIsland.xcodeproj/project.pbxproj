@@ -17,6 +17,7 @@
 		A1C0DE0000000000000000A1 /* TimerClockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE0000000000000000B1 /* TimerClockTests.swift */; };
 		A1C0DE00000000000000BA01 /* BatteryExtrasTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */; };
 		A1C0DE00000000000000F0A2 /* NotchlySettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000F0B2 /* NotchlySettingsTests.swift */; };
+		A1C0DE00000000000000F1012 /* StatusMenuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE00000000000000F1011 /* StatusMenuTests.swift */; };
 		A1C0DE0000000000000000A2 /* QuickActionsLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */; };
 		7E1ADF1D2EA209B1001DA867 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7E61181E2E24071E0050006C /* SkyLightWindow */; };
 		7E6118142E24071E0050006C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 14D032192C68F32E0096E6A1 /* LaunchAtLogin */; };
@@ -89,6 +90,7 @@
 		A1C0DE0000000000000000B1 /* TimerClockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerClockTests.swift; sourceTree = "<group>"; };
 		A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryExtrasTests.swift; sourceTree = "<group>"; };
 		A1C0DE00000000000000F0B2 /* NotchlySettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchlySettingsTests.swift; sourceTree = "<group>"; };
+		A1C0DE00000000000000F1011 /* StatusMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuTests.swift; sourceTree = "<group>"; };
 		A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsLayoutTests.swift; sourceTree = "<group>"; };
 		47C39E67B09152F6665ED683 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		54078F29304A9DBBEFBDF932 /* DynamicIslandUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DynamicIslandUITests.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 				A1C0DE0000000000000000B1 /* TimerClockTests.swift */,
 				A1C0DE00000000000000BB01 /* BatteryExtrasTests.swift */,
 				A1C0DE00000000000000F0B2 /* NotchlySettingsTests.swift */,
+				A1C0DE00000000000000F1011 /* StatusMenuTests.swift */,
 				A1C0DE0000000000000000B2 /* QuickActionsLayoutTests.swift */,
 				A1B2C3D40000000000000002 /* LyricsMetadataTests.swift */,
 				A1B2C3D40000000000000004 /* NetEaseLyricsTests.swift */,
@@ -489,6 +492,7 @@
 				A1C0DE0000000000000000A1 /* TimerClockTests.swift in Sources */,
 				A1C0DE00000000000000BA01 /* BatteryExtrasTests.swift in Sources */,
 				A1C0DE00000000000000F0A2 /* NotchlySettingsTests.swift in Sources */,
+				A1C0DE00000000000000F1012 /* StatusMenuTests.swift in Sources */,
 				A1C0DE0000000000000000A2 /* QuickActionsLayoutTests.swift in Sources */,
 				A1B2C3D40000000000000001 /* LyricsMetadataTests.swift in Sources */,
 				A1B2C3D40000000000000003 /* NetEaseLyricsTests.swift in Sources */,
@@ -777,11 +781,11 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_MetalCaptureEnabled = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Notchly uses Apple Events to control Spotify and Apple Music, and to switch between light and dark mode from the Quick Actions row.";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Atoll needs Bluetooth access to detect when audio devices connect and display their battery status in the HUD.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "We need your camera for Mirror mode";
-				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Atoll needs access to save screenshots to your desktop.";
-				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "Atoll needs access to read files in the downloads folder.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Notchly uses Bluetooth to notice when audio devices connect and to read their battery level for the notch HUD.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Notchly uses your camera only to show the live Mirror preview in the notch. Nothing is recorded or stored.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Notchly needs access to your Desktop folder to save screenshots there.";
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "Notchly needs access to your Downloads folder to show download progress in the notch.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Free software under the GNU GPL-3.0";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -842,11 +846,11 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_MetalCaptureEnabled = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Notchly uses Apple Events to control Spotify and Apple Music, and to switch between light and dark mode from the Quick Actions row.";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Atoll needs Bluetooth access to detect when audio devices connect and display their battery status in the HUD.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "We need your camera for Mirror mode";
-				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Atoll needs access to save screenshots to your desktop.";
-				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "Atoll needs access to read files in the downloads folder.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Notchly uses Bluetooth to notice when audio devices connect and to read their battery level for the notch HUD.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Notchly uses your camera only to show the live Mirror preview in the notch. Nothing is recorded or stored.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Notchly needs access to your Desktop folder to save screenshots there.";
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "Notchly needs access to your Downloads folder to show download progress in the notch.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Free software under the GNU GPL-3.0";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
