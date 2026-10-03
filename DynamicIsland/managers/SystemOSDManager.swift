@@ -388,7 +388,7 @@ class SystemOSDManager {
                 let sleeping = suppressionState.withLock { $0.systemSleeping }
                 if sleeping {
                     // Sleep in larger chunks so we respond to cancellation promptly.
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1s
+                    try? await Task.sleep(for: .seconds(1), tolerance: .milliseconds(500))
                     continue
                 }
 
@@ -414,7 +414,11 @@ class SystemOSDManager {
                 } else {
                     intervalNs = 1_000_000_000 // 1s — steady state
                 }
-                try? await Task.sleep(nanoseconds: intervalNs)
+                // The slow steady-state waits can slide a little so the kernel
+                // coalesces them with other wakeups; the 150ms catch-up polls
+                // stay tight.
+                let slack: UInt64 = intervalNs >= 500_000_000 ? intervalNs / 5 : 0
+                try? await Task.sleep(for: .nanoseconds(intervalNs), tolerance: .nanoseconds(slack))
             }
         }
 

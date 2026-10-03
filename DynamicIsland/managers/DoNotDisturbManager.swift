@@ -601,6 +601,9 @@ private extension DoNotDisturbManager {
     }
 
     func pollAssertionsState() {
+        // Nothing is on screen while the display sleeps; the next tick after
+        // wake picks up any change (the file's modification date is compared).
+        guard !ActivityMonitor.currentGate.isSuspended else { return }
         guard FullDiskAccessAuthorization.hasPermission() else { return }
 
         // Skip if a notification just arrived — let the notification take precedence

@@ -166,6 +166,11 @@ class DownloadManager {
     
     private func startMonitoring() {
         guard source == nil, let downloadsDirectory else { return }
+        #if DEBUG
+        // The unit-test host is the app itself; opening the Downloads folder
+        // there can raise a blocking privacy prompt nobody is around to answer.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
+        #endif
         
         monitorSession &+= 1
         let session = monitorSession
@@ -534,7 +539,12 @@ class DownloadManager {
 
     private func requestDownloadsPermissionIfNeeded() {
         guard let downloadsDirectory else { return }
-        _ = try? FileManager.default.contentsOfDirectory(at: downloadsDirectory, includingPropertiesForKeys: nil)
+        // Listing the folder is what raises the Downloads access prompt. Do it
+        // off the main thread: this runs during app launch, and a pending
+        // prompt (or a very large folder) would otherwise freeze startup.
+        DispatchQueue.global(qos: .utility).async {
+            _ = try? FileManager.default.contentsOfDirectory(at: downloadsDirectory, includingPropertiesForKeys: nil)
+        }
     }
     
     private func updateDownloadingState(isActive: Bool) {

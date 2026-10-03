@@ -109,6 +109,7 @@ final class MenuBarLayout: ObservableObject {
 
     func refresh() {
         guard !inFlight else { return }
+        guard !ActivityMonitor.currentGate.isSuspended else { return }
         guard AXIsProcessTrusted() else {
             appMenusRightEdge = nil
             return
