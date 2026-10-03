@@ -23,6 +23,7 @@
 import AppKit
 import AudioToolbox
 import CoreAudio
+import Combine
 import Defaults
 import simd
 import os.log
@@ -117,6 +118,8 @@ class AudioTap: NSObject {
     private var ioProcID: AudioDeviceIOProcID? = nil
     private var captureIsRunning = false
     private var updateTimer: Timer?
+    private var gateCancellable: AnyCancellable?
+    private var gateSuspendedTimer = false
     
     // Serial queue to prevent race conditions
     private let audioQueue = DispatchQueue(label: "com.atoll.audiotap", qos: .userInitiated)
@@ -140,6 +143,25 @@ class AudioTap: NSObject {
 
     private override init() {
         super.init()
+    }
+
+    /// Main thread only. Smooths the tap's magnitudes at 30 fps (fewer on
+    /// battery), or not at all while the display sleeps.
+    private func installUpdateTimer() {
+        updateTimer?.invalidate()
+        updateTimer = nil
+        gateSuspendedTimer = false
+        guard captureIsRunning else { return }
+        let gate = ActivityMonitor.currentGate
+        guard !gate.isSuspended else {
+            gateSuspendedTimer = true
+            return
+        }
+        let interval = gate.frameInterval(30)
+        let timer = Timer(timeInterval: interval, target: self, selector: #selector(updateSmoothedMagnitudes), userInfo: nil, repeats: true)
+        timer.tolerance = ActivityGate.tolerance(for: interval, fraction: 0.15)
+        RunLoop.main.add(timer, forMode: .common)
+        updateTimer = timer
     }
 
     @objc private func updateSmoothedMagnitudes() {
@@ -319,10 +341,19 @@ class AudioTap: NSObject {
         callbackCount = 0
         
         DispatchQueue.main.async { [weak self] in
-            self?.updateTimer?.invalidate()
-            let timer = Timer(timeInterval: 1.0 / 30.0, target: self as Any, selector: #selector(self?.updateSmoothedMagnitudes), userInfo: nil, repeats: true)
-            RunLoop.main.add(timer, forMode: .common)
-            self?.updateTimer = timer
+            guard let self else { return }
+            self.installUpdateTimer()
+            // Re-time on battery / Low Power Mode and park while the display sleeps.
+            if self.gateCancellable == nil {
+                self.gateCancellable = ActivityMonitor.shared.$gate
+                    .dropFirst()
+                    .removeDuplicates()
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] _ in
+                        guard let self, self.updateTimer != nil || self.gateSuspendedTimer else { return }
+                        self.installUpdateTimer()
+                    }
+            }
         }
         
         print("🟢 [AudioTap] CoreAudio CATap flowing through Aggregate Device!")
@@ -416,6 +447,8 @@ class AudioTap: NSObject {
         captureIsRunning = false
         
         DispatchQueue.main.async { [weak self] in
+            self?.gateCancellable = nil
+            self?.gateSuspendedTimer = false
             self?.updateTimer?.invalidate()
             self?.updateTimer = nil
             // Reset display magnitudes safely on main thread

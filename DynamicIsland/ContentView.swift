@@ -1695,7 +1695,12 @@ struct ContentView: View {
                     }
                 }
 
-                try? await Task.sleep(for: .milliseconds(self.hiddenEdgeHoverPollingIntervalMs()))
+                let intervalMs = self.hiddenEdgeHoverPollingIntervalMs()
+                // Let the kernel coalesce these wakeups with other timers.
+                try? await Task.sleep(
+                    for: .milliseconds(intervalMs),
+                    tolerance: .milliseconds(max(10, intervalMs / 5))
+                )
             }
 
             self.hiddenEdgeHoverPollingTask = nil
@@ -1703,13 +1708,18 @@ struct ContentView: View {
     }
 
     private func hiddenEdgeHoverPollingIntervalMs() -> Int {
+        let gate = ActivityMonitor.shared.gate
+        // Nobody can be pointing at a dark display.
+        if gate.isSuspended {
+            return 2_000
+        }
         if shouldUseHiddenEdgeHoverPolling {
-            return 50
+            return gate.reducedActivity ? 100 : 50
         }
         if isHovering && interactionsEnabled {
             return 100
         }
-        return 1_000
+        return gate.reducedActivity ? 2_000 : 1_000
     }
 
     private func stopHiddenEdgeHoverPolling() {

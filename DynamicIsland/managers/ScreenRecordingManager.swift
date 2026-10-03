@@ -465,6 +465,7 @@ class ScreenRecordingManager: ObservableObject {
                 self?.updateDuration()
             }
         }
+        durationTimer?.tolerance = 0.1
 
         screenRecordingDebugLog("Started duration tracking")
     }

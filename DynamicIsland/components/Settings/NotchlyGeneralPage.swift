@@ -45,6 +45,7 @@ struct NotchlyGeneralPage: View {
             displayCard
             openingCard
             gesturesCard
+            performanceCard
         }
         .onChange(of: showOnAllDisplays) {
             NotificationCenter.default.post(name: Notification.Name.showOnAllDisplaysChanged, object: nil)
@@ -178,6 +179,20 @@ struct NotchlyGeneralPage: View {
         }
     }
 
+    // MARK: Performance
+
+    private var performanceCard: some View {
+        NotchlySettingsCard(
+            "Performance",
+            footer: "Slows background checks and trims visualizer and animation frame rates. Everything pauses while the display sleeps, whatever this is set to."
+        ) {
+            I.efficiencyMode.toggle(
+                "Reduce background activity on battery and in Low Power Mode.",
+                key: .efficiencyMode
+            )
+        }
+    }
+
     private var sensitivityBinding: Binding<Double> {
         Binding(get: { gestureSensitivity }, set: { gestureSensitivity = $0 })
     }
@@ -215,6 +230,7 @@ extension NotchlyGeneralPage {
         static let mediaGestures = NotchlySettingItem(.general, "Change media with horizontal swipes", keywords: ["media", "swipe", "skip", "next", "previous", "horizontal"])
         static let skipBehavior = NotchlySettingItem(.general, "Swipe skip behavior", keywords: ["track skip", "10 seconds", "gesture", "media"])
         static let reverseSwipe = NotchlySettingItem(.general, "Reverse swipe direction", keywords: ["reverse", "swipe", "media"])
+        static let efficiencyMode = NotchlySettingItem(.general, "Efficiency mode", keywords: ["battery", "low power", "performance", "cpu", "energy", "background activity", "frame rate", "visualizer"])
     }
 
     static let items: [NotchlySettingItem] = [
@@ -222,5 +238,6 @@ extension NotchlyGeneralPage {
         Item.allDisplays, Item.specificDisplay, Item.autoSwitch, Item.externalStyle, Item.hideUntilHovered, Item.hideInCaptures,
         Item.openOnHover, Item.hoverDelay, Item.extendHover, Item.rememberTab, Item.haptics,
         Item.gestures, Item.closeGesture, Item.sensitivity, Item.reverseScroll, Item.mediaGestures, Item.skipBehavior, Item.reverseSwipe,
+        Item.efficiencyMode,
     ]
 }

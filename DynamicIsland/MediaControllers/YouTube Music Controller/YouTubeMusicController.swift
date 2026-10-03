@@ -327,6 +327,7 @@ final class YouTubeMusicController: MediaControllerProtocol {
                 await self?.updatePlaybackInfo()
             }
         }
+        updateTimer?.tolerance = ActivityGate.tolerance(for: configuration.updateInterval, fraction: 0.25)
     }
     
     private func stopPeriodicUpdates() {

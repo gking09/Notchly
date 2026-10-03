@@ -42,6 +42,7 @@ class BluetoothAudioManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let coordinator = DynamicIslandViewCoordinator.shared
     private var pollingTimer: Timer?
+    private var gateCancellable: AnyCancellable?
     private var lowBatteryTimer: Timer?
     private var lowBatteryTracker = BluetoothLowBatteryTracker()
     private var pendingLowBatteryAlerts: [BluetoothLowBatteryAlert] = []
@@ -261,9 +262,30 @@ class BluetoothAudioManager: ObservableObject {
     private func startPollingForChanges() {
         print("🎧 [BluetoothAudioManager] Starting polling timer (3s interval)...")
         
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        Task { @MainActor [weak self] in
+            var wasSuspended = false
+            self?.gateCancellable = ActivityMonitor.shared.$gate.removeDuplicates().sink { [weak self] gate in
+                guard let self else { return }
+                self.schedulePolling(for: gate)
+                // Catch up on anything that connected while the display slept.
+                if wasSuspended, !gate.isSuspended { self.checkForDeviceChanges() }
+                wasSuspended = gate.isSuspended
+            }
+        }
+    }
+
+    /// Re-times the fallback poll: stretched on battery / Low Power Mode, parked
+    /// while the display sleeps, and coalesced with other wakeups via tolerance.
+    private func schedulePolling(for gate: ActivityGate) {
+        pollingTimer?.invalidate()
+        pollingTimer = nil
+        guard !gate.isSuspended else { return }
+        let interval = gate.interval(3.0)
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             self?.checkForDeviceChanges()
         }
+        timer.tolerance = ActivityGate.tolerance(for: interval, fraction: 0.25, minimum: 0.5)
+        pollingTimer = timer
     }
     
     /// Checks for device connection/disconnection changes
@@ -1992,6 +2014,7 @@ class BluetoothAudioManager: ObservableObject {
         let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
             self?.lowBatteryTick()
         }
+        timer.tolerance = ActivityGate.tolerance(for: 60, minimum: 5)
         RunLoop.main.add(timer, forMode: .common)
         lowBatteryTimer = timer
     }

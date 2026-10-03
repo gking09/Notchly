@@ -8,6 +8,7 @@ struct RealTimeWaveformScrubberView: View {
     let minHeight: CGFloat
     
     @State private var timer: Timer? = nil
+    @ObservedObject private var activity = ActivityMonitor.shared
     @State private var magnitudes: [Float] = Array(repeating: 0.1, count: 6)
 
     var body: some View {
@@ -37,11 +38,19 @@ struct RealTimeWaveformScrubberView: View {
         .onDisappear {
             stopTimer()
         }
+        .onChange(of: activity.gate) {
+            // Re-time on battery / Low Power Mode, and stop while the display sleeps.
+            if activity.gate.isSuspended { stopTimer() } else { startTimer() }
+        }
     }
     
     private func startTimer() {
         timer?.invalidate()
-        let newTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
+        timer = nil
+        guard !activity.gate.isSuspended else { return }
+        // 30 fps is plenty for a smoothed six-band waveform (it was 60).
+        let frameInterval = activity.gate.frameInterval(30)
+        let newTimer = Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) { _ in
             let tapMagnitudes = AudioTap.shared.getSmoothedMagnitudes()
             let barCount = Defaults[.visualizerBarCount]
             var newMags: [Float] = []
@@ -61,10 +70,11 @@ struct RealTimeWaveformScrubberView: View {
             }
             
             // Smoothly animate the path update
-            withAnimation(.linear(duration: 1.0 / 60.0)) {
+            withAnimation(.linear(duration: frameInterval)) {
                 magnitudes = smoothedMags
             }
         }
+        newTimer.tolerance = ActivityGate.tolerance(for: frameInterval, fraction: 0.15)
         RunLoop.main.add(newTimer, forMode: .common)
         timer = newTimer
     }

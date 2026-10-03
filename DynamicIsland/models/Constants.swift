@@ -498,6 +498,8 @@ extension Defaults.Keys {
     static let automaticallySwitchDisplay = Key<Bool>("automaticallySwitchDisplay", default: true)
     static let releaseName = Key<String>("releaseName", default: "Kaafu")
     static let hideDynamicIslandFromScreenCapture = Key<Bool>("hideDynamicIslandFromScreenCapture", default: false)
+    /// Thins out polling, timers and visualizer frame rate on battery and in Low Power Mode.
+    static let efficiencyMode = Key<Bool>("efficiencyMode", default: true)
     
         // MARK: Behavior
     static let minimumHoverDuration = Key<TimeInterval>("minimumHoverDuration", default: 0.3)

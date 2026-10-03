@@ -64,6 +64,13 @@ struct HubClockParts: Equatable {
 }
 
 enum HubClockFormatter {
+    /// Seconds between clock redraws: every second while seconds are shown (or
+    /// the colon is blinking), once a minute when seconds are hidden and
+    /// background activity is reduced.
+    static func tickInterval(showSeconds: Bool, reducedActivity: Bool) -> TimeInterval {
+        (!showSeconds && reducedActivity) ? 60 : 1
+    }
+
     /// Whether the clock should be drawn on a 24-hour face.
     static func uses24Hour(format: HubTimeFormat, locale: Locale = .current) -> Bool {
         switch format {

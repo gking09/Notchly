@@ -85,6 +85,7 @@ class AudioSpectrum: NSView {
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.updateBars()
         }
+        animationTimer?.tolerance = 0.06
     }
     
     private func stopAnimating() {

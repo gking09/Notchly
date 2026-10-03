@@ -125,6 +125,7 @@ final class TimerManager: ObservableObject {
                 self?.tick()
             }
         }
+        timer.tolerance = 0.05
         RunLoop.main.add(timer, forMode: .common)
         ticker = timer
     }

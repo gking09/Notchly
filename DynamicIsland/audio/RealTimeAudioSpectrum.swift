@@ -21,6 +21,7 @@
 
 import AppKit
 import Cocoa
+import Combine
 import SwiftUI
 import simd
 import Defaults
@@ -30,6 +31,7 @@ class RealTimeAudioSpectrum: NSView {
     private var barLayers: [CAShapeLayer] = []
     private var isPlaying: Bool = true
     private var animationTimer: Timer?
+    private var gateObserver: AnyCancellable?
     
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -82,14 +84,36 @@ class RealTimeAudioSpectrum: NSView {
     }
 
     private func startAnimating() {
-        guard animationTimer == nil else { return }
-        // Use a timer at ~30fps for smooth animation
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 1.0/30.0, repeats: true) { [weak self] _ in
+        if gateObserver == nil {
+            gateObserver = ActivityMonitor.shared.$gate
+                .dropFirst()
+                .removeDuplicates()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    guard let self, self.isPlaying else { return }
+                    self.scheduleTimer()
+                }
+        }
+        scheduleTimer()
+    }
+
+    /// ~30fps for smooth animation, thinned on battery / Low Power Mode and
+    /// parked while the display sleeps.
+    private func scheduleTimer() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+        let gate = ActivityMonitor.shared.gate
+        guard !gate.isSuspended else { return }
+        let frameInterval = gate.frameInterval(30)
+        let timer = Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) { [weak self] _ in
             self?.updateBarsFromAudio()
         }
+        timer.tolerance = ActivityGate.tolerance(for: frameInterval, fraction: 0.15)
+        animationTimer = timer
     }
     
     private func stopAnimating() {
+        gateObserver = nil
         animationTimer?.invalidate()
         animationTimer = nil
         resetBars()

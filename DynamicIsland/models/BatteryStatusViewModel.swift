@@ -108,8 +108,11 @@ class BatteryStatusViewModel: ObservableObject {
     private func setupDetailsRefresh() {
         guard details.level != nil else { return }
         let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            // Nothing is visible while the display sleeps.
+            guard !ActivityMonitor.currentGate.isSuspended else { return }
             self?.refreshDetails()
         }
+        timer.tolerance = ActivityGate.tolerance(for: 30, minimum: 3)
         RunLoop.main.add(timer, forMode: .common)
         detailsTimer = timer
     }

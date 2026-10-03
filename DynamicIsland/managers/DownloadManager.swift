@@ -241,6 +241,7 @@ class DownloadManager {
         let timer = Timer(timeInterval: Self.speedSampleInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.sampleSpeed() }
         }
+        timer.tolerance = ActivityGate.tolerance(for: Self.speedSampleInterval, fraction: 0.15)
         RunLoop.main.add(timer, forMode: .common)
         speedTimer = timer
         sampleSpeed()

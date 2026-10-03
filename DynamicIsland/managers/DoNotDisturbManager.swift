@@ -586,7 +586,7 @@ private extension DoNotDisturbManager {
         lastAssertionsModificationDate = nil
 
         let timer = DispatchSource.makeTimerSource(queue: pollingQueue)
-        timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(2), leeway: .milliseconds(250))
+        timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(2), leeway: .milliseconds(750))
         timer.setEventHandler { [weak self] in
             self?.pollAssertionsState()
         }

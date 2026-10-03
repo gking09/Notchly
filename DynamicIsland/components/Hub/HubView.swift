@@ -79,13 +79,17 @@ struct HubView: View {
 /// everything else on the notch. Stands still under Reduce Motion.
 private struct HubAmbientGlow: View {
     let pointer: CGPoint
+    @ObservedObject private var activity = ActivityMonitor.shared
 
     /// Seconds for one full breath.
     private let period: Double = 7
 
     var body: some View {
         let reduce = NotchlyTheme.Motion.reduceMotion
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduce)) { context in
+        // A seven-second breath does not need 20 frames a second; thin it out
+        // on battery, and stop drawing while the display sleeps.
+        let frameInterval = activity.gate.frameInterval(20, minimum: 10)
+        TimelineView(.animation(minimumInterval: frameInterval, paused: reduce || activity.gate.isSuspended)) { context in
             let breath = reduce
                 ? 0.5
                 : 0.5 + 0.5 * sin(context.date.timeIntervalSinceReferenceDate * 2 * .pi / period)
@@ -106,18 +110,25 @@ private struct HubClockFace: View {
     @Default(.hubShowSeconds) private var showSeconds
     @Default(.hubTimeFormat) private var timeFormat
     @Default(.hubShowDate) private var showDate
+    @ObservedObject private var activity = ActivityMonitor.shared
 
     var body: some View {
         // Ticks on the second, aligned to the wall clock, so the digits turn
-        // over exactly when the time does.
-        TimelineView(.periodic(from: Date(timeIntervalSinceReferenceDate: 0), by: 1)) { context in
+        // over exactly when the time does. With seconds hidden and activity
+        // reduced, once a minute is enough (the colon then stays lit).
+        TimelineView(.periodic(from: Date(timeIntervalSinceReferenceDate: 0), by: tickInterval)) { context in
             face(for: context.date)
         }
     }
 
+    private var tickInterval: TimeInterval {
+        HubClockFormatter.tickInterval(showSeconds: showSeconds, reducedActivity: activity.gate.reducedActivity)
+    }
+
     private func face(for date: Date) -> some View {
         let parts = HubClockFormatter.parts(for: date, format: timeFormat, showSeconds: showSeconds)
-        let colonLit = Int(date.timeIntervalSince1970) % 2 == 0
+        let blinks = tickInterval < 60
+        let colonLit = !blinks || Int(date.timeIntervalSince1970) % 2 == 0
         let colonOpacity = NotchlyTheme.Motion.reduceMotion ? 0.7 : (colonLit ? 0.9 : 0.35)
         let dateLine = HubClockFormatter.dateLine(for: date)
 

@@ -86,6 +86,7 @@ final class MenuBarLayout: ObservableObject {
         let timer = Timer(timeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
+        timer.tolerance = ActivityGate.tolerance(for: Self.pollInterval, fraction: 0.25, minimum: 0.5)
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer
 
