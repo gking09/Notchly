@@ -26,6 +26,7 @@ import Cocoa
 import Foundation
 import Defaults
 import CoreImage
+import ImageIO
 import CoreGraphics
 import CoreImage.CIFilterBuiltins
 
@@ -535,5 +536,33 @@ extension Color {
             startPoint: .top,
             endPoint: .bottom
         ))
+    }
+}
+
+extension NSImage {
+    /// Decodes artwork straight to a bounded size and forces the decode to happen
+    /// now, on the calling (background) queue. A plain `NSImage(data:)` decodes
+    /// lazily on first draw, i.e. on the main thread, and keeps the full-size
+    /// bitmap around; streaming services hand over 1400px+ covers that the notch
+    /// shows at ~100pt. Falls back to the plain decode if ImageIO declines.
+    static func downsampledArtwork(from data: Data, maxPixelSize: Int = 640) -> NSImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        if let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) {
+            // Never upscale: a small cover keeps its own size.
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            let width = (properties?[kCGImagePropertyPixelWidth] as? Int) ?? maxPixelSize
+            let height = (properties?[kCGImagePropertyPixelHeight] as? Int) ?? maxPixelSize
+            let limit = max(1, min(maxPixelSize, max(width, height)))
+            let thumbnailOptions = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: limit,
+            ] as CFDictionary
+            if let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) {
+                return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+            }
+        }
+        return NSImage(data: data)
     }
 }
