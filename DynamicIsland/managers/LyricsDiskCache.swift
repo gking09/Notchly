@@ -114,8 +114,8 @@ final class LyricsDiskCache: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         loadIfNeeded()
+        // Recency is updated in memory and written with the next store.
         guard let entry = lru.value(for: key) else { return nil }
-        scheduleSaveLocked() // recency changed
         return Self.resolution(from: entry)
     }
 
@@ -181,12 +181,16 @@ final class LyricsDiskCache: @unchecked Sendable {
         guard !saveScheduled else { return }
         saveScheduled = true
         ioQueue.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.writeNow()
+            self?.writeNow(onlyIfScheduled: true)
         }
     }
 
-    private func writeNow() {
+    private func writeNow(onlyIfScheduled: Bool = false) {
         lock.lock()
+        if onlyIfScheduled && !saveScheduled {
+            lock.unlock()
+            return
+        }
         saveScheduled = false
         let contents = FileContents(order: lru.order, entries: lru.storage)
         lock.unlock()

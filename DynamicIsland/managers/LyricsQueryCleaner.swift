@@ -77,26 +77,47 @@ enum LyricsQueryCleaner {
         let channelLooksLikeChannel = looksLikeChannel(artist)
         let cleanedTitle = cleanTitle(title, aggressive: isWebSource || channelLooksLikeChannel)
 
+        var didSplit = false
         // "Artist - Title" in the title field. Split it when the artist field
-        // is empty, is a channel rather than a person, already appears on the
-        // left, or the source is a web page (where this is the convention).
+        // is empty, is a channel rather than a person, already appears on one
+        // side, or the source is a web page (where this is the convention).
         if let split = splitArtistTitle(cleanedTitle) {
             let left = cleanArtist(split.artist)
             let right = cleanTitle(split.title, aggressive: true)
             let leftMatchesArtist = !channel.isEmpty && overlaps(normalized(left), normalized(channel))
-            if channel.isEmpty || channelLooksLikeChannel || leftMatchesArtist || isWebSource {
+            let rightMatchesArtist = !channel.isEmpty && !leftMatchesArtist
+                && normalized(cleanArtist(split.title)) == normalized(channel)
+            if rightMatchesArtist {
+                // "Hurt - Johnny Cash" by Johnny Cash: written the other way round.
+                candidates.append(LyricsQuery(artist: channel, title: cleanTitle(split.artist, aggressive: true)))
+                didSplit = true
+            } else if channel.isEmpty || channelLooksLikeChannel || leftMatchesArtist || isWebSource {
                 candidates.append(LyricsQuery(artist: left, title: right))
-                if !channel.isEmpty, !leftMatchesArtist {
-                    // The left part might be the title and the channel the
-                    // artist ("Song - Live Session" by "Band").
+                if !channel.isEmpty, !leftMatchesArtist, !channelLooksLikeChannel {
+                    // A performer's own upload titled "Song - Version" by "Band".
                     candidates.append(LyricsQuery(artist: channel, title: right))
                 }
+                didSplit = true
             }
+        } else if let quoted = splitQuotedTitle(normalizeBrackets(stripEmoji(title))),
+                  channel.isEmpty || channelLooksLikeChannel || isWebSource {
+            // K-pop and J-pop uploads: BTS (방탄소년단) 'Dynamite' Official MV,
+            // YOASOBI「アイドル」 Official Music Video.
+            candidates.append(LyricsQuery(artist: quoted.artist, title: quoted.title))
+            if !channel.isEmpty, !channelLooksLikeChannel {
+                candidates.append(LyricsQuery(artist: channel, title: quoted.title))
+            }
+            didSplit = true
         }
 
-        candidates.append(LyricsQuery(artist: channel, title: cleanedTitle))
-        if channel != artist {
-            candidates.append(LyricsQuery(artist: artist, title: cleanedTitle))
+        // Unsplit forms only when no split was trusted: once the title has
+        // been read as "Artist - Title", asking for the whole string again
+        // just spends a request on something no catalogue holds.
+        if !didSplit {
+            candidates.append(LyricsQuery(artist: channel, title: cleanedTitle))
+            if channel != artist, !channelLooksLikeChannel {
+                candidates.append(LyricsQuery(artist: artist, title: cleanedTitle))
+            }
         }
 
         var seen = Set<String>()
@@ -116,6 +137,7 @@ enum LyricsQueryCleaner {
     private static let trailingNoisePatterns: [String] = [
         "\\s*[-–—|:]?\\s*(official\\s+)?(music\\s+|lyrics?\\s+|audio\\s+|hd\\s+|4k\\s+)?(video|audio|visuali[sz]er)(\\s+oficial)?\\s*$",
         "\\s*[-–—|:]?\\s*official\\s*$",
+        "\\s*[-–—|:]?\\s*(official\\s+)?(music\\s+)?m/?v\\s*$",
         "\\s*[-–—|:]?\\s*(with\\s+)?lyrics\\s*$",
         "\\s*[-–—|:]?\\s*\\b(hd|hq|4k|8k|1080p|720p)\\b\\s*$",
         "\\s*[-–—|:]?\\s*(video|audio)\\s+oficial\\s*$"
@@ -127,11 +149,7 @@ enum LyricsQueryCleaner {
     static func cleanTitle(_ raw: String, aggressive: Bool = true) -> String {
         var title = stripEmoji(collapseWhitespace(raw))
 
-        // Fullwidth and CJK brackets used on Asian uploads.
-        title = title
-            .replacingOccurrences(of: "【", with: "[").replacingOccurrences(of: "】", with: "]")
-            .replacingOccurrences(of: "「", with: "\"").replacingOccurrences(of: "」", with: "\"")
-            .replacingOccurrences(of: "（", with: "(").replacingOccurrences(of: "）", with: ")")
+        title = normalizeBrackets(title)
 
         if aggressive {
             // "Title | Official Video" / "Artist - Title | Channel": the first
@@ -240,6 +258,30 @@ enum LyricsQueryCleaner {
             return (left, right)
         }
         return nil
+    }
+
+    /// Fullwidth and CJK brackets used on Asian uploads, as ASCII.
+    static func normalizeBrackets(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "【", with: "[").replacingOccurrences(of: "】", with: "]")
+            .replacingOccurrences(of: "「", with: "\"").replacingOccurrences(of: "」", with: "\"")
+            .replacingOccurrences(of: "『", with: "\"").replacingOccurrences(of: "』", with: "\"")
+            .replacingOccurrences(of: "（", with: "(").replacingOccurrences(of: "）", with: ")")
+    }
+
+    /// `Artist 'Title'`, `Artist "Title"`, `Artist “Title”`, `Artist「Title」`.
+    static func splitQuotedTitle(_ title: String) -> (artist: String, title: String)? {
+        let pattern = "^(.+?)\\s*['\"“‘「]([^'\"”’」]+)['\"”’」]"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let ns = title as NSString
+        guard let match = regex.firstMatch(in: title, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        var artist = ns.substring(with: match.range(at: 1))
+        // A bracketed alias after the name ("BTS (방탄소년단)") is not part of it.
+        artist = artist.replacingOccurrences(of: "\\s*[\\(\\[][^\\)\\]]*[\\)\\]]\\s*$", with: "", options: .regularExpression)
+        let song = trimDecorations(ns.substring(with: match.range(at: 2)))
+        let name = cleanArtist(artist)
+        guard !name.isEmpty, song.count >= 2 else { return nil }
+        return (name, song)
     }
 
     // MARK: Helpers
