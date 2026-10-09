@@ -428,9 +428,10 @@ private struct LyricsStatusView: View {
 
             if let actionTitle, let action {
                 Button(action: action) {
-                    Text(actionTitle)
+                    Label(actionTitle, systemImage: "arrow.clockwise")
                         .font(.system(size: 11, weight: .semibold))
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
                 }
                 .buttonStyle(.notchlyGlass)
                 .padding(.top, 2)

@@ -568,4 +568,52 @@ final class LyricsStageRenderTests: XCTestCase {
             try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("lyrics-\(name).png"))
         }
     }
+
+    /// The Home tab with lyrics mode on, to check the title-row button and the
+    /// card's footprint against the Hub's. Same opt-in as above.
+    @MainActor
+    func testRenderHomeWithLyricsModeToPNG() throws {
+        guard let directory = ProcessInfo.processInfo.environment["NOTCHLY_RENDER_DIR"], !directory.isEmpty else {
+            throw XCTSkip("NOTCHLY_RENDER_DIR not set")
+        }
+        let coordinator = DynamicIslandViewCoordinator.shared
+        let savedFirstLaunch = coordinator.firstLaunch
+        let savedMode = LyricsModeController.shared.isActive
+        defer {
+            coordinator.firstLaunch = savedFirstLaunch
+            LyricsModeController.shared.set(savedMode)
+        }
+        coordinator.firstLaunch = false
+
+        let vm = DynamicIslandViewModel()
+        for active in [false, true] {
+            LyricsModeController.shared.set(active)
+            let size = openNotchSize
+            let view = HomeRenderHost()
+                .environmentObject(vm)
+                .frame(width: size.width, height: size.height)
+                .background(Color.black)
+                .environment(\.colorScheme, .dark)
+            let host = NSHostingView(rootView: view)
+            host.frame = NSRect(origin: .zero, size: size)
+            let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            window.appearance = NSAppearance(named: .darkAqua)
+            window.contentView = host
+            host.layoutSubtreeIfNeeded()
+            RunLoop.main.run(until: Date().addingTimeInterval(1.2))
+            host.layoutSubtreeIfNeeded()
+            guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { continue }
+            host.cacheDisplay(in: host.bounds, to: rep)
+            guard let png = rep.representation(using: .png, properties: [:]) else { continue }
+            try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("home-lyrics-\(active ? "on" : "off").png"))
+        }
+    }
+}
+
+private struct HomeRenderHost: View {
+    @Namespace private var namespace
+    var body: some View {
+        NotchHomeView(albumArtNamespace: namespace)
+            .padding(.top, 34)
+    }
 }
