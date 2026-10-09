@@ -636,7 +636,11 @@ class MusicManager: ObservableObject {
 
     // MARK: - Lyrics Properties
     @Published var currentLyrics: String = ""
-    @Published var syncedLyrics: [LyricLine] = []
+    @Published var syncedLyrics: [LyricLine] = [] {
+        didSet { syncedLyricTimestamps = syncedLyrics.map(\.timestamp) }
+    }
+    /// Kept beside the lines so finding the current one never allocates.
+    private var syncedLyricTimestamps: [TimeInterval] = []
     @Published private(set) var lyricsAvailability: LyricsAvailability = .unavailable
 
     /// Whether the loaded lyrics carry real timings, as opposed to being a
@@ -739,6 +743,18 @@ class MusicManager: ObservableObject {
                 self?.handleLyricsPreferenceChange(isEnabled: change.newValue)
             }
             .store(in: &cancellables)
+
+        // Lyrics mode and the online-lookup switch also decide whether lyrics
+        // are wanted at all.
+        Publishers.Merge(
+            LyricsModeController.shared.$isActive.dropFirst().map { _ in () },
+            Defaults.publisher(.fetchLyricsOnline, options: []).map { _ in () }
+        )
+        .receive(on: RunLoop.main)
+        .sink { [weak self] _ in
+            self?.handleLyricsDemandChange()
+        }
+        .store(in: &cancellables)
 
         // Observe Pear Desktop launch/terminate for auto-detection
         setupPearDesktopAutoDetection()
@@ -1093,7 +1109,7 @@ class MusicManager: ObservableObject {
         }
 
         // Manage lyric sync task based on playback/lyrics availability
-        if Defaults[.enableLyrics] && !self.syncedLyrics.isEmpty {
+        if lyricsWanted && !self.syncedLyrics.isEmpty {
             // Ensure syncing runs while lyrics are enabled
             startLyricSync()
         } else {
@@ -1768,14 +1784,30 @@ class MusicManager: ObservableObject {
     }
 
     // MARK: - Lyrics Methods
+
+    /// Whether anything on screen wants lyrics: the inline/side-panel lyrics
+    /// setting or lyrics mode -- and only while online lookups are allowed.
+    var lyricsWanted: Bool {
+        (Defaults[.enableLyrics] || LyricsModeController.shared.isActive) && Defaults[.fetchLyricsOnline]
+    }
+
     func fetchLyrics() {
-        prepareLyricsForCurrentTrack(forceFetch: true, prioritizeVisibleResult: Defaults[.enableLyrics])
+        prepareLyricsForCurrentTrack(forceFetch: true, prioritizeVisibleResult: lyricsWanted)
+    }
+
+    /// Lyrics mode or the online switch changed.
+    private func handleLyricsDemandChange() {
+        if lyricsWanted {
+            prepareLyricsForCurrentTrack(prioritizeVisibleResult: true)
+        } else {
+            discardLyrics()
+        }
     }
 
     private func handleLyricsPreferenceChange(isEnabled: Bool) {
         showLyrics = isEnabled
 
-        if isEnabled {
+        if lyricsWanted {
             prepareLyricsForCurrentTrack(prioritizeVisibleResult: true)
         } else {
             discardLyrics()
@@ -1801,7 +1833,7 @@ class MusicManager: ObservableObject {
         // off the placeholder was suppressed, but the track title and artist were
         // still sent to LRCLIB on every track change, and nothing consumed the
         // reply. Stop before the request rather than after it.
-        guard Defaults[.enableLyrics] else {
+        guard lyricsWanted else {
             discardLyrics()
             return
         }
@@ -1850,26 +1882,45 @@ class MusicManager: ObservableObject {
             currentLyrics = "Loading lyrics..."
         }
 
-        let requestArtist = lookup.requestArtist
-        let requestTitle = lookup.requestTitle
+        let queries = lookup.queries
         let requestAlbum = lookup.requestAlbum
+        let isWebSource = lookup.isWebSource
+        let duration = songDuration
+        let diskKey = LyricsDiskCache.key(
+            artist: queries.first?.artist ?? "",
+            title: queries.first?.title ?? "",
+            duration: duration
+        )
 
         lyricsFetchTask = Task { [weak self] in
             guard let self else { return }
 
-            let lyrics = await LyricsProviderFallback.resolve(
-                primary: {
-                    try await self.fetchLyricsFromAPI(
-                        artist: requestArtist,
-                        title: requestTitle,
-                        album: requestAlbum
-                    )
-                },
-                fallback: {
-                    try await self.fetchLyricsFromNetEase(artist: requestArtist, title: requestTitle)
+            // Songs played before are answered from disk without asking anyone.
+            var lyrics = forceFetch ? nil : LyricsDiskCache.shared.lookup(diskKey)
+            if lyrics == nil {
+                let fetched = await LyricsProviderFallback.resolve(
+                    primary: {
+                        // Track updates can assign the duration after preparing
+                        // lyrics; read it once the request is about to go out.
+                        let currentDuration = await MainActor.run { self.songDuration }
+                        return try await LRCLIBLyrics.fetch(
+                            queries: queries,
+                            album: requestAlbum,
+                            duration: currentDuration > 0 ? currentDuration : duration,
+                            isWebSource: isWebSource
+                        )
+                    },
+                    fallback: {
+                        try await self.fetchLyricsFromNetEase(queries: queries)
+                    }
+                )
+                guard !Task.isCancelled else { return }
+                if fetched.availability != .unavailable {
+                    LyricsDiskCache.shared.store(fetched, for: diskKey)
                 }
-            )
-            guard !Task.isCancelled else { return }
+                lyrics = fetched
+            }
+            guard !Task.isCancelled, let lyrics else { return }
 
             await MainActor.run {
                 guard self.lyricsFetchID == fetchID, self.activeLyricsKey == key else { return }
@@ -1887,69 +1938,61 @@ class MusicManager: ObservableObject {
         }
     }
 
-    /// All media sources share this fallback and semantic result.
-    private func fetchLyricsFromNetEase(artist: String, title: String) async throws -> LyricsResolution {
-        guard !artist.isEmpty, !title.isEmpty else { return LyricsResolution() }
+    /// All media sources share this fallback and semantic result. Tries the
+    /// two best cleaned queries.
+    private func fetchLyricsFromNetEase(queries: [LyricsQuery]) async throws -> LyricsResolution {
         // Track updates assign duration after preparing lyrics; read it only
         // after LRCLIB has answered, as in the existing fallback.
         let duration = await MainActor.run { self.songDuration }
-        return try await NetEaseLyrics.fetch(title: title, artist: artist, duration: duration)
-    }
-
-    private func fetchLyricsFromAPI(artist: String, title: String, album: String) async throws -> LyricsResolution {
-        guard !artist.isEmpty, !title.isEmpty else { return LyricsResolution() }
-
-        // Normalize input and percent-encode
-        let cleanArtist = artist.folding(options: .diacriticInsensitive, locale: .current)
-        let cleanTitle = title.folding(options: .diacriticInsensitive, locale: .current)
-        let cleanAlbum = album.folding(options: .diacriticInsensitive, locale: .current)
-        guard let encodedArtist = cleanArtist.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let encodedTitle = cleanTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return LyricsResolution()
-        }
-
-        // Use LRCLIB search endpoint which returns an array JSON with `plainLyrics` and/or `syncedLyrics`.
-        let urlString = "https://lrclib.net/api/search?track_name=\(encodedTitle)&artist_name=\(encodedArtist)"
-        guard let url = URL(string: urlString) else { return LyricsResolution() }
-
-        let (data, response) = try await URLSession.shared.data(from: url)
-        if let http = response as? HTTPURLResponse, http.statusCode == 200 {
-            // Metadata updates assign duration after preparing lyrics. Read it
-            // after the request, before trusting a whole-track instrumental flag.
-            let duration = await MainActor.run { self.songDuration }
-            // Try parse as array JSON (preferred)
-            if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-               let bestMatch = bestLyricsMatch(in: jsonArray, artist: cleanArtist, title: cleanTitle, album: cleanAlbum, duration: duration) {
-                let resolution = LyricsResolution.lrclib(bestMatch)
-                // Text-only instrumental placeholders need the same recording
-                // identity check as structured provider flags.
-                if resolution.availability == .instrumental,
-                   !LyricsSearchResults.isReliableInstrumentalMatch(bestMatch, title: cleanTitle, duration: duration) {
-                    return LyricsResolution()
-                }
-                return resolution
+        var lastError: Error?
+        for query in queries.prefix(2) {
+            try Task.checkCancellation()
+            do {
+                let result = try await NetEaseLyrics.fetch(
+                    title: query.title,
+                    artist: query.artist,
+                    duration: duration,
+                    session: LyricsNetwork.neteaseSession
+                )
+                if result.availability != .unavailable { return result }
+            } catch {
+                lastError = error
             }
         }
-        // A search response with no matching recording is not a plain lyric body.
+        if let lastError { throw lastError }
         return LyricsResolution()
     }
 
-    // pi-lens-ignore: large_tuple
-    private func currentLyricsLookupContext() -> (key: LyricsLookupKey, requestArtist: String, requestTitle: String, requestAlbum: String)? {
+    struct LyricsLookupContext {
+        let key: LyricsLookupKey
+        /// Cleaned search terms, best first.
+        let queries: [LyricsQuery]
+        let requestAlbum: String
+        let isWebSource: Bool
+    }
+
+    private func currentLyricsLookupContext() -> LyricsLookupContext? {
+        let isWebSource = LyricsQueryCleaner.isWebSource(bundleIdentifier: bundleIdentifier ?? lastArtworkBundleIdentifier)
         let requestArtist = normalizedLyricsRequestComponent(artistName)
         let requestTitle = normalizedLyricsTitle(songTitle)
         let requestAlbum = normalizedLyricsRequestComponent(album)
 
+        // YouTube in a browser publishes "Artist - Title (Official Video)" by
+        // "ArtistVEVO"; the cleaner turns that into something a catalogue knows.
+        let queries = LyricsQueryCleaner.queries(title: requestTitle, artist: requestArtist, isWebSource: isWebSource)
+        guard let primary = queries.first else { return nil }
+
         let key = LyricsLookupKey(
-            title: requestTitle.lowercased(),
-            artist: requestArtist.lowercased(),
+            title: primary.title.lowercased(),
+            artist: primary.artist.lowercased(),
             album: requestAlbum.lowercased(),
             source: lastArtworkBundleIdentifier ?? "",
             contentIdentifier: lastArtworkContentIdentifier,
             duration: songDuration
         )
 
-        return key.isValid ? (key, requestArtist, requestTitle, requestAlbum) : nil
+        guard key.isValid else { return nil }
+        return LyricsLookupContext(key: key, queries: queries, requestAlbum: requestAlbum, isWebSource: isWebSource)
     }
 
     private func normalizedLyricsRequestComponent(_ value: String) -> String {
@@ -1979,10 +2022,6 @@ class MusicManager: ObservableObject {
         return normalizedLyricsRequestComponent(normalized)
     }
 
-    private func bestLyricsMatch(in results: [[String: Any]], artist: String, title: String, album: String, duration: TimeInterval) -> [String: Any]? {
-        LyricsSearchResults.bestMatch(in: results, artist: artist, title: title, album: album, duration: duration)
-    }
-
     func applyLyricsToDisplay(_ resolution: LyricsResolution) {
         let lyrics = resolution.lines
         syncedLyrics = lyrics
@@ -1997,7 +2036,7 @@ class MusicManager: ObservableObject {
 
         updateCurrentLyric(for: lyricPlaybackPosition())
 
-        if Defaults[.enableLyrics] {
+        if lyricsWanted {
             startLyricSync()
         } else {
             stopLyricSync()
@@ -2017,15 +2056,8 @@ class MusicManager: ObservableObject {
             return
         }
 
-        // Find the current lyric based on elapsed time
-        var newIndex = -1
-        for (index, lyric) in syncedLyrics.enumerated() {
-            if elapsedTime >= lyric.timestamp {
-                newIndex = index
-            } else {
-                break
-            }
-        }
+        // Lines are sorted by timestamp, so the current one is a binary search.
+        let newIndex = LyricsTimeline.activeIndex(timestamps: syncedLyricTimestamps, at: elapsedTime)
 
         // The text is settled independently of whether the index moved. Lyrics
         // arrive with the index already at -1, so keying the text off a change in
@@ -2056,6 +2088,12 @@ class MusicManager: ObservableObject {
         // on waking at its maximum rate for the rest of the track, finding
         // nothing to point at each time.
         guard hasTimedLyrics else {
+            stopLyricSync()
+            return
+        }
+        // Nothing moves while paused: a seek while paused arrives as a playback
+        // update (which re-points the line itself), and resuming restarts this.
+        guard isPlaying else {
             stopLyricSync()
             return
         }

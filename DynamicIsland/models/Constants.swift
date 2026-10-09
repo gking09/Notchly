@@ -821,6 +821,12 @@ extension Defaults.Keys {
     static let pinLyricsWhenClosed = Key<Bool>("pinLyricsWhenClosed", default: false)
     static let lyricsPanelWidth = Key<CGFloat>("lyricsPanelWidth", default: 280)
     static let lyricsPanelOffset = Key<CGFloat>("lyricsPanelOffset", default: 0)
+    /// Look lyrics up on LRCLIB / NetEase. Only artist, title and duration are sent.
+    static let fetchLyricsOnline = Key<Bool>("fetchLyricsOnline", default: true)
+    /// Start each session with the open notch in lyrics mode.
+    static let lyricsModeOnByDefault = Key<Bool>("lyricsModeOnByDefault", default: false)
+    /// Text size of the rolling lyrics view.
+    static let lyricsTextSize = Key<LyricsTextSize>("lyricsTextSize", default: .medium)
     static let showLiveCanvasInDynamicIsland = Key<Bool>("showLiveCanvasInDynamicIsland", default: false)
     
     // Helper to determine the default media controller based on macOS version
