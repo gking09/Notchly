@@ -67,7 +67,7 @@ So Notchly is deliberately **smaller and more opinionated**: a notch-only app wi
 ## Build and run
 
 ```bash
-git clone https://github.com/<your-username>/Notchly.git
+git clone https://github.com/gking09/Notchly.git
 cd Notchly
 open DynamicIsland.xcodeproj
 ```
