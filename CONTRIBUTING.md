@@ -1,97 +1,33 @@
 <p align="center">
-	<img src=".github/assets/atoll-logo.png" alt="Atoll logo" width="100">
+	<img src=".github/assets/notchly-logo.png" alt="Notchly logo" width="100">
 </p>
 
-# Contributing to Atoll
+# Contributing to Notchly
 
-Thank you for your interest in contributing to Atoll! We welcome contributions from everyone—developers, designers, testers, and documentation writers. Please read the following guidelines to help us maintain a collaborative and high-quality project.
+Notchly is a personal project: a deliberately small, notch-only fork of [Atoll](https://github.com/Ebullioscopic/Atoll). Bug reports, ideas and pull requests are welcome, but I'm opinionated about scope, so please open an issue before starting anything big.
 
-## Table of Contents
-- [How to Contribute](#how-to-contribute)
-- [Code of Conduct](#code-of-conduct)
-- [Development Setup](#development-setup)
-- [Pull Request Process](#pull-request-process)
-- [Coding Guidelines](#coding-guidelines)
-- [Design Contributions](#design-contributions)
-- [Documentation](#documentation)
-- [Code Review process](#code-review-process)
-- [Community & Support](#community--support)
+## What fits
+- Anything that improves the notch experience: music, lyrics, live activities, HUDs, Stash, Quick Actions, the Hub.
+- Fixes, performance and battery improvements, accessibility, and polish.
 
+## What doesn't
+- Features that were removed on purpose (terminal, clipboard history, system stats, notes, file shelf, widgets, extensions, calendar). Notchly is meant to stay small.
 
----
+## Development setup
+- macOS 14+ with Xcode 15+, and a MacBook with a notch for full testing.
+- `open DynamicIsland.xcodeproj`, pick your own team under Signing & Capabilities, and run (⌘R).
+- The Metal toolchain is needed for the visualizer shader: `xcodebuild -downloadComponent MetalToolchain`.
+- Run the unit tests: `xcodebuild -scheme DynamicIsland -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:DynamicIslandTests`.
 
-## How to Contribute
-
-1. **Fork the repository** and clone your fork locally.
-2. **Create a feature branch** for your changes: `git switch -c feature/your-feature-name`
-3. **Make your changes** following the guidelines below.
-4. **Test your changes** to ensure they work as expected and do not break existing functionality.
-5. **Commit** with clear, descriptive messages.
-6. **Push** to your fork and submit a **pull request** (PR) to the `main` branch.
-7. **Participate in code review** and address any feedback.
+## Pull requests
+1. Fork, then branch from `notchly` (or `main` once it's merged there).
+2. Keep changes focused. Put new logic in small, testable pieces and add unit tests where practical (the test target is not auto-synchronised, so add new test files to the Xcode project).
+3. Keep the soft-glass monochrome look: use the tokens in `components/UI/NotchlyTheme.swift` and the springs in `NotchlyMotion.swift`, and respect Reduce Motion.
+4. Keep content out of the hardware notch region (see `sizing/NotchWingLayout.swift`).
+5. Make sure the build succeeds and the unit tests pass, and include screenshots or a recording for UI changes.
 
 ## Code of Conduct
+Please be kind. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-We are committed to fostering a welcoming and inclusive environment. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
-
-## Development Setup
-
-- **Requirements:**
-	- macOS Sonoma 14.0 or later
-	- Xcode 15.0+ with Swift 5.9 toolchain
-	- MacBook with a notch (for full feature testing)
-- **Clone the repo:**
-	```bash
-	git clone https://github.com/Ebullioscopic/Atoll.git
-	cd Atoll
-	open DynamicIsland.xcodeproj
-	```
-- **Build & Run:**
-	- Select your Mac as the run destination in Xcode.
-	- Build and run (Cmd+R).
-	- Grant any requested permissions.
-
-## Pull Request Process
-
-- Ensure your branch is up to date with `main` before submitting a PR.
-- Provide a clear description of your changes and the motivation behind them.
-- Reference any related issues or discussions.
-- Add screenshots or screen recordings for UI changes.
-- Ensure the code builds without errors or warnings.
-- Respond promptly to review feedback.
-
-## Coding Guidelines
-
-- Follow Swift API Design Guidelines.
-- Use meaningful variable and function names.
-- Keep functions focused and concise.
-- Add inline documentation for public APIs and complex logic.
-- Write unit tests for new features where practical.
-- Avoid introducing unnecessary dependencies.
-
-## Design Contributions
-
-- Submit UI/UX improvements, mockups, or visual assets.
-- Maintain consistency with macOS Human Interface Guidelines.
-- Provide rationale for design decisions.
-
-## Documentation
-
-- Improve user guides, API docs, and troubleshooting sections.
-- Translate documentation into other languages.
-- Clarify setup instructions and add usage examples.
-
-## Code review process
-- All pull requests require review from project maintainers before merging.
-- Automated testing must pass via continuous integration workflows.
-- Changes should not significantly decrease test coverage without justification.
-- Breaking changes require major version updates following semantic versioning.
-
-## Community & Support
-
-- Join our [Discord community](https://discord.gg/zvjB4tJBkt) for discussion, support, and collaboration.
-- Be respectful and constructive in all interactions.
-
----
-
-Thank you for helping make Atoll better!
+## License
+By contributing you agree your work is licensed under GPL-3.0, like the rest of the project.

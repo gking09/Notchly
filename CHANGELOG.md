@@ -1,9 +1,33 @@
 # Changelog
 
-All notable changes to Atoll will be documented in this file.
+All notable changes to Notchly are documented in this file. Everything under "Atoll history" below happened upstream, before the fork.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Notchly
+
+### Added
+- **Notchly identity**: new name, bundle ID, logo, app icon and menu bar glyph; soft-glass monochrome design language with spring motion throughout.
+- **Hub**: a centrepiece clock on the Home tab with a context-aware chip row (battery, timer, stopwatch, Focus, paused music, Stash).
+- **Lyrics mode**: a lyrics button that rolls time-synced lyrics through the open notch, with YouTube-title cleanup, LRCLIB and NetEase lookups, an on-disk cache and clear empty states.
+- **Quick Actions row**: timer, stopwatch, mute mic, dark mode, screenshot, sleep display and run a Shortcuts shortcut.
+- **Timer and stopwatch live activities** beside the hardware notch.
+- **Battery extras**: time remaining, charger wattage, health and cycle count, charge-held detection, low/critical/full alerts, Bluetooth device low-battery alerts.
+- **Stash**: a temporary tray for text, links, images and files, with drag in and out.
+- **Efficiency mode** and an activity gate that reduce background work on battery, in Low Power Mode and while the display sleeps.
+- **Rebuilt settings window, status-bar menu and first-launch flow.**
+
+### Changed
+- Live activities, HUDs and music now lay out in symmetric wings so nothing is hidden behind the hardware notch.
+- Cover art is decoded and downsampled off the main thread.
+
+### Removed
+- Terminal, clipboard history, system stats, notes, file shelf and AirDrop, lock-screen widgets, color picker, keep-awake, LLM usage tracking, screen assistant, per-app volume, the extension system, the calendar and reminders, the old timer tab, and the Sparkle updater.
+
+---
+
+# Atoll history (upstream)
 
 ## [Unreleased]
 
