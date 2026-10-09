@@ -82,12 +82,31 @@ func hubRequiredNotchWidth() -> CGFloat {
     )
 }
 
+/// Width the Home tab needs when lyrics mode adds a lyrics card beside the
+/// player that the Hub would otherwise not have been taking room for. With the
+/// Hub on (or the side panel shown) the card takes their place at the same
+/// size, so nothing changes.
+func lyricsStageRequiredNotchWidth() -> CGFloat {
+    guard LyricsModeController.shared.isActive,
+          !Defaults[.enableHub],
+          !Defaults[.enableLyrics],
+          !Defaults[.enableMinimalisticUI],
+          Defaults[.showStandardMediaControls],
+          (!Defaults[.autoHideInactiveNotchMediaPlayer] || MusicManager.shared.hasActiveSession)
+    else { return 0 }
+    return HomeLayoutBudget.requiredNotchWidth(
+        hubVisible: true,
+        playerVisible: true,
+        mirrorVisible: Defaults[.showMirror] && WebcamManager.shared.cameraAvailable
+    )
+}
+
 var openNotchSize: CGSize {
     let storedWidth = Defaults[.openNotchWidth]
     let minWidth = currentRecommendedMinimumNotchWidth()
     let maxWidth = maxAllowedNotchWidth()
     let width = min(
-        max(storedWidth, minWidth, sideLyricsRequiredNotchWidth(), hubRequiredNotchWidth()),
+        max(storedWidth, minWidth, sideLyricsRequiredNotchWidth(), hubRequiredNotchWidth(), lyricsStageRequiredNotchWidth()),
         maxWidth
     )
     // The Quick Actions row sits above the Home content and needs its own room,

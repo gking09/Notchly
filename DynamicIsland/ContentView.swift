@@ -38,6 +38,7 @@ struct ContentView: View {
     @Default(.pinnedLyricContext) private var pinnedLyricContext
     @Default(.pinLyricsWhenClosed) private var pinLyricsWhenClosed
     @Default(.enableLyrics) private var enableLyrics
+    @ObservedObject private var lyricsMode = LyricsModeController.shared
     @EnvironmentObject var vm: DynamicIslandViewModel
     @EnvironmentObject var webcamManager: WebcamManager
 
@@ -1225,6 +1226,14 @@ struct ContentView: View {
     }
 
     private static let closedMusicTitleFont = NSFont.systemFont(ofSize: 12, weight: .medium)
+
+    /// The line being sung, shown in the closed activity's title slot while
+    /// lyrics mode is on and the music is playing. Timed lyrics only.
+    private var closedLyricLine: String? {
+        guard lyricsMode.isActive, musicManager.isPlaying, musicManager.hasTimedLyrics else { return nil }
+        let line = musicManager.currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
+        return line.isEmpty ? nil : line
+    }
     private static let closedMusicArtistFont = NSFont.systemFont(ofSize: 11, weight: .regular)
 
     /// Wing sizes for the closed music activity.
@@ -1336,22 +1345,39 @@ struct ContentView: View {
                     .frame(width: artworkSize + 3, height: notchContentHeight, alignment: .center)
 
                     if showsInfo, titleFieldWidth > 8, !musicManager.songTitle.isEmpty {
-                        MusicTitleMarqueeView(
-                            text: musicManager.songTitle,
-                            isExplicit: musicManager.isCurrentTrackExplicit,
-                            font: .system(size: 12, weight: .medium),
-                            nsFont: .callout,
-                            textColor: closedMusicTextColor,
-                            minDuration: 0.4,
-                            frameWidth: titleFieldWidth,
-                            badgeHeight: 13
-                        )
-                        .id("closed-title-\(musicManager.songTitle)")
-                        .transition(.wingSlide(from: .leading))
+                        // In lyrics mode the line being sung takes the title's
+                        // place. The wing keeps the width the title asked for,
+                        // so changing lines never resizes the activity.
+                        if let lyric = closedLyricLine {
+                            MarqueeText(
+                                .constant(lyric),
+                                font: .system(size: 12, weight: .medium),
+                                nsFont: .callout,
+                                textColor: closedMusicTextColor,
+                                minDuration: 0.4,
+                                frameWidth: titleFieldWidth
+                            )
+                            .id("closed-lyric-\(lyric)")
+                            .transition(.lyricLine)
+                        } else {
+                            MusicTitleMarqueeView(
+                                text: musicManager.songTitle,
+                                isExplicit: musicManager.isCurrentTrackExplicit,
+                                font: .system(size: 12, weight: .medium),
+                                nsFont: .callout,
+                                textColor: closedMusicTextColor,
+                                minDuration: 0.4,
+                                frameWidth: titleFieldWidth,
+                                badgeHeight: 13
+                            )
+                            .id("closed-title-\(musicManager.songTitle)")
+                            .transition(.wingSlide(from: .leading))
+                        }
                     }
                 }
                 .animation(NotchlyTheme.Motion.spring, value: showsInfo)
                 .animation(NotchlyTheme.Motion.spring, value: musicManager.songTitle)
+                .animation(NotchlyTheme.Motion.spring, value: closedLyricLine)
             } right: {
                 HStack(spacing: MusicWingMetrics.spacing) {
                     if showsInfo, secondary == nil, artistFieldWidth > 8, !musicManager.artistName.isEmpty {

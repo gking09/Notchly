@@ -206,7 +206,8 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
             MusicManager.shared.$isPlaying.map { _ in () }.eraseToAnyPublisher(),
             MusicManager.shared.$songTitle.map { _ in () }.eraseToAnyPublisher(),
             MusicManager.shared.$artistName.map { _ in () }.eraseToAnyPublisher(),
-            WebcamManager.shared.$cameraAvailable.map { _ in () }.eraseToAnyPublisher()
+            WebcamManager.shared.$cameraAvailable.map { _ in () }.eraseToAnyPublisher(),
+            LyricsModeController.shared.$isActive.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
         )
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in

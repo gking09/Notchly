@@ -460,7 +460,14 @@ struct MusicControlsView: View {
     @Default(.musicSkipBehavior) private var musicSkipBehavior
     @Default(.enableLyrics) private var enableLyrics
     @Default(.enableHub) private var enableHub
+    @ObservedObject private var lyricsMode = LyricsModeController.shared
     private let seekInterval: TimeInterval = 10
+
+    /// The lyrics button sits beside the title for every source, unless the
+    /// user has put the Lyrics control into one of the transport slots.
+    private var showsTitleLyricsButton: Bool {
+        !musicManager.isAdvertisement && !displayedSlots.contains(.lyrics)
+    }
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -494,26 +501,41 @@ struct MusicControlsView: View {
     }
 
     private func songInfo(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            MusicTitleMarqueeView(
-                text: musicManager.songTitle,
-                isExplicit: musicManager.isCurrentTrackExplicit,
-                font: .headline,
-                nsFont: .headline,
-                textColor: .white,
-                frameWidth: width,
-                badgeHeight: 14
-            )
-            MarqueeText(
-                $musicManager.artistName,
-                font: .headline,
-                nsFont: .headline,
-                textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
-                    .ensureMinimumBrightness(factor: 0.6) : NotchlyTheme.Palette.textSecondary,
-                frameWidth: width
-            )
-            .fontWeight(.medium)
-            if enableLyrics && enableHub {
+        let showsButton = showsTitleLyricsButton
+        let textWidth = showsButton ? max(0, width - 32) : width
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
+                    MusicTitleMarqueeView(
+                        text: musicManager.songTitle,
+                        isExplicit: musicManager.isCurrentTrackExplicit,
+                        font: .headline,
+                        nsFont: .headline,
+                        textColor: .white,
+                        frameWidth: textWidth,
+                        badgeHeight: 14
+                    )
+                    MarqueeText(
+                        $musicManager.artistName,
+                        font: .headline,
+                        nsFont: .headline,
+                        textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
+                            .ensureMinimumBrightness(factor: 0.6) : NotchlyTheme.Palette.textSecondary,
+                        frameWidth: textWidth
+                    )
+                    .fontWeight(.medium)
+                }
+                .frame(width: textWidth, alignment: .leading)
+
+                if showsButton {
+                    LyricsModeButton(size: 24)
+                        .padding(.top, 6)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            // The rolling lyrics card already shows the line; repeating it
+            // here would be noise.
+            if enableLyrics && enableHub && !lyricsMode.isActive {
                 let transition = AnyTransition.lyricLine
 
                 let line = musicManager.currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -816,11 +838,11 @@ struct MusicControlsView: View {
             AirPlayPickerButton()
         case .lyrics:
             HoverButton(
-                icon: enableLyrics ? "quote.bubble.fill" : "quote.bubble",
+                icon: lyricsMode.isActive ? "quote.bubble.fill" : "quote.bubble",
                 scale: .medium,
-                isActive: enableLyrics
+                isActive: lyricsMode.isActive
             ) {
-                enableLyrics.toggle()
+                withAnimation(NotchlyTheme.Motion.spring) { lyricsMode.toggle() }
             }
         case .likeTrack:
             LikeTrackControl { presentation, toggle in
@@ -897,7 +919,14 @@ struct NotchHomeView: View {
     @Default(.quickActionsOrder) private var quickActionsOrder
     @Default(.quickActionsHidden) private var quickActionsHidden
     @Default(.quickActionsShortcutName) private var quickActionsShortcutName
+    @ObservedObject private var lyricsMode = LyricsModeController.shared
     let albumArtNamespace: Namespace.ID
+
+    /// Lyrics mode swaps the rolling lyrics card in where the Hub (or the side
+    /// lyrics panel) sits, keeping the same footprint.
+    private var lyricsStageVisible: Bool {
+        shouldShowMusicPlayer && lyricsMode.isActive
+    }
 
     /// Whether the music player should actively display (enabled AND has real content).
     private var shouldShowMusicPlayer: Bool {
@@ -959,9 +988,19 @@ struct NotchHomeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                if enableHub {
-                    HubView()
-                        .frame(maxWidth: shouldShowMusicPlayer ? nil : CGFloat.infinity)
+                if enableHub || lyricsStageVisible {
+                    ZStack {
+                        if lyricsStageVisible {
+                            LyricsStageView()
+                                .frame(width: HomeLayoutBudget.hubWidth, height: HomeLayoutBudget.hubHeight)
+                                .staggered(index: 2)
+                                .transition(.lyricsStageSwap)
+                        } else {
+                            HubView()
+                                .transition(.lyricsStageSwap)
+                        }
+                    }
+                    .frame(maxWidth: shouldShowMusicPlayer ? nil : CGFloat.infinity)
                 }
 
                 if mirrorIsVisible {
@@ -977,7 +1016,15 @@ struct NotchHomeView: View {
                 .frame(minWidth: SideLyricsLayout.minimumPlayerWidth, maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
 
-            LyricsSidePanelView()
+            ZStack {
+                if lyricsStageVisible {
+                    LyricsStageView(cornerRadius: NotchlyTheme.Radius.md)
+                        .transition(.lyricsStageSwap)
+                } else {
+                    LyricsSidePanelView()
+                        .transition(.lyricsStageSwap)
+                }
+            }
                 .frame(width: max(0, lyricsPanelWidth), alignment: .topLeading)
                 .padding(.leading, max(0, -lyricsPanelOffset))
                 .offset(x: lyricsPanelOffset)
