@@ -43,6 +43,8 @@ struct NotchlyMusicPage: View {
     @Default(.pinnedLyricContext) private var pinnedLyricContext
     @Default(.lyricsPanelWidth) private var lyricsPanelWidth
     @Default(.lyricsPanelOffset) private var lyricsPanelOffset
+    @Default(.fetchLyricsOnline) private var fetchLyricsOnline
+    @Default(.lyricsModeOnByDefault) private var lyricsModeOnByDefault
 
     /// The standard notch player is switched off (and Minimalistic UI is not
     /// providing a player of its own).
@@ -229,9 +231,31 @@ struct NotchlyMusicPage: View {
             "Lyrics",
             footer: lyricsFooter
         ) {
+            I.fetchLyrics.toggle(
+                "Look up lyrics for whatever is playing: Apple Music, Spotify, YouTube in a browser and more.",
+                key: .fetchLyricsOnline
+            )
+            I.lyricsModeDefault.toggle(
+                lyricsAvailable
+                    ? "Start with rolling lyrics in place of the Hub. The lyrics button next to the song title switches any time."
+                    : (enableMinimalisticUI ? "Turn off Minimalistic UI to use lyrics mode." : "Turn on the music player (Home & Hub) to use lyrics mode."),
+                isEnabled: lyricsAvailable,
+                key: .lyricsModeOnByDefault
+            )
+            .onChange(of: lyricsModeOnByDefault) { _, isOn in
+                LyricsModeController.shared.set(isOn)
+            }
+            I.lyricsTextSize.picker(
+                "Size of the rolling lyrics.",
+                isEnabled: lyricsAvailable,
+                key: .lyricsTextSize,
+                options: Array(LyricsTextSize.allCases),
+                style: .segmented,
+                label: { $0.localizedName }
+            )
             I.lyrics.toggle(
                 lyricsAvailable
-                    ? "Synced lyrics for the song that is playing."
+                    ? "Also show the current line under the artist (or a side panel when the Hub is off)."
                     : (enableMinimalisticUI ? "Turn off Minimalistic UI to use lyrics." : "Turn on the music player (Home & Hub) to use lyrics."),
                 isEnabled: lyricsAvailable,
                 key: .enableLyrics
@@ -280,9 +304,16 @@ struct NotchlyMusicPage: View {
     }
 
     private var lyricsFooter: String {
-        enableHub
-            ? "Lyrics sit on one line under the artist name because the Hub is using the rest of the notch. Turn the Hub off to give them a panel beside the player."
-            : "Lyrics get their own panel beside the player. Turn the Hub on to move them under the artist name instead."
+        var text = enableHub
+            ? "Inline lyrics sit on one line under the artist name because the Hub is using the rest of the notch. Turn the Hub off to give them a panel beside the player."
+            : "Inline lyrics get their own panel beside the player. Turn the Hub on to move them under the artist name instead."
+        text += fetchLyricsOnline
+            ? " Privacy: only the song's title, artist and length are sent, to lrclib.net (and music.163.com as a fallback). Found lyrics are cached on this Mac."
+            : " Online lookups are off, so no lyrics are shown."
+        if mediaController != .nowPlaying && !MusicManager.shared.isNowPlayingDeprecated {
+            text += " For YouTube in a browser, choose Now Playing as the source."
+        }
+        return text
     }
 
     // MARK: Artwork
@@ -475,6 +506,9 @@ extension NotchlyMusicPage {
         static let sneakPeek = NotchlySettingItem(.music, "Sneak peek", keywords: ["sneak peek", "preview", "title", "artist"])
         static let sneakPeekOnChange = NotchlySettingItem(.music, "Sneak peek on playback changes", keywords: ["sneak peek", "play", "pause", "track change"])
         static let sneakPeekStyle = NotchlySettingItem(.music, "Sneak peek style", keywords: ["sneak peek", "inline", "standard", "default", "style"])
+        static let fetchLyrics = NotchlySettingItem(.music, "Fetch lyrics online", keywords: ["lyrics", "lrclib", "netease", "online", "privacy", "network", "youtube", "lookup", "search"])
+        static let lyricsModeDefault = NotchlySettingItem(.music, "Open lyrics mode by default", keywords: ["lyrics", "lyrics mode", "karaoke", "rolling", "scrolling lyrics", "hub", "default"])
+        static let lyricsTextSize = NotchlySettingItem(.music, "Lyrics text size", keywords: ["lyrics", "text size", "font", "small", "medium", "large", "bigger"])
         static let lyrics = NotchlySettingItem(.music, "Show lyrics", keywords: ["lyrics", "song text", "side panel", "hub", "inline"])
         static let lyricHighlight = NotchlySettingItem(.music, "Lyric highlight", keywords: ["lyrics", "highlight", "sweep", "gradient", "solid", "karaoke", "animation"], anchoredTo: lyrics)
         static let pinLyrics = NotchlySettingItem(.music, "Keep lyrics under the closed notch", keywords: ["lyrics", "pin", "pinned", "closed notch", "always show"], anchoredTo: lyrics)
@@ -497,6 +531,7 @@ extension NotchlyMusicPage {
         Item.liveActivity, Item.floatingControls, Item.songOnExternal, Item.inactivityTimeout, Item.hideInFullscreen,
         Item.skipButtons, Item.customControls, Item.mediaOutput,
         Item.sneakPeek, Item.sneakPeekOnChange, Item.sneakPeekStyle,
+        Item.fetchLyrics, Item.lyricsModeDefault, Item.lyricsTextSize,
         Item.lyrics, Item.lyricHighlight, Item.pinLyrics, Item.pinnedContext, Item.lyricsWidth, Item.lyricsOffset,
         Item.liveCanvas, Item.parallax,
         Item.realTimeWaveform, Item.barCount, Item.colorExtraction, Item.waveformScrubber,
