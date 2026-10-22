@@ -651,6 +651,14 @@ class MusicManager: ObservableObject {
     @Published var showLyrics: Bool = false
     @Published var currentLyricIndex: Int = -1
 
+    /// The listener's correction for the song playing, in seconds; positive
+    /// shows lines earlier. Remembered per song in the lyrics cache.
+    @Published private(set) var lyricsOffset: TimeInterval = 0
+    /// What the last lookup searched for and why it found nothing, shown on the
+    /// lyrics card's failure state.
+    @Published private(set) var lyricsLookupNote: LyricsLookupNote?
+    private var lyricsOffsetKey: String?
+
     // Task used to periodically sync displayed lyric with playback position
     private var lyricSyncTask: Task<Void, Never>?
     private var lyricsFetchTask: Task<Void, Never>?
@@ -1063,16 +1071,35 @@ class MusicManager: ObservableObject {
         let shuffleChanged = state.isShuffled != self.isShuffled
         let repeatModeChanged = state.repeatMode != self.repeatMode
 
-        if timeChanged {
-            self.elapsedTime = state.currentTime
-            // Update current lyric based on elapsed time
-            self.updateCurrentLyric(for: state.currentTime)
+        // The playback anchor is a triple -- the position, the instant it was
+        // sampled and the rate -- and a position is only meaningful with the
+        // other two. They are adopted together, before anything reads them:
+        // the lyric lookup below used to run between the new position and the
+        // old instant, and lit whichever line `state.currentTime` alone named
+        // (for a source that anchors once per track, that is the first line)
+        // until the next sync tick put it right.
+        //
+        // The timestamp is not a clock, it is the anchor: it moves when the
+        // player re-anchors, which Spotify does roughly once a track. While
+        // paused it re-sends the same instant indefinitely, so it is guarded
+        // like every other assignment here -- an unconditional assign
+        // republishes MusicManager on every delivery and invalidates all the
+        // views that read it.
+        let anchorTimestampChanged = state.lastUpdated != self.timestampDate
+        if anchorTimestampChanged {
+            self.timestampDate = state.lastUpdated
         }
-
         if playbackRateChanged {
             self.playbackRate = state.playbackRate
         }
-        
+        if timeChanged {
+            self.elapsedTime = state.currentTime
+        }
+        if timeChanged || anchorTimestampChanged || playbackRateChanged {
+            // From the whole anchor, lead and offset included, like the sync loop.
+            self.updateCurrentLyric(for: self.lyricPlaybackPosition())
+        }
+
         // TIDAL reports neither on the media stream, so what arrives here is
         // the default rather than the truth. Its own menu is the authority.
         let sourceOwnsPlaybackModes = state.bundleIdentifier == TidalAccessibility.bundleIdentifier
@@ -1092,21 +1119,6 @@ class MusicManager: ObservableObject {
         updateLiveStreamState(with: state)
         self.refreshLikedFlag(for: state)
         self.refreshTidalPlaybackModes(for: state)
-
-        // Guarded like every other assignment in this method, and for the same
-        // reason. This is a published property that several views read, so an
-        // unconditional assign republishes MusicManager on every delivery from
-        // the media stream and invalidates all of them.
-        //
-        // It is not a clock, it is the playback anchor: it moves when the
-        // player re-anchors, which Spotify does roughly once a track. While
-        // paused it re-sends the same instant indefinitely -- four samples six
-        // seconds apart during this work carried a byte-identical timestamp.
-        // Nearly every one of those assignments was writing a value that had
-        // not changed.
-        if state.lastUpdated != self.timestampDate {
-            self.timestampDate = state.lastUpdated
-        }
 
         // Manage lyric sync task based on playback/lyrics availability
         if lyricsWanted && !self.syncedLyrics.isEmpty {
@@ -1795,6 +1807,15 @@ class MusicManager: ObservableObject {
         prepareLyricsForCurrentTrack(forceFetch: true, prioritizeVisibleResult: lyricsWanted)
     }
 
+    /// Forgets every saved lyric (memory and disk) and looks the current song up
+    /// again. Timing corrections the listener made are kept.
+    func clearLyricsCache() {
+        lyricsCache.removeAll()
+        lyricsCacheOrder.removeAll()
+        LyricsDiskCache.shared.removeAll()
+        fetchLyrics()
+    }
+
     /// Lyrics mode or the online switch changed.
     private func handleLyricsDemandChange() {
         if lyricsWanted {
@@ -1853,12 +1874,25 @@ class MusicManager: ObservableObject {
         let trackChanged = activeLyricsKey != key
         activeLyricsKey = key
 
+        let queries = lookup.queries
+        let duration = songDuration
+        let diskKey = LyricsDiskCache.key(
+            artist: queries.first?.artist ?? "",
+            title: queries.first?.title ?? "",
+            duration: duration
+        )
+
         if trackChanged {
             lyricsAvailability = .loading
             syncedLyrics = []
             currentLyricIndex = -1
             currentLyrics = shouldShowLoading ? "Loading lyrics..." : ""
+            lyricsLookupNote = nil
             stopLyricSync()
+        }
+        if trackChanged || lyricsOffsetKey != diskKey {
+            lyricsOffsetKey = diskKey
+            lyricsOffset = LyricsDiskCache.shared.offset(for: diskKey)
         }
 
         if !forceFetch, let cachedLyrics = lyricsCache[key] {
@@ -1882,29 +1916,43 @@ class MusicManager: ObservableObject {
             currentLyrics = "Loading lyrics..."
         }
 
-        let queries = lookup.queries
         let requestAlbum = lookup.requestAlbum
         let isWebSource = lookup.isWebSource
-        let duration = songDuration
-        let diskKey = LyricsDiskCache.key(
-            artist: queries.first?.artist ?? "",
-            title: queries.first?.title ?? "",
-            duration: duration
-        )
+        let originalTitle = lookup.originalTitle
+        let searchedFor = queries.first.map { "\($0.artist) \u{2014} \($0.title)" } ?? ""
 
         lyricsFetchTask = Task { [weak self] in
             guard let self else { return }
+            let cache = LyricsDiskCache.shared
 
-            // Songs played before are answered from disk without asking anyone.
-            var lyrics = forceFetch ? nil : LyricsDiskCache.shared.lookup(diskKey)
+            // Songs played before are answered from disk without asking anyone,
+            // except plain-only answers a day old (a timed version may have been
+            // contributed since) and misses, which are only trusted for minutes.
+            var lyrics: LyricsResolution?
+            var stale: LyricsResolution?
+            var sawTransientFailure = false
+            if forceFetch {
+                cache.forgetMiss(diskKey)
+            } else {
+                switch cache.lookupDetailed(diskKey) {
+                case .fresh(let cached): lyrics = cached
+                case .stale(let cached): stale = cached
+                case .absent: break
+                }
+                if lyrics == nil, stale == nil, cache.isRecentMiss(diskKey) {
+                    lyrics = LyricsResolution()
+                }
+            }
+
             if lyrics == nil {
-                let fetched = await LyricsProviderFallback.resolve(
+                let outcome = await LyricsProviderFallback.run(
                     primary: {
                         // Track updates can assign the duration after preparing
                         // lyrics; read it once the request is about to go out.
                         let currentDuration = await MainActor.run { self.songDuration }
                         return try await LRCLIBLyrics.fetch(
-                            queries: queries,
+                            variants: queries,
+                            originalTitle: originalTitle,
                             album: requestAlbum,
                             duration: currentDuration > 0 ? currentDuration : duration,
                             isWebSource: isWebSource
@@ -1915,58 +1963,74 @@ class MusicManager: ObservableObject {
                     }
                 )
                 guard !Task.isCancelled else { return }
-                if fetched.availability != .unavailable {
-                    LyricsDiskCache.shared.store(fetched, for: diskKey)
+                var resolution = outcome.resolution
+                sawTransientFailure = outcome.sawTransientFailure
+                if resolution.availability == .unavailable, let stale {
+                    resolution = stale
+                } else if resolution.availability != .unavailable {
+                    cache.store(resolution, for: diskKey)
+                } else if outcome.isDefinitiveMiss {
+                    cache.storeMiss(diskKey)
                 }
-                lyrics = fetched
+                lyrics = resolution
             }
             guard !Task.isCancelled, let lyrics else { return }
 
             await MainActor.run {
                 guard self.lyricsFetchID == fetchID, self.activeLyricsKey == key else { return }
                 // Empty is not a fact about the track. Caching it would stick a
-                // transport blip — including the old path where LRCLIB threw
-                // and NetEase was never asked — and hide a later hit.
-                if lyrics.availability != .unavailable {
+                // transport blip -- including the old path where LRCLIB threw
+                // and NetEase was never asked -- and hide a later hit. Plain
+                // words are kept out of this cache for the same reason: the disk
+                // cache decides when to look for a timed version again.
+                if lyrics.availability != .unavailable && lyrics.availability != .untimed {
                     self.storeLyricsInCache(lyrics, for: key)
                 }
                 self.lyricsFetchKey = nil
                 self.lyricsFetchID = nil
                 self.lyricsFetchTask = nil
+                self.lyricsLookupNote = lyrics.availability == .unavailable
+                    ? LyricsLookupNote(searchedFor: searchedFor, serviceUnavailable: sawTransientFailure)
+                    : nil
                 self.applyLyricsToDisplay(lyrics)
             }
         }
     }
 
     /// All media sources share this fallback and semantic result. Tries the
-    /// two best cleaned queries.
+    /// best three query variants.
     private func fetchLyricsFromNetEase(queries: [LyricsQuery]) async throws -> LyricsResolution {
         // Track updates assign duration after preparing lyrics; read it only
         // after LRCLIB has answered, as in the existing fallback.
         let duration = await MainActor.run { self.songDuration }
         var lastError: Error?
-        for query in queries.prefix(2) {
+        var best = LyricsResolution()
+        for query in queries.prefix(3) {
             try Task.checkCancellation()
             do {
                 let result = try await NetEaseLyrics.fetch(
                     title: query.title,
-                    artist: query.artist,
+                    artist: LyricsArtistNames.primary(query.artist),
                     duration: duration,
                     session: LyricsNetwork.neteaseSession
                 )
-                if result.availability != .unavailable { return result }
+                if result.availability == .timed { return result }
+                if best.availability == .unavailable { best = result }
             } catch {
                 lastError = error
             }
         }
+        if best.availability != .unavailable { return best }
         if let lastError { throw lastError }
         return LyricsResolution()
     }
 
     struct LyricsLookupContext {
         let key: LyricsLookupKey
-        /// Cleaned search terms, best first.
+        /// Ordered search variants, best first.
         let queries: [LyricsQuery]
+        /// The title as the player wrote it.
+        let originalTitle: String
         let requestAlbum: String
         let isWebSource: Bool
     }
@@ -1978,8 +2042,9 @@ class MusicManager: ObservableObject {
         let requestAlbum = normalizedLyricsRequestComponent(album)
 
         // YouTube in a browser publishes "Artist - Title (Official Video)" by
-        // "ArtistVEVO"; the cleaner turns that into something a catalogue knows.
-        let queries = LyricsQueryCleaner.queries(title: requestTitle, artist: requestArtist, isWebSource: isWebSource)
+        // "ArtistVEVO"; the cleaner turns that into something a catalogue knows,
+        // and the planner widens each into the spellings a catalogue may use.
+        let queries = LyricsQueryPlanner.variants(title: requestTitle, artist: requestArtist, isWebSource: isWebSource)
         guard let primary = queries.first else { return nil }
 
         let key = LyricsLookupKey(
@@ -1992,7 +2057,11 @@ class MusicManager: ObservableObject {
         )
 
         guard key.isValid else { return nil }
-        return LyricsLookupContext(key: key, queries: queries, requestAlbum: requestAlbum, isWebSource: isWebSource)
+        return LyricsLookupContext(
+            key: key, queries: queries,
+            originalTitle: normalizedLyricsRequestComponent(songTitle),
+            requestAlbum: requestAlbum, isWebSource: isWebSource
+        )
     }
 
     private func normalizedLyricsRequestComponent(_ value: String) -> String {
@@ -2002,7 +2071,7 @@ class MusicManager: ObservableObject {
     }
 
     private func normalizedLyricsTitle(_ value: String) -> String {
-        var normalized = normalizedLyricsRequestComponent(value)
+        var normalized = LyricsText.canonical(normalizedLyricsRequestComponent(value))
         let cleanupPatterns = [
             "\\s*\\((feat\\.?|ft\\.?|featuring)[^\\)]*\\)",
             "\\s*\\[(feat\\.?|ft\\.?|featuring)[^\\]]*\\]",
@@ -2115,27 +2184,41 @@ class MusicManager: ObservableObject {
         }
     }
 
-    /// Playback position for lyric purposes, tolerant of a missing duration.
-    ///
-    /// `estimatedPlaybackPosition` clamps to `songDuration`, which is zero until
-    /// the duration arrives and for streams that never report one -- so it answers
-    /// zero however far playback has actually got, which pegs every lyric at the
-    /// start of the track. Elapsed time is the better answer there.
+    /// Where in the song the lyrics are looked up: the playback anchor
+    /// extrapolated to `date`, plus the lead and this song's offset. See
+    /// `LyricsClock` for the arithmetic (it is pure and tested) -- notably it
+    /// extrapolates without a known duration, which `estimatedPlaybackPosition`
+    /// cannot, because that clamps to a duration of zero.
     private func lyricPlaybackPosition(at date: Date = Date()) -> TimeInterval {
-        // `estimatedPlaybackPosition` clamps to the duration, so a sender that
-        // reports none -- a live stream, or a player that simply does not --
-        // pins every estimate to zero and the lyrics stop moving between
-        // deliveries. Extrapolate from the anchor directly in that case; a
-        // paused track has nothing to extrapolate and stays where it is.
-        let position: TimeInterval
-        if songDuration > 0 {
-            position = max(estimatedPlaybackPosition(at: date), elapsedTime)
-        } else if isPlaying {
-            position = max(0, elapsedTime + date.timeIntervalSince(timestampDate) * playbackRate)
-        } else {
-            position = max(0, elapsedTime)
+        LyricsClock.lyricPosition(
+            elapsed: elapsedTime,
+            timestamp: timestampDate,
+            rate: playbackRate,
+            isPlaying: isPlaying,
+            duration: songDuration,
+            now: date,
+            lead: Self.lyricLeadTime,
+            offset: lyricsOffset
+        )
+    }
+
+    /// Moves this song's lyrics earlier (positive) or later (negative) and
+    /// remembers the correction for the next time it plays.
+    func adjustLyricsOffset(by delta: TimeInterval) {
+        setLyricsOffset(LyricsOffset.adjusted(lyricsOffset, by: delta))
+    }
+
+    func resetLyricsOffset() {
+        setLyricsOffset(0)
+    }
+
+    private func setLyricsOffset(_ value: TimeInterval) {
+        guard value != lyricsOffset else { return }
+        lyricsOffset = value
+        if let key = lyricsOffsetKey {
+            LyricsDiskCache.shared.setOffset(value, for: key)
         }
-        return position + Self.lyricLeadTime
+        updateCurrentLyric(for: lyricPlaybackPosition())
     }
 
     /// How far ahead of the voice the lyrics run.

@@ -71,6 +71,19 @@ enum LyricsStageState: Equatable {
     }
 }
 
+/// What the last lookup tried, for the failure state: the cleaned query that
+/// was sent (so a wrong guess is visible) and whether the service itself was
+/// the problem rather than the song.
+struct LyricsLookupNote: Equatable {
+    let searchedFor: String
+    let serviceUnavailable: Bool
+
+    var detail: String {
+        if serviceUnavailable { return "The lyrics service did not answer. Try again in a moment." }
+        return searchedFor.isEmpty ? "" : "Searched for \(searchedFor)"
+    }
+}
+
 /// The rows the rolling view draws around the current line.
 enum LyricsStageWindow {
     struct Window: Equatable {

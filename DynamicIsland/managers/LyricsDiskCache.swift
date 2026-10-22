@@ -59,9 +59,14 @@ struct LyricsLRU<Key: Hashable, Value> {
 }
 
 /// Found lyrics, kept on disk so replaying a song does not ask the network
-/// again. Only answers are cached ("no lyrics" is not: it may be a transport
-/// blip, and a later lookup could succeed). At most `capacity` songs, kept in
-/// one small JSON file in the Caches directory, written off the main thread.
+/// again, and the per-song timing corrections the listener has made.
+///
+/// Answers are cached; "no lyrics" is only remembered in memory, for ten
+/// minutes, and only when every request was answered -- a transport blip must
+/// not hide a song for long. Plain-only answers are trusted for a day: a timed
+/// version may be contributed to the catalogue later, and timed beats plain.
+/// At most `capacity` songs, kept in one small JSON file in the Caches
+/// directory, written off the main thread.
 final class LyricsDiskCache: @unchecked Sendable {
 
     struct StoredLine: Codable, Equatable {
@@ -73,13 +78,43 @@ final class LyricsDiskCache: @unchecked Sendable {
     struct Entry: Codable, Equatable {
         let lines: [StoredLine]
         let instrumental: Bool
+        /// Seconds since 1970 when the answer was stored; nil for entries
+        /// written before this was recorded.
+        var storedAt: Double?
+
+        init(lines: [StoredLine], instrumental: Bool, storedAt: Double? = nil) {
+            self.lines = lines
+            self.instrumental = instrumental
+            self.storedAt = storedAt
+        }
+
+        /// Words with no timings at all.
+        var isPlainOnly: Bool {
+            !instrumental && !lines.isEmpty && !lines.contains { $0.timed }
+        }
+    }
+
+    /// What a lookup found.
+    enum Lookup {
+        case fresh(LyricsResolution)
+        /// A plain-only answer old enough that a timed one should be looked
+        /// for. Still better than nothing if that lookup fails.
+        case stale(LyricsResolution)
+        case absent
     }
 
     private struct FileContents: Codable {
-        var version = 1
+        var version = 2
         var order: [String]
         var entries: [String: Entry]
+        var offsets: [String: Double]?
     }
+
+    /// How long a plain-only answer is trusted.
+    static let plainOnlyLifetime: TimeInterval = 24 * 60 * 60
+    /// How long a confirmed miss is trusted.
+    static let missLifetime: TimeInterval = 10 * 60
+    private static let offsetCapacity = 500
 
     static let shared: LyricsDiskCache = {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
@@ -91,6 +126,9 @@ final class LyricsDiskCache: @unchecked Sendable {
     let fileURL: URL
     private let lock = NSLock()
     private var lru: LyricsLRU<String, Entry>
+    private var offsets: [String: Double] = [:]
+    private var offsetOrder: [String] = []
+    private var misses: [String: Date] = [:]
     private var loaded = false
     private var saveScheduled = false
     private let ioQueue = DispatchQueue(label: "notchly.lyrics-cache", qos: .utility)
@@ -111,20 +149,93 @@ final class LyricsDiskCache: @unchecked Sendable {
     // MARK: Access
 
     func lookup(_ key: String) -> LyricsResolution? {
+        if case .fresh(let resolution) = lookupDetailed(key) { return resolution }
+        return nil
+    }
+
+    /// Like `lookup`, but says when an entry is present and too old to trust.
+    func lookupDetailed(_ key: String, now: Date = Date()) -> Lookup {
         lock.lock()
         defer { lock.unlock() }
         loadIfNeeded()
         // Recency is updated in memory and written with the next store.
-        guard let entry = lru.value(for: key) else { return nil }
-        return Self.resolution(from: entry)
+        guard let entry = lru.value(for: key) else { return .absent }
+        let resolution = Self.resolution(from: entry)
+        if entry.isPlainOnly {
+            // An entry from before storage times were kept counts as old.
+            let age = entry.storedAt.map { now.timeIntervalSince1970 - $0 } ?? .infinity
+            if age > Self.plainOnlyLifetime { return .stale(resolution) }
+        }
+        return .fresh(resolution)
     }
 
-    func store(_ resolution: LyricsResolution, for key: String) {
+    func store(_ resolution: LyricsResolution, for key: String, now: Date = Date()) {
         guard resolution.availability != .unavailable, resolution.availability != .loading else { return }
         lock.lock()
         defer { lock.unlock() }
         loadIfNeeded()
-        lru.insert(Self.entry(from: resolution), for: key)
+        var entry = Self.entry(from: resolution)
+        entry.storedAt = now.timeIntervalSince1970
+        lru.insert(entry, for: key)
+        misses.removeValue(forKey: key)
+        scheduleSaveLocked()
+    }
+
+    // MARK: Misses
+
+    /// Remembers, in memory only, that every request for this track was
+    /// answered and none had lyrics.
+    func storeMiss(_ key: String, now: Date = Date()) {
+        lock.lock()
+        defer { lock.unlock() }
+        misses[key] = now
+        if misses.count > 200, let oldest = misses.min(by: { $0.value < $1.value })?.key {
+            misses.removeValue(forKey: oldest)
+        }
+    }
+
+    func isRecentMiss(_ key: String, now: Date = Date()) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let date = misses[key] else { return false }
+        if now.timeIntervalSince(date) > Self.missLifetime {
+            misses.removeValue(forKey: key)
+            return false
+        }
+        return true
+    }
+
+    func forgetMiss(_ key: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        misses.removeValue(forKey: key)
+    }
+
+    // MARK: Offsets
+
+    /// The listener's timing correction for this song, in seconds.
+    func offset(for key: String) -> TimeInterval {
+        lock.lock()
+        defer { lock.unlock() }
+        loadIfNeeded()
+        return offsets[key] ?? 0
+    }
+
+    func setOffset(_ value: TimeInterval, for key: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        loadIfNeeded()
+        if value == 0 {
+            offsets.removeValue(forKey: key)
+            offsetOrder.removeAll { $0 == key }
+        } else {
+            offsets[key] = value
+            offsetOrder.removeAll { $0 == key }
+            offsetOrder.append(key)
+            while offsetOrder.count > Self.offsetCapacity {
+                offsets.removeValue(forKey: offsetOrder.removeFirst())
+            }
+        }
         scheduleSaveLocked()
     }
 
@@ -140,12 +251,16 @@ final class LyricsDiskCache: @unchecked Sendable {
         ioQueue.sync { self.writeNow() }
     }
 
+    /// Forgets every stored lyric and remembered miss. The timing corrections
+    /// the listener made are theirs and are kept.
     func removeAll() {
         lock.lock()
+        loadIfNeeded()
         lru = LyricsLRU(capacity: lru.capacity)
-        loaded = true
+        misses = [:]
+        saveScheduled = true
         lock.unlock()
-        try? FileManager.default.removeItem(at: fileURL)
+        flush()
     }
 
     // MARK: Conversion
@@ -175,6 +290,8 @@ final class LyricsDiskCache: @unchecked Sendable {
         for key in contents.order {
             if let entry = contents.entries[key] { lru.insert(entry, for: key) }
         }
+        offsets = contents.offsets ?? [:]
+        offsetOrder = Array(offsets.keys)
     }
 
     private func scheduleSaveLocked() {
@@ -192,7 +309,7 @@ final class LyricsDiskCache: @unchecked Sendable {
             return
         }
         saveScheduled = false
-        let contents = FileContents(order: lru.order, entries: lru.storage)
+        let contents = FileContents(order: lru.order, entries: lru.storage, offsets: offsets.isEmpty ? nil : offsets)
         lock.unlock()
 
         do {

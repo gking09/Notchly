@@ -44,7 +44,9 @@ struct LyricsStageView: View {
             canSeek: !musicManager.isLiveStream && musicManager.songDuration > 0,
             accent: playerColorTinting
                 ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
-                : NotchlyTheme.Palette.silver
+                : NotchlyTheme.Palette.silver,
+            offset: musicManager.lyricsOffset,
+            note: musicManager.lyricsLookupNote
         )
     }
 
@@ -58,6 +60,8 @@ struct LyricsStageView: View {
             progress: { musicManager.currentLyricSweepProgress(at: $0) },
             onSeek: { musicManager.seek(to: $0) },
             onRetry: { musicManager.fetchLyrics() },
+            onAdjustOffset: { musicManager.adjustLyricsOffset(by: $0) },
+            onResetOffset: { musicManager.resetLyricsOffset() },
             onClose: {
                 withAnimation(NotchlyTheme.Motion.spring) { LyricsModeController.shared.set(false) }
             },
@@ -84,6 +88,10 @@ struct LyricsStageSnapshot {
     var isPlaying: Bool
     var canSeek: Bool
     var accent: Color
+    /// This song's timing correction, in seconds; positive shows lines earlier.
+    var offset: TimeInterval = 0
+    /// What the last lookup searched for, for the "No lyrics found" state.
+    var note: LyricsLookupNote?
 }
 
 // MARK: - Content
@@ -96,6 +104,8 @@ struct LyricsStageContent: View {
     var progress: (Date) -> Double
     var onSeek: (TimeInterval) -> Void = { _ in }
     var onRetry: () -> Void = {}
+    var onAdjustOffset: (TimeInterval) -> Void = { _ in }
+    var onResetOffset: () -> Void = {}
     var onClose: () -> Void = {}
     var onScrollHover: (Bool) -> Void = { _ in }
 
@@ -114,6 +124,7 @@ struct LyricsStageContent: View {
         .clipShape(shape)
         .contentShape(shape)
         .overlay(alignment: .topTrailing) { closeButton }
+        .overlay(alignment: .topLeading) { offsetControl }
         .onHover { hovering in
             withAnimation(NotchlyTheme.Motion.snappy) { isHovering = hovering }
         }
@@ -163,7 +174,13 @@ struct LyricsStageContent: View {
         case .searching:
             LyricsStatusView(symbol: "text.magnifyingglass", title: "Searching…", detail: nil, animates: true)
         case .notFound:
-            LyricsStatusView(symbol: "text.badge.xmark", title: "No lyrics found", detail: nil, actionTitle: "Try again", action: onRetry)
+            LyricsStatusView(
+                symbol: "text.badge.xmark",
+                title: "No lyrics found",
+                detail: snapshot.note?.detail,
+                actionTitle: "Try again",
+                action: onRetry
+            )
         case .instrumental:
             LyricsStatusView(symbol: "music.note", title: "Instrumental", detail: "No words in this one")
         case .onlineLookupOff:
@@ -175,6 +192,52 @@ struct LyricsStageContent: View {
         case .nothingPlaying:
             LyricsStatusView(symbol: "music.note", title: "Nothing playing", detail: nil)
         }
+    }
+
+    /// Nudges this song's lyrics earlier or later. Shown on hover while timed
+    /// lyrics are up, and kept visible once a correction is set so it is never
+    /// a mystery why the lines are where they are.
+    @ViewBuilder
+    private var offsetControl: some View {
+        if snapshot.state == .synced {
+            let isSet = abs(snapshot.offset) > 0.001
+            HStack(spacing: 2) {
+                offsetButton("minus", help: "Lyrics later (\(LyricsOffset.label(-LyricsOffset.step)))") {
+                    onAdjustOffset(-LyricsOffset.step)
+                }
+                Button(action: onResetOffset) {
+                    Text(LyricsOffset.label(snapshot.offset))
+                        .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(isSet ? NotchlyTheme.Palette.textPrimary : NotchlyTheme.Palette.textTertiary)
+                        .frame(minWidth: 30)
+                }
+                .buttonStyle(.plain)
+                .help("Reset timing")
+                .accessibilityLabel("Lyrics timing \(LyricsOffset.label(snapshot.offset)). Reset")
+                offsetButton("plus", help: "Lyrics earlier (\(LyricsOffset.label(LyricsOffset.step)))") {
+                    onAdjustOffset(LyricsOffset.step)
+                }
+            }
+            .padding(.horizontal, 3)
+            .frame(height: 18)
+            .glassSurface(in: Capsule())
+            .padding(7)
+            .opacity(isHovering || isSet ? 1 : 0)
+            .allowsHitTesting(isHovering || isSet)
+        }
+    }
+
+    private func offsetButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(NotchlyTheme.Palette.textSecondary)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.notchlyPress)
+        .help(help)
+        .accessibilityLabel(help)
     }
 
     private var closeButton: some View {
@@ -418,7 +481,7 @@ private struct LyricsStatusView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(NotchlyTheme.Palette.textPrimary)
 
-            if let detail {
+            if let detail, !detail.isEmpty {
                 Text(detail)
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(NotchlyTheme.Palette.textTertiary)

@@ -38,16 +38,100 @@ enum LyricsNetwork {
     static let neteaseSession = makeSession(userAgent: nil)
 }
 
+// MARK: - Transport
+
+/// One HTTP round trip: the body and the status code. Injectable, so the
+/// retry and variant logic is tested against recorded responses.
+typealias LyricsTransport = @Sendable (URL) async throws -> (Data, Int)
+
+enum LyricsHTTP {
+    /// The transport every real request goes through.
+    static func transport(session: URLSession) -> LyricsTransport {
+        { url in
+            let (data, response) = try await session.data(from: url)
+            return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    enum Result {
+        case ok(Data)
+        /// 404 or 400: the catalogue answered, and the answer is "no".
+        case none
+        /// Overloaded, rate limited, timed out or unreachable, even after
+        /// retrying. Says nothing about whether the track exists.
+        case transientFailure
+    }
+
+    /// LRCLIB answers `503 ServerOverloaded` for a large share of requests
+    /// (about one `get` in five and more `search`es when measured for this
+    /// change), and a retry a moment later usually succeeds. Treating the first
+    /// 503 as "no such track" is how songs the catalogue has were shown as
+    /// "No lyrics found".
+    static let retryDelays: [TimeInterval] = [0.6, 1.5]
+
+    static func perform(
+        _ url: URL,
+        transport: LyricsTransport,
+        sleep: (TimeInterval) async -> Void,
+        deadline: Date?
+    ) async throws -> Result {
+        var attempt = 0
+        while true {
+            try Task.checkCancellation()
+            do {
+                let (data, status) = try await transport(url)
+                switch status {
+                case 200: return .ok(data)
+                case 400, 404: return .none
+                default: break   // 429, 5xx and anything unexpected are retried
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                if (error as? URLError)?.code == .cancelled { throw CancellationError() }
+            }
+            guard attempt < retryDelays.count else { return .transientFailure }
+            if let deadline, Date().addingTimeInterval(retryDelays[attempt]) >= deadline { return .transientFailure }
+            await sleep(retryDelays[attempt])
+            attempt += 1
+        }
+    }
+}
+
+/// What one lookup found, and whether "found nothing" can be trusted.
+struct LyricsFetchOutcome {
+    var resolution: LyricsResolution = LyricsResolution()
+    /// Some request failed even after retrying, so an empty result may only
+    /// mean the catalogue could not be asked.
+    var sawTransientFailure = false
+    var requestCount = 0
+    /// How far the chosen row's length is from the track's, for diagnostics.
+    var durationDelta: TimeInterval?
+
+    /// Nothing found and every request was answered: safe to remember for a while.
+    var isDefinitiveMiss: Bool {
+        resolution.availability == .unavailable && !sawTransientFailure
+    }
+}
+
 /// LRCLIB (lrclib.net), a free keyless catalogue of synced lyrics.
 ///
-/// `/api/get` is asked first: it matches artist, title and duration exactly
-/// (the server allows a couple of seconds either way), which is the most
-/// reliable answer there is. When it has nothing, `/api/search` is ranked with
-/// `LyricsSearchResults`, preferring rows whose length agrees with the track.
-/// Only the artist, title and duration are ever sent.
+/// The lookup is a plan, not a single query. Each ordered variant of the
+/// artist and title is asked of `/api/get` (exact artist, title and length, the
+/// most reliable answer there is) and then `/api/search`; after the variants,
+/// a free-text `q` search and a title-only search catch what the structured
+/// ones miss. Every row seen goes into one pool and `LyricsCandidateSelector`
+/// picks from the pool, so the answer is the best of everything found rather
+/// than the first thing that was acceptable. Only the artist, title and
+/// duration are ever sent.
 enum LRCLIBLyrics {
 
     static let baseURL = "https://lrclib.net/api"
+
+    /// Requests per lookup, not counting retries.
+    static let maximumRequests = 10
+    /// Wall-clock allowance for the whole lookup.
+    static let lookupBudget: TimeInterval = 24
 
     private static let queryValueAllowed: CharacterSet = {
         var allowed = CharacterSet.urlQueryAllowed
@@ -55,10 +139,10 @@ enum LRCLIBLyrics {
         return allowed
     }()
 
+    /// Sent as written: `get` and `search` both ignore accents, and folding
+    /// would turn a Cyrillic "й" into "и".
     private static func encode(_ value: String) -> String? {
-        value
-            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
-            .addingPercentEncoding(withAllowedCharacters: queryValueAllowed)
+        LyricsText.canonical(value).addingPercentEncoding(withAllowedCharacters: queryValueAllowed)
     }
 
     static func getURL(artist: String, title: String, duration: TimeInterval) -> URL? {
@@ -70,6 +154,12 @@ enum LRCLIBLyrics {
     static func searchURL(artist: String, title: String) -> URL? {
         guard let artist = encode(artist), let title = encode(title) else { return nil }
         return URL(string: "\(baseURL)/search?track_name=\(title)&artist_name=\(artist)")
+    }
+
+    /// Free-text search over title and artist together.
+    static func searchURL(query: String) -> URL? {
+        guard let query = encode(query) else { return nil }
+        return URL(string: "\(baseURL)/search?q=\(query)")
     }
 
     // MARK: Parsing
@@ -86,32 +176,10 @@ enum LRCLIBLyrics {
         (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []
     }
 
-    /// Picks the best search row for a query: the usual title/artist ranking,
-    /// with rows whose length agrees with the track tried before rows whose
-    /// length does not (a different edit times every line wrong).
-    static func bestSearchMatch(
-        in rows: [[String: Any]],
-        query: LyricsQuery,
-        album: String,
-        duration: TimeInterval,
-        tolerance: TimeInterval
-    ) -> [String: Any]? {
-        let agreeing = rows.filter {
-            LyricsQueryCleaner.durationsAgree(($0["duration"] as? Double) ?? 0, duration, tolerance: tolerance)
-        }
-        if let match = LyricsSearchResults.bestMatch(
-            in: agreeing, artist: query.artist, title: query.title, album: album, duration: duration
-        ) {
-            return match
-        }
-        // Nothing of the right length. A plain-text row is still worth showing
-        // (no timing to be wrong), a timed one from another edit is not.
-        let untimed = rows.filter { !LyricsSearchResults.carriesSyncedLyrics($0) }
-        return LyricsSearchResults.bestMatch(
-            in: untimed, artist: query.artist, title: query.title, album: album, duration: duration
-        )
-    }
+    // MARK: Resolutions
 
+    /// Whatever the row carries, preferring timings. Used for a row that was
+    /// not chosen by the selector (tests, tooling).
     static func resolution(for row: [String: Any], query: LyricsQuery, duration: TimeInterval) -> LyricsResolution {
         let resolution = LyricsResolution.lrclib(row)
         if resolution.availability == .instrumental,
@@ -121,85 +189,126 @@ enum LRCLIBLyrics {
         return resolution
     }
 
+    /// The lyrics a selection stands for, honouring *why* it was chosen: a row
+    /// picked as plain text is shown as plain text even when it also carries
+    /// timings of the wrong length.
+    static func resolution(for selection: LyricsSelection) -> LyricsResolution {
+        let row = selection.row
+        let synced = (row["syncedLyrics"] as? String) ?? ""
+        let plain = (row["plainLyrics"] as? String) ?? ""
+        switch selection.kind {
+        case .instrumental:
+            return LyricsResolution(instrumental: true)
+        case .synced:
+            return LyricsResolution(lines: LRCParser.parse(synced))
+        case .plain:
+            return LyricsResolution(lines: LyricLine.untimedLines(from: plain))
+        case .syncedOffLength:
+            let words = LRCParser.parse(synced)
+                .filter { !$0.text.isEmpty }
+                .map { LyricLine(timestamp: 0, text: $0.text, isTimed: false) }
+            return LyricsResolution(lines: words)
+        }
+    }
+
     // MARK: Fetching
 
-    /// Tries each query in order and returns the first timed lyrics found, or
-    /// the first untimed/instrumental answer when no query has timings.
-    /// Throws only when every request failed in transport, so the caller can
-    /// still fall back to another provider.
+    /// Looks the track up and returns the best lyrics found. Throws only for
+    /// cancellation: a failed request is reported in the outcome so the caller
+    /// can still ask another provider and knows not to remember a miss.
     static func fetch(
-        queries: [LyricsQuery],
+        variants: [LyricsQuery],
+        originalTitle: String,
         album: String,
         duration: TimeInterval,
         isWebSource: Bool,
-        session: URLSession = LyricsNetwork.lrclibSession
-    ) async throws -> LyricsResolution {
-        var fallback: LyricsResolution?
-        var lastError: Error?
-        var anyRequestSucceeded = false
-        let tolerance = LyricsQueryCleaner.durationTolerance(isWebSource: isWebSource)
+        transport: LyricsTransport = LyricsHTTP.transport(session: LyricsNetwork.lrclibSession),
+        sleep: (TimeInterval) async -> Void = { try? await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) },
+        budget: TimeInterval = lookupBudget
+    ) async throws -> LyricsFetchOutcome {
+        guard !variants.isEmpty else { return LyricsFetchOutcome() }
 
-        for query in queries.prefix(3) {
-            try Task.checkCancellation()
-            do {
-                let result = try await fetch(query: query, album: album, duration: duration, tolerance: tolerance, session: session)
-                anyRequestSucceeded = true
-                switch result.availability {
-                case .timed:
-                    return result
-                case .untimed, .instrumental:
-                    if fallback == nil { fallback = result }
-                case .loading, .unavailable:
-                    break
+        let request = LyricsMatchRequest(
+            titles: variants.map(\.title) + [originalTitle],
+            originalTitle: originalTitle,
+            artists: variants.map(\.artist),
+            album: album,
+            duration: duration,
+            tolerance: LyricsQueryCleaner.durationTolerance(isWebSource: isWebSource)
+        )
+
+        var outcome = LyricsFetchOutcome()
+        var pool: [[String: Any]] = []
+        var poolIDs = Set<Int>()
+        let deadline = Date().addingTimeInterval(budget)
+
+        func ingest(_ rows: [[String: Any]]) {
+            for row in rows {
+                if let id = row["id"] as? Int {
+                    guard poolIDs.insert(id).inserted else { continue }
                 }
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                if (error as? URLError)?.code == .cancelled { throw CancellationError() }
-                lastError = error
+                pool.append(row)
             }
         }
 
-        if let fallback { return fallback }
-        if !anyRequestSucceeded, let lastError { throw lastError }
-        return LyricsResolution()
-    }
-
-    private static func fetch(
-        query: LyricsQuery,
-        album: String,
-        duration: TimeInterval,
-        tolerance: TimeInterval,
-        session: URLSession
-    ) async throws -> LyricsResolution {
-        var untimed: LyricsResolution?
-
-        if let url = getURL(artist: query.artist, title: query.title, duration: duration) {
-            let (data, response) = try await session.data(from: url)
-            if (response as? HTTPURLResponse)?.statusCode == 200, let row = parseGetResponse(data) {
-                let resolution = resolution(for: row, query: query, duration: duration)
-                if resolution.availability == .timed || resolution.availability == .instrumental {
-                    return resolution
-                }
-                if resolution.availability == .untimed { untimed = resolution }
+        func ask(_ url: URL?) async throws -> Data? {
+            guard let url, outcome.requestCount < maximumRequests, Date() < deadline else { return nil }
+            outcome.requestCount += 1
+            switch try await LyricsHTTP.perform(url, transport: transport, sleep: sleep, deadline: deadline) {
+            case .ok(let data): return data
+            case .none: return nil
+            case .transientFailure:
+                outcome.sawTransientFailure = true
+                return nil
             }
         }
 
-        try Task.checkCancellation()
-        guard let url = searchURL(artist: query.artist, title: query.title) else {
-            return untimed ?? LyricsResolution()
+        func best() -> LyricsSelection? {
+            LyricsCandidateSelector.select(rows: pool, request: request)
         }
-        let (data, response) = try await session.data(from: url)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { return untimed ?? LyricsResolution() }
 
-        let rows = parseSearchResponse(data)
-        guard let row = bestSearchMatch(in: rows, query: query, album: album, duration: duration, tolerance: tolerance) else {
-            return untimed ?? LyricsResolution()
+        /// A synced row whose length is within a second or so of the track's:
+        /// nothing a further request could find is worth waiting for.
+        func isSettled(_ selection: LyricsSelection?) -> Bool {
+            guard let selection, selection.kind == .synced else { return false }
+            return (selection.durationDelta ?? 0) <= 1.5
         }
-        let resolution = resolution(for: row, query: query, duration: duration)
-        if resolution.availability == .unavailable || (resolution.availability == .untimed && untimed != nil) {
-            return untimed ?? resolution
+
+        search: do {
+            for variant in variants {
+                if let data = try await ask(getURL(artist: variant.artist, title: variant.title, duration: duration)),
+                   let row = parseGetResponse(data) {
+                    ingest([row])
+                }
+                if isSettled(best()) { break search }
+
+                if let data = try await ask(searchURL(artist: variant.artist, title: variant.title)) {
+                    ingest(parseSearchResponse(data))
+                }
+                // Any timed row of the right length ends the search: the
+                // variants after this one only differ in spelling.
+                if best()?.kind == .synced { break search }
+            }
+
+            // Nothing timed yet. Free text finds rows the structured search
+            // does not, notably when the artist field is a list.
+            if let first = variants.first {
+                if let data = try await ask(searchURL(query: "\(LyricsArtistNames.primary(first.artist)) \(first.title)")) {
+                    ingest(parseSearchResponse(data))
+                }
+                if best()?.kind == .synced { break search }
+                // Title alone: the artist is filtered by the selector, so a
+                // wrong artist string costs nothing here.
+                if let data = try await ask(searchURL(query: first.title)) {
+                    ingest(parseSearchResponse(data))
+                }
+            }
         }
-        return resolution
+
+        if let selection = best() {
+            outcome.resolution = resolution(for: selection)
+            outcome.durationDelta = selection.durationDelta
+        }
+        return outcome
     }
 }

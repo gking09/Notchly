@@ -15,17 +15,28 @@ enum LRCParser {
 
     /// Matches one `[mm:ss]`, `[mm:ss.xx]` or `[mm:ss.xxx]` tag.
     ///
-    /// The fractional part is one to three digits and is scaled by its own
-    /// length: `.5` is five tenths, `.50` is fifty hundredths and `.500` is five
-    /// hundred thousandths, and all three mean half a second.
-    private static let timeTagPattern = "\\[(\\d{1,3}):(\\d{2})(?:[.:](\\d{1,3}))?\\]"
+    /// The fractional part is one to three digits, after a `.`, `:` or `,` (all
+    /// three are written), and is scaled by its own length: `.5` is five tenths,
+    /// `.50` is fifty hundredths and `.500` is five hundred thousandths, and all
+    /// three mean half a second.
+    private static let timeTagPattern = "\\[(\\d{1,3}):(\\d{2})(?:[.:,](\\d{1,3}))?\\]"
+
+    /// The run of timestamps at the start of a line, `[00:12.00][00:45.30]`.
+    private static let leadingTagsPattern = "^\\s*((?:\\[\\d{1,3}:\\d{2}(?:[.:,]\\d{1,3})?\\]\\s*)+)"
+
+    /// Timestamps inside the text: enhanced LRC marks every word with
+    /// `<00:12.30>`, and some files repeat `[00:12.30]` mid-line. Neither is
+    /// part of what is sung.
+    private static let inlineTagPattern = "<\\d{1,3}:\\d{2}(?:[.:,]\\d{1,3})?>|\\[\\d{1,3}:\\d{2}(?:[.:,]\\d{1,3})?\\]"
 
     /// Matches the `[offset:±ms]` metadata tag, which shifts every line.
     /// A positive offset means the lyrics should appear earlier.
     private static let offsetTagPattern = "\\[offset:\\s*([+-]?\\d+)\\s*\\]"
 
     static func parse(_ lrc: String) -> [LyricLine] {
-        guard let timeRegex = try? NSRegularExpression(pattern: timeTagPattern) else { return [] }
+        guard let timeRegex = try? NSRegularExpression(pattern: timeTagPattern),
+              let leadingRegex = try? NSRegularExpression(pattern: leadingTagsPattern),
+              let inlineRegex = try? NSRegularExpression(pattern: inlineTagPattern) else { return [] }
 
         let offset = parseOffset(lrc)
         var lyrics: [LyricLine] = []
@@ -33,20 +44,27 @@ enum LRCParser {
         for line in lrc.components(separatedBy: .newlines) {
             let nsLine = line as NSString
             let fullRange = NSRange(location: 0, length: nsLine.length)
-            let matches = timeRegex.matches(in: line, range: fullRange)
-            guard !matches.isEmpty else { continue }
 
-            // A line may carry several timestamps -- a repeated chorus is written
-            // once with one tag per repetition. The text starts after the last of
-            // them, and the line is emitted at every timestamp it carries.
-            guard let lastMatch = matches.last else { continue }
-            let textStart = lastMatch.range.location + lastMatch.range.length
+            // A line may carry several leading timestamps -- a repeated chorus is
+            // written once with one tag per repetition. The text starts after the
+            // last of them, and the line is emitted at every timestamp it carries.
+            guard let leading = leadingRegex.firstMatch(in: line, range: fullRange) else { continue }
+            let tagRange = leading.range(at: 1)
+            let matches = timeRegex.matches(in: line, range: tagRange)
+            guard !matches.isEmpty else { continue }
+            let textStart = tagRange.location + tagRange.length
             guard textStart <= nsLine.length else { continue }
 
             // A timestamp with no text behind it is not junk: LRC uses it to mark
             // where singing stops, which is what delimits an instrumental break.
             // Keep it as an empty line so callers can see the gap.
-            let text = nsLine.substring(from: textStart).trimmingCharacters(in: .whitespaces)
+            var text = nsLine.substring(from: textStart)
+            text = inlineRegex.stringByReplacingMatches(
+                in: text, range: NSRange(location: 0, length: (text as NSString).length), withTemplate: ""
+            )
+            text = text
+                .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespaces)
 
             for match in matches {
                 guard let timestamp = timestamp(from: match, in: nsLine) else { continue }
@@ -54,7 +72,14 @@ enum LRCParser {
             }
         }
 
-        return lyrics.sorted { $0.timestamp < $1.timestamp }
+        // Stable for lines that share a timestamp, so they keep file order.
+        return lyrics.enumerated()
+            .sorted { lhs, rhs in
+                lhs.element.timestamp != rhs.element.timestamp
+                    ? lhs.element.timestamp < rhs.element.timestamp
+                    : lhs.offset < rhs.offset
+            }
+            .map(\.element)
     }
 
     /// Reads the `[offset:±ms]` tag, in seconds. Returns 0 when absent.

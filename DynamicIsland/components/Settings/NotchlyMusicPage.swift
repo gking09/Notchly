@@ -296,6 +296,12 @@ struct NotchlyMusicPage: View {
                     )
                 }
             }
+            NotchlyActionRow(
+                title: String(localized: "Clear lyrics cache"),
+                subtitle: String(localized: "Look every song up again. Timing corrections you made are kept."),
+                symbol: "trash",
+                action: { MusicManager.shared.clearLyricsCache() }
+            )
         }
     }
 

@@ -288,32 +288,61 @@ struct LyricsResolution {
     }
 }
 
-/// LRCLIB is asked first. A thrown request there is the same as an empty
+/// LRCLIB is asked first. A failed request there is the same as an empty
 /// catalogue: neither produced words, so the fallback still has to run.
 /// Folding both calls into one `do` meant a transport failure skipped the
 /// only provider that had the track, and the catch showed "No lyrics found".
+///
+/// The fallback is also asked when LRCLIB has only plain words, because a
+/// second catalogue may hold a timed version -- and timed beats plain. Its
+/// answer replaces LRCLIB's only when it is timed; otherwise the plain text
+/// found first stands.
 enum LyricsProviderFallback {
     static func resolve(
         primary: () async throws -> LyricsResolution,
         fallback: () async throws -> LyricsResolution
     ) async -> LyricsResolution {
-        let primaryResult: LyricsResolution
+        await run(
+            primary: { LyricsFetchOutcome(resolution: try await primary()) },
+            fallback: fallback
+        ).resolution
+    }
+
+    static func run(
+        primary: () async throws -> LyricsFetchOutcome,
+        fallback: () async throws -> LyricsResolution
+    ) async -> LyricsFetchOutcome {
+        var outcome: LyricsFetchOutcome
         do {
-            primaryResult = try await primary()
+            outcome = try await primary()
         } catch {
             print("Failed to fetch lyrics: \(error)")
-            primaryResult = LyricsResolution()
+            outcome = LyricsFetchOutcome()
+            outcome.sawTransientFailure = true
         }
-        guard !Task.isCancelled, primaryResult.availability == .unavailable else {
-            return primaryResult
+        let availability = outcome.resolution.availability
+        guard !Task.isCancelled, availability == .unavailable || availability == .untimed else {
+            return outcome
         }
         do {
             let secondary = try await fallback()
-            if secondary.availability != .unavailable { return secondary }
+            switch secondary.availability {
+            case .timed:
+                outcome.resolution = secondary
+                outcome.durationDelta = nil
+            case .untimed, .instrumental:
+                if availability == .unavailable {
+                    outcome.resolution = secondary
+                    outcome.durationDelta = nil
+                }
+            case .loading, .unavailable:
+                break
+            }
         } catch {
             print("Failed to fetch lyrics: \(error)")
+            if availability == .unavailable { outcome.sawTransientFailure = true }
         }
-        return primaryResult
+        return outcome
     }
 }
 

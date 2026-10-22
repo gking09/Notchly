@@ -316,21 +316,28 @@ final class LRCLIBLyricsTests: XCTestCase {
         )
     }
 
+    private func select(_ rows: [[String: Any]], duration: TimeInterval, tolerance: TimeInterval = 3) -> LyricsSelection? {
+        LyricsCandidateSelector.select(rows: rows, request: LyricsMatchRequest(
+            titles: ["Blinding Lights"], originalTitle: "Blinding Lights", artists: ["The Weeknd"],
+            album: "", duration: duration, tolerance: tolerance
+        ))
+    }
+
     func testSearchPrefersTheRowWhoseLengthAgrees() throws {
         let rows = LRCLIBLyrics.parseSearchResponse(Data(Self.searchFixture.utf8))
         XCTAssertEqual(rows.count, 3)
-        let query = LyricsQuery(artist: "The Weeknd", title: "Blinding Lights")
-        let match = try XCTUnwrap(LRCLIBLyrics.bestSearchMatch(in: rows, query: query, album: "", duration: 201, tolerance: 3))
-        XCTAssertEqual(match["id"] as? Int, 1)
+        let match = try XCTUnwrap(select(rows, duration: 201))
+        XCTAssertEqual(match.row["id"] as? Int, 1)
         // The remix length matches only when that is what is playing.
-        let remix = try XCTUnwrap(LRCLIBLyrics.bestSearchMatch(in: rows, query: query, album: "", duration: 262, tolerance: 3))
-        XCTAssertEqual(remix["id"] as? Int, 2)
+        let remix = try XCTUnwrap(select(rows, duration: 262))
+        XCTAssertEqual(remix.row["id"] as? Int, 2)
     }
 
-    func testSearchRejectsTimedRowsOfTheWrongLength() {
+    func testSearchDoesNotTimeLyricsOfTheWrongLength() throws {
         let rows = LRCLIBLyrics.parseSearchResponse(Data(Self.searchFixture.utf8))
-        let query = LyricsQuery(artist: "The Weeknd", title: "Blinding Lights")
-        XCTAssertNil(LRCLIBLyrics.bestSearchMatch(in: rows, query: query, album: "", duration: 400, tolerance: 3))
+        let match = try XCTUnwrap(select(rows, duration: 400))
+        XCTAssertNotEqual(match.kind, .synced, "no timed row is within tolerance of 400s")
+        XCTAssertEqual(LRCLIBLyrics.resolution(for: match).availability, .untimed)
     }
 
     func testURLsCarryOnlyArtistTitleAndDuration() throws {
@@ -339,7 +346,7 @@ final class LRCLIBLyricsTests: XCTestCase {
         let items = URLComponents(url: get, resolvingAgainstBaseURL: false)?.queryItems ?? []
         XCTAssertEqual(Set(items.map(\.name)), ["artist_name", "track_name", "duration"])
         XCTAssertEqual(items.first { $0.name == "track_name" }?.value, "Halo & Love")
-        XCTAssertEqual(items.first { $0.name == "artist_name" }?.value, "Beyonce")
+        XCTAssertEqual(items.first { $0.name == "artist_name" }?.value, "Beyoncé", "sent as written; lrclib ignores accents itself")
         XCTAssertEqual(items.first { $0.name == "duration" }?.value, "262")
         XCTAssertNil(LRCLIBLyrics.getURL(artist: "A", title: "B", duration: 0), "get needs a duration")
         XCTAssertNotNil(LRCLIBLyrics.searchURL(artist: "A", title: "B"))

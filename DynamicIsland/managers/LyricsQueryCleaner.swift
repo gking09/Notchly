@@ -318,14 +318,24 @@ enum LyricsQueryCleaner {
     }
 
     /// Trims separators, quotes and stray brackets left at either end.
+    ///
+    /// A single quote is the exception: it is an apostrophe far more often than
+    /// a quotation mark ("Livin'", "Beggin'", "'Til Tuesday"), and trimming it
+    /// changed the name of the song. It is only dropped as a *pair* wrapped
+    /// round the whole text ('Title').
     private static func trimDecorations(_ value: String) -> String {
         var result = collapseWhitespace(value)
-        let edge = CharacterSet(charactersIn: " -–—|:~·•*\"'“”‘’«»")
+        let edge = CharacterSet(charactersIn: " -–—|:~·•*\"“”‘«»")
         result = result.trimmingCharacters(in: edge)
         // An unmatched bracket at an end ("Title (" after a cut) is debris.
         while let last = result.last, "([{".contains(last) { result.removeLast() }
         while let first = result.first, ")]}".contains(first) { result.removeFirst() }
-        return collapseWhitespace(result.trimmingCharacters(in: edge))
+        result = collapseWhitespace(result.trimmingCharacters(in: edge))
+        if result.count > 2, let first = result.first, let last = result.last,
+           "'\u{2019}".contains(first), "'\u{2019}".contains(last) {
+            result = String(result.dropFirst().dropLast())
+        }
+        return collapseWhitespace(result)
     }
 
     /// "RickAstley" -> "Rick Astley". Only splits lower->upper boundaries, so
