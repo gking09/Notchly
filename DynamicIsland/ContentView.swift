@@ -59,6 +59,7 @@ struct ContentView: View {
     @State private var closedContentWidth: CGFloat = 0
     @ObservedObject var capsLockManager = CapsLockManager.shared
     @ObservedObject var stashManager = StashManager.shared
+    @ObservedObject var foundryBridge = FoundryBridge.shared
     /// The notch was opened by a drag arriving over it, so a drag leaving should close it again.
     @State private var stashOpenedByDrag = false
     @State private var stashDragExitTask: Task<Void, Never>?
@@ -990,6 +991,7 @@ struct ContentView: View {
         var privacy: Bool
         var idleFace: Bool
         var stash: Bool
+        var foundry: Bool
     }
 
     private var closedActivitySignature: ClosedActivitySignature {
@@ -1004,7 +1006,8 @@ struct ContentView: View {
             focus: doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing,
             privacy: privacyManager.hasAnyIndicator,
             idleFace: !musicManager.isPlaying && musicManager.isPlayerIdle,
-            stash: stashClosedNoticeVisible
+            stash: stashClosedNoticeVisible,
+            foundry: foundryAlertVisible
         )
     }
 
@@ -1081,6 +1084,10 @@ struct ContentView: View {
                               )
                       } else if stashClosedNoticeVisible, let notice = stashManager.closedNotice {
                           StashClosedActivity(notice: notice)
+                              .id(notice.id)
+                              .transition(closedLiveActivitySwapTransition)
+                      } else if foundryAlertVisible, let notice = foundryBridge.closedAlert {
+                          FoundryClosedActivity(alert: notice.alert)
                               .id(notice.id)
                               .transition(closedLiveActivitySwapTransition)
                       } else if vm.notchState == .closed && capsLockManager.isCapsLockActive && Defaults[.enableCapsLockIndicator] && !vm.hideOnClosed && !lockScreenManager.isLocked {
@@ -1175,6 +1182,8 @@ struct ContentView: View {
                                       NotchHomeView(albumArtNamespace: albumArtNamespace)
                                   case .stash:
                                       StashView()
+                                  case .foundry:
+                                      FoundryView()
                               }
                           }
                           .id(coordinator.currentView)
@@ -1970,6 +1979,18 @@ struct ContentView: View {
             && vm.notchState == .closed
             && !vm.hideOnClosed
             && !lockScreenManager.isLocked
+    }
+
+    /// Whether a brief Foundry warning is showing in the wings. Like the other
+    /// closed-notch activities it stays out of the way while the notch is hidden
+    /// (full screen), the Mac is locked, or a Focus is on.
+    private var foundryAlertVisible: Bool {
+        foundryBridge.closedAlert != nil
+            && foundryBridge.settings.alertsEnabled
+            && vm.notchState == .closed
+            && !vm.hideOnClosed
+            && !lockScreenManager.isLocked
+            && !doNotDisturbManager.isDoNotDisturbActive
     }
 
     private var stashAcceptsDrops: Bool {

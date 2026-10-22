@@ -32,6 +32,10 @@ enum QuickAction: String, CaseIterable, Identifiable, Defaults.Serializable {
     case screenshot
     case sleepDisplay
     case shortcut
+    /// Opens Foundry (the project-management app). Only offered when it is available.
+    case openFoundry
+    /// Opens the project of Foundry's suggested next step.
+    case foundryNextUp
 
     var id: String { rawValue }
 
@@ -44,6 +48,8 @@ enum QuickAction: String, CaseIterable, Identifiable, Defaults.Serializable {
         case .screenshot: return String(localized: "Screenshot")
         case .sleepDisplay: return String(localized: "Sleep display")
         case .shortcut: return String(localized: "Run shortcut")
+        case .openFoundry: return String(localized: "Open Foundry")
+        case .foundryNextUp: return String(localized: "Foundry next up")
         }
     }
 
@@ -56,6 +62,8 @@ enum QuickAction: String, CaseIterable, Identifiable, Defaults.Serializable {
         case .screenshot: return String(localized: "Drag-select an area and copy it to the clipboard.")
         case .sleepDisplay: return String(localized: "Turns the display off now.")
         case .shortcut: return String(localized: "Runs the Shortcuts shortcut named below, for example one that toggles a Focus.")
+        case .openFoundry: return String(localized: "Brings Foundry forward. Shown only while the Foundry integration is on and Foundry is installed.")
+        case .foundryNextUp: return String(localized: "Opens the project of your next step in Foundry. It never completes anything.")
         }
     }
 
@@ -69,6 +77,8 @@ enum QuickAction: String, CaseIterable, Identifiable, Defaults.Serializable {
         case .screenshot: return "camera.viewfinder"
         case .sleepDisplay: return "display"
         case .shortcut: return "bolt.fill"
+        case .openFoundry: return "square.stack.3d.up"
+        case .foundryNextUp: return "arrow.right.circle"
         }
     }
 
@@ -81,8 +91,12 @@ enum QuickAction: String, CaseIterable, Identifiable, Defaults.Serializable {
     }
 
     static let defaultOrder: [QuickAction] = [
-        .timer, .stopwatch, .muteMicrophone, .darkMode, .screenshot, .sleepDisplay, .shortcut
+        .timer, .stopwatch, .muteMicrophone, .darkMode, .screenshot, .sleepDisplay, .shortcut,
+        .openFoundry, .foundryNextUp
     ]
+
+    /// Needs the Foundry integration (and Foundry itself) to be of any use.
+    var requiresFoundry: Bool { self == .openFoundry || self == .foundryNextUp }
 }
 
 /// Pure ordering / visibility rules for the row, kept apart from the views and
@@ -100,16 +114,19 @@ enum QuickActionsLayout {
     }
 
     /// What the row actually shows, left to right. The shortcut button needs a
-    /// shortcut name to run, so it stays out until one is set.
+    /// shortcut name to run, so it stays out until one is set, and Foundry's
+    /// buttons stay out unless the integration is on and Foundry is installed.
     static func visibleActions(
         order: [QuickAction],
         hidden: [QuickAction],
-        shortcutName: String
+        shortcutName: String,
+        foundryAvailable: Bool = FoundryAvailability.quickActionsAvailable
     ) -> [QuickAction] {
         let hiddenSet = Set(hidden)
         let hasShortcut = !shortcutName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return normalizedOrder(order).filter { action in
             guard !hiddenSet.contains(action) else { return false }
+            if action.requiresFoundry { return foundryAvailable }
             return action != .shortcut || hasShortcut
         }
     }
@@ -142,6 +159,7 @@ func quickActionsBarVisible() -> Bool {
     return !QuickActionsLayout.visibleActions(
         order: Defaults[.quickActionsOrder],
         hidden: Defaults[.quickActionsHidden],
-        shortcutName: Defaults[.quickActionsShortcutName]
+        shortcutName: Defaults[.quickActionsShortcutName],
+        foundryAvailable: FoundryAvailability.quickActionsAvailable
     ).isEmpty
 }

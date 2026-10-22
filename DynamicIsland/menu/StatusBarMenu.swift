@@ -160,7 +160,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             isTimerActive: TimerManager.shared.isTimerActive,
             isStopwatchActive: StopwatchManager.shared.isActive,
             isMicMuted: QuickActionsManager.shared.isMicMuted,
-            isDarkMode: QuickActionsManager.shared.isDarkMode
+            isDarkMode: QuickActionsManager.shared.isDarkMode,
+            foundry: FoundryBridge.shared.menuState
         )
     }
 
@@ -219,6 +220,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             QuickActionsManager.shared.perform(.screenshot) {
                 AppDelegate.shared?.closeNotchOnActiveScreen()
             }
+        case .openFoundry:
+            FoundryBridge.shared.openApp()
+        case .openFoundryNextUp:
+            FoundryBridge.shared.openNextUp()
         case .openSettings:
             SettingsWindowController.shared.showWindow()
         case .openAbout:

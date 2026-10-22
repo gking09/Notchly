@@ -44,6 +44,12 @@
 		A1C0FFEE0003000000000001 /* PinnedLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */; };
 		A1C0FFEE0004000000000001 /* UnsyncedLyricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */; };
 		A1C0FFEE0009000000000001 /* LyricsModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0009000000000002 /* LyricsModeTests.swift */; };
+		A1C0FFEE00B1000000000001 /* LyricsMatchingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00B1000000000002 /* LyricsMatchingTests.swift */; };
+		A1C0FFEE00F1000000000001 /* FoundryFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00F1000000000002 /* FoundryFeedTests.swift */; };
+		A1C0FFEE00F2000000000001 /* FoundryAlertPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00F2000000000002 /* FoundryAlertPlannerTests.swift */; };
+		A1C0FFEE00F3000000000001 /* FoundryRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00F3000000000002 /* FoundryRenderTests.swift */; };
+		A1C0FFEE00F4000000000001 /* FoundrySettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00F4000000000002 /* FoundrySettingsTests.swift */; };
+		A1C0FFEE00F5000000000001 /* FoundryTabModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00F5000000000002 /* FoundryTabModelTests.swift */; };
 		A3C83CAF84544DCE386C3BB8 /* DynamicIslandUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54078F29304A9DBBEFBDF932 /* DynamicIslandUITests.swift */; };
 		A4B5C6D7E8F90123456789AB /* AppleMusicControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F90123456789AC /* AppleMusicControllerTests.swift */; };
 		A70F1A012F90000100F1A001 /* FingerprintScan.json in Resources */ = {isa = PBXBuildFile; fileRef = A70F1A022F90000100F1A001 /* FingerprintScan.json */; };
@@ -119,6 +125,12 @@
 		A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinnedLyricsTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnsyncedLyricsTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0009000000000002 /* LyricsModeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LyricsModeTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE00B1000000000002 /* LyricsMatchingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LyricsMatchingTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE00F1000000000002 /* FoundryFeedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundryFeedTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE00F2000000000002 /* FoundryAlertPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundryAlertPlannerTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE00F3000000000002 /* FoundryRenderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundryRenderTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE00F4000000000002 /* FoundrySettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundrySettingsTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE00F5000000000002 /* FoundryTabModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundryTabModelTests.swift; sourceTree = "<group>"; };
 		A4B5C6D7E8F90123456789AC /* AppleMusicControllerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleMusicControllerTests.swift; sourceTree = "<group>"; };
 		A70F1A022F90000100F1A001 /* FingerprintScan.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = FingerprintScan.json; sourceTree = "<group>"; };
 		B1C2D3E4F5061728394A5B6D /* PartialDownloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PartialDownloadTests.swift; sourceTree = "<group>"; };
@@ -231,6 +243,12 @@
 				A1C0FFEE0003000000000002 /* PinnedLyricsTests.swift */,
 				A1C0FFEE0004000000000002 /* UnsyncedLyricsTests.swift */,
 				A1C0FFEE0009000000000002 /* LyricsModeTests.swift */,
+				A1C0FFEE00B1000000000002 /* LyricsMatchingTests.swift */,
+				A1C0FFEE00F1000000000002 /* FoundryFeedTests.swift */,
+				A1C0FFEE00F2000000000002 /* FoundryAlertPlannerTests.swift */,
+				A1C0FFEE00F3000000000002 /* FoundryRenderTests.swift */,
+				A1C0FFEE00F4000000000002 /* FoundrySettingsTests.swift */,
+				A1C0FFEE00F5000000000002 /* FoundryTabModelTests.swift */,
 				C1DE0FAV0001000000000002 /* CiderFavoritingTests.swift */,
 				2EB37667F763422E97DEEB49 /* MenuBarClearanceTests.swift */,
 				A1C0DE0000000000000000C1 /* LiveActivityWingTests.swift */,
@@ -493,6 +511,12 @@
 				A1C0FFEE0003000000000001 /* PinnedLyricsTests.swift in Sources */,
 				A1C0FFEE0004000000000001 /* UnsyncedLyricsTests.swift in Sources */,
 				A1C0FFEE0009000000000001 /* LyricsModeTests.swift in Sources */,
+				A1C0FFEE00B1000000000001 /* LyricsMatchingTests.swift in Sources */,
+				A1C0FFEE00F1000000000001 /* FoundryFeedTests.swift in Sources */,
+				A1C0FFEE00F2000000000001 /* FoundryAlertPlannerTests.swift in Sources */,
+				A1C0FFEE00F3000000000001 /* FoundryRenderTests.swift in Sources */,
+				A1C0FFEE00F4000000000001 /* FoundrySettingsTests.swift in Sources */,
+				A1C0FFEE00F5000000000001 /* FoundryTabModelTests.swift in Sources */,
 				C1DE0FAV0001000000000001 /* CiderFavoritingTests.swift in Sources */,
 				738C4EBB63E3449B923997D0 /* MenuBarClearanceTests.swift in Sources */,
 				A1C0DE0000000000000000C2 /* LiveActivityWingTests.swift in Sources */,

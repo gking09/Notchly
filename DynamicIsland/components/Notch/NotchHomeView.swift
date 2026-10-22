@@ -920,6 +920,8 @@ struct NotchHomeView: View {
     @Default(.quickActionsHidden) private var quickActionsHidden
     @Default(.quickActionsShortcutName) private var quickActionsShortcutName
     @ObservedObject private var lyricsMode = LyricsModeController.shared
+    // Foundry's quick actions come and go with its settings.
+    @ObservedObject private var foundryBridge = FoundryBridge.shared
     let albumArtNamespace: Namespace.ID
 
     /// Lyrics mode swaps the rolling lyrics card in where the Hub (or the side

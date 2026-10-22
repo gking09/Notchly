@@ -46,6 +46,7 @@ struct TabSelectionView: View {
     @Default(.enableMinimalisticUI) private var enableMinimalisticUI
     @Default(.enableStash) private var enableStash
     @ObservedObject private var stashStore = StashManager.shared.store
+    @ObservedObject private var foundry = FoundryBridge.shared
     @Namespace var animation
     
     private var tabs: [TabModel] {
@@ -57,6 +58,11 @@ struct TabSelectionView: View {
 
         if enableStash && !enableMinimalisticUI {
             tabsArray.append(TabModel(label: "Stash", icon: "tray.and.arrow.down", view: .stash))
+        }
+
+        // Foundry's tab needs the integration on and a valid summary to show.
+        if foundry.tabVisible {
+            tabsArray.append(TabModel(label: "Foundry", icon: "square.stack.3d.up", view: .foundry))
         }
 
         return tabsArray
@@ -101,6 +107,10 @@ struct TabSelectionView: View {
         .onAppear {
             ensureValidSelection(with: tabs)
         }
+        // A tab that goes away (Foundry switched off, summary gone) sends the notch home.
+        .onChange(of: tabs.map(\.id)) { _, _ in
+            withAnimation(NotchlyTheme.Motion.spring) { ensureValidSelection(with: tabs) }
+        }
     }
 
     private var homeTabVisible: Bool {
@@ -111,7 +121,11 @@ struct TabSelectionView: View {
     }
 
     private func badge(for tab: TabModel) -> Int {
-        tab.view == .stash ? stashStore.items.count : 0
+        switch tab.view {
+        case .stash: return stashStore.items.count
+        case .foundry: return foundry.feed?.attention.count ?? 0
+        case .home: return 0
+        }
     }
 
     private func isSelected(_ tab: TabModel) -> Bool {

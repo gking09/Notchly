@@ -38,14 +38,18 @@ struct NotchlyHomeHubPage: View {
     @Default(.quickActionsHidden) private var hiddenActions
     @Default(.quickActionsShortcutName) private var shortcutName
     @Default(.showStandardMediaControls) private var showStandardMediaControls
+    @Default(.foundryIntegration) private var foundryIntegration
+    @Default(.foundryShowQuickActions) private var foundryShowQuickActions
     @Default(.mirrorShape) private var mirrorShape
     @Default(.selectedCameraID) private var selectedCameraID
     @Default(.showMirror) private var showMirror
 
     @State private var soundRefresh = 0
 
+    /// Foundry's buttons are listed only while they could be shown.
     private var orderedActions: [QuickAction] {
-        QuickActionsLayout.normalizedOrder(order)
+        let foundryAvailable = FoundryAvailability.quickActionsAvailable
+        return QuickActionsLayout.normalizedOrder(order).filter { foundryAvailable || !$0.requiresFoundry }
     }
 
     var body: some View {
@@ -135,6 +139,7 @@ struct NotchlyHomeHubPage: View {
         case .battery: return "battery.75percent"
         case .music: return "pause.circle"
         case .stash: return "tray"
+        case .foundry: return "square.stack.3d.up"
         }
     }
 
@@ -205,8 +210,14 @@ struct NotchlyHomeHubPage: View {
     }
 
     private func move(_ action: QuickAction, by offset: Int) {
+        // Step over the buttons that are listed, not ones that are out of play
+        // (Foundry's, while it is off), so every click visibly moves the row.
+        let listed = orderedActions
+        let full = QuickActionsLayout.normalizedOrder(order)
+        guard let index = listed.firstIndex(of: action), listed.indices.contains(index + offset),
+              let from = full.firstIndex(of: action), let to = full.firstIndex(of: listed[index + offset]) else { return }
         withAnimation(.smooth) {
-            order = QuickActionsLayout.moved(order, action: action, by: offset)
+            order = QuickActionsLayout.moved(full, action: action, by: to - from)
         }
     }
 

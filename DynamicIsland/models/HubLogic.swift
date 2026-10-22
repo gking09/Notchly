@@ -141,6 +141,8 @@ enum HubChip: String, CaseIterable, Identifiable, Defaults.Serializable {
     case battery
     case music
     case stash
+    /// The next step or a warning from Foundry, the project-management app.
+    case foundry
 
     var id: String { rawValue }
 
@@ -152,6 +154,7 @@ enum HubChip: String, CaseIterable, Identifiable, Defaults.Serializable {
         case .battery: return String(localized: "Battery")
         case .music: return String(localized: "Paused music")
         case .stash: return String(localized: "Stash")
+        case .foundry: return String(localized: "Foundry")
         }
     }
 
@@ -163,12 +166,13 @@ enum HubChip: String, CaseIterable, Identifiable, Defaults.Serializable {
         case .battery: return String(localized: "While charging or when the battery is low.")
         case .music: return String(localized: "The track you paused. Click to resume.")
         case .stash: return String(localized: "How many items are waiting in the Stash. Click to open it.")
+        case .foundry: return String(localized: "Your next step from Foundry, or a project that needs attention. Click to open it in Foundry; right-click to mark it done.")
         }
     }
 
     /// Most important first. When there is not room for every relevant chip,
     /// the ones at the end are the ones that wait.
-    static let priority: [HubChip] = [.timer, .stopwatch, .focus, .battery, .music, .stash]
+    static let priority: [HubChip] = [.timer, .stopwatch, .focus, .battery, .foundry, .music, .stash]
 }
 
 /// What the Hub knows about the Mac right now, as plain values.
@@ -195,6 +199,9 @@ struct HubContext: Equatable {
     /// A track is loaded but not playing.
     var musicIsPaused = false
     var musicTitle = ""
+
+    /// What Foundry has to say, if it is installed and has published a summary.
+    var foundry: FoundryChipContent?
 }
 
 /// How a chip should read at a glance. Colour is reserved for meaning, in
@@ -318,6 +325,20 @@ enum HubChipPlanner {
                 symbol: "tray.full.fill",
                 text: count == 1 ? String(localized: "1 item") : String(localized: "\(count) items")
             )
+
+        case .foundry:
+            guard let content = context.foundry else { return nil }
+            switch content.kind {
+            case .attention(let critical):
+                return HubChipModel(
+                    kind: kind,
+                    symbol: "exclamationmark.triangle.fill",
+                    text: content.text,
+                    tone: critical ? .critical : .warning
+                )
+            case .nextUp:
+                return HubChipModel(kind: kind, symbol: "arrow.right.circle", text: content.text)
+            }
         }
     }
 

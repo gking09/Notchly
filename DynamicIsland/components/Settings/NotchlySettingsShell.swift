@@ -144,6 +144,8 @@ struct NotchlySettingsView: View {
             NotchlyLiveActivitiesPage()
         } else if selectedPage == .stash {
             NotchlyStashPage()
+        } else if selectedPage == .foundry {
+            NotchlyFoundryPage()
         } else if selectedPage == .shortcuts {
             NotchlyShortcutsPage()
         }

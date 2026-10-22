@@ -152,6 +152,11 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
+    // Foundry tab (settings only; whether a summary exists doesn't resize the notch)
+    if FoundryAvailability.tabAllowed {
+        count += 1
+    }
+
     return count
 }
 

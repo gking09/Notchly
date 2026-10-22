@@ -28,6 +28,7 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
     case music
     case liveActivities
     case stash
+    case foundry
     case shortcuts
     case about
 
@@ -41,6 +42,7 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .music: return String(localized: "Music")
         case .liveActivities: return String(localized: "Live Activities")
         case .stash: return String(localized: "Stash")
+        case .foundry: return String(localized: "Foundry")
         case .shortcuts: return String(localized: "Shortcuts")
         case .about: return String(localized: "About")
         }
@@ -55,6 +57,7 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .music: return "music.note"
         case .liveActivities: return "waveform.path.ecg"
         case .stash: return "tray.and.arrow.down"
+        case .foundry: return "square.stack.3d.up"
         case .shortcuts: return "command"
         case .about: return "info.circle"
         }
@@ -68,6 +71,7 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .music: return String(localized: "Now playing, lyrics and media sources.")
         case .liveActivities: return String(localized: "Battery, devices, volume and brightness HUDs, recording, focus and lock screen.")
         case .stash: return String(localized: "The temporary text and file tray in the notch.")
+        case .foundry: return String(localized: "Your next step, project health and warnings from the Foundry app.")
         case .shortcuts: return String(localized: "Global keyboard shortcuts.")
         case .about: return String(localized: "Version, credits and license.")
         }
@@ -88,6 +92,8 @@ enum NotchlySettingsPage: String, CaseIterable, Identifiable, Hashable {
             return ["battery", "charging", "bluetooth", "devices", "hud", "osd", "volume", "brightness", "recording", "focus", "camera", "microphone", "lock screen", "downloads", "controls"]
         case .stash:
             return ["tray", "shelf", "clipboard", "files", "drop", "temporary", "retention"]
+        case .foundry:
+            return ["project management", "projects", "next up", "tasks", "warnings", "alerts", "health", "feed", "summary", "glance"]
         case .shortcuts:
             return ["keyboard", "hotkey", "key bindings", "global shortcuts"]
         case .about:
@@ -142,6 +148,7 @@ extension NotchlySettingsPage {
         case .music: return NotchlyMusicPage.items
         case .liveActivities: return NotchlyLiveActivitiesPage.items
         case .stash: return NotchlyStashPage.items
+        case .foundry: return NotchlyFoundryPage.items
         case .shortcuts: return NotchlyShortcutsPage.items
         case .about: return []
         }

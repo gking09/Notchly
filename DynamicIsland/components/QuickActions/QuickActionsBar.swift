@@ -45,6 +45,7 @@ extension AnyTransition {
 struct QuickActionsBar: View {
     @EnvironmentObject private var vm: DynamicIslandViewModel
     @ObservedObject private var actions = QuickActionsManager.shared
+    @ObservedObject private var foundryBridge = FoundryBridge.shared
     @Default(.quickActionsOrder) private var order
     @Default(.quickActionsHidden) private var hidden
     @Default(.quickActionsShortcutName) private var shortcutName

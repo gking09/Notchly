@@ -201,6 +201,8 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
             Defaults.publisher(.quickActionsOrder, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.quickActionsHidden, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.quickActionsShortcutName, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.foundryIntegration, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.foundryShowQuickActions, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.lyricsPanelWidth, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.lyricsPanelOffset, options: []).map { _ in () }.eraseToAnyPublisher(),
             MusicManager.shared.$isPlaying.map { _ in () }.eraseToAnyPublisher(),

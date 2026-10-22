@@ -636,6 +636,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         statusBarController = StatusBarController()
 
+        // Foundry's summary feed: starts watching only if the integration is on.
+        _ = FoundryBridge.shared
+
         // Initialize idle animations (load bundled + built-in face)
         idleAnimationManager.initializeDefaultAnimations()
 
@@ -739,7 +742,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             Defaults.publisher(.enableQuickActions, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.quickActionsOrder, options: []).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.quickActionsHidden, options: []).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.quickActionsShortcutName, options: []).map { _ in () }.eraseToAnyPublisher()
+            Defaults.publisher(.quickActionsShortcutName, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.foundryIntegration, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.foundryShowQuickActions, options: []).map { _ in () }.eraseToAnyPublisher()
         )
         .sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()

@@ -212,6 +212,7 @@ private struct HubChipRow: View {
     @ObservedObject private var focus = DoNotDisturbManager.shared
     @ObservedObject private var music = MusicManager.shared
     @ObservedObject private var stash = StashManager.shared.store
+    @ObservedObject private var foundry = FoundryBridge.shared
     @Default(.hubHiddenChips) private var hidden
     @Default(.enableStash) private var stashEnabled
 
@@ -239,6 +240,7 @@ private struct HubChipRow: View {
         context.focusName = focus.currentFocusModeName
         context.musicIsPaused = music.hasActiveSession && !music.isPlaying
         context.musicTitle = music.songTitle
+        context.foundry = foundry.content
         return context
     }
 
@@ -247,6 +249,8 @@ private struct HubChipRow: View {
         HStack(spacing: 6) {
             ForEach(chips) { chip in
                 HubChipView(chip: chip, action: action(for: chip.kind))
+                    .help(chip.kind == .foundry ? (foundry.content?.detail ?? chip.kind.title) : chip.kind.title)
+                    .contextMenu { if chip.kind == .foundry { foundryMenu } }
                     .transition(.scale(scale: 0.55).combined(with: .opacity))
             }
         }
@@ -255,6 +259,19 @@ private struct HubChipRow: View {
         // Chips spring in and out as they become relevant; their text changing
         // underneath (a ticking timer) must not.
         .animation(NotchlyTheme.Motion.pop, value: chips.map(\.id))
+        .onChange(of: hidden) { _, _ in foundry.reload() }
+    }
+
+    /// Right-click actions for the Foundry chip. Foundry performs them and keeps
+    /// an Undo in its own window; Notchly never edits Foundry's data.
+    @ViewBuilder private var foundryMenu: some View {
+        if foundry.content?.completableTaskId != nil {
+            Button(String(localized: "Mark Done")) { foundry.markDone() }
+        }
+        Button(String(localized: "Open in Foundry")) { foundry.openInFoundry() }
+        if foundry.content?.recommendationKey != nil {
+            Button(String(localized: "Later")) { foundry.later() }
+        }
     }
 
     /// What tapping a chip does, or `nil` for one that only informs.
@@ -286,6 +303,8 @@ private struct HubChipRow: View {
             }
         case .music:
             return { music.togglePlay() }
+        case .foundry:
+            return { foundry.openInFoundry() }
         case .focus, .battery:
             return nil
         }

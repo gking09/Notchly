@@ -36,6 +36,8 @@ struct StatusMenuState: Equatable {
     var isStopwatchActive = false
     var isMicMuted = false
     var isDarkMode = false
+    /// Foundry's entry; nil while the integration is off, so the menu has no Foundry item.
+    var foundry: FoundryMenuState?
 }
 
 /// What choosing a menu item does. The controller maps each case onto the real app.
@@ -50,6 +52,8 @@ enum StatusMenuAction: Equatable {
     case toggleMicrophone
     case toggleDarkMode
     case screenshot
+    case openFoundry
+    case openFoundryNextUp
     case openSettings
     case openAbout
     case quit
@@ -137,6 +141,16 @@ enum StatusMenuModel {
             ))
         }
 
+        if let foundry = state.foundry {
+            items.append(StatusMenuItem(
+                id: "foundry",
+                kind: .submenu,
+                title: String(localized: "Foundry"),
+                symbol: "square.stack.3d.up",
+                children: foundryItems(for: foundry)
+            ))
+        }
+
         items.append(.separator("sep.settings"))
         items.append(StatusMenuItem(
             id: "settings",
@@ -159,6 +173,54 @@ enum StatusMenuModel {
             shortcut: StatusMenuKeyEquivalent(key: "q"),
             action: .quit
         ))
+        return items
+    }
+
+    /// The longest line the Foundry submenu shows before cutting it with an ellipsis.
+    static let foundryTitleLimit = 48
+
+    static func truncated(_ text: String, limit: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > limit else { return trimmed }
+        return String(trimmed.prefix(max(1, limit - 1))).trimmingCharacters(in: .whitespaces) + "\u{2026}"
+    }
+
+    static func foundryItems(for foundry: FoundryMenuState) -> [StatusMenuItem] {
+        var items: [StatusMenuItem] = []
+        let next = foundry.nextUpTitle.map { truncated($0, limit: foundryTitleLimit) }.flatMap { $0.isEmpty ? nil : $0 }
+
+        // A disabled header: information, not something to choose.
+        items.append(StatusMenuItem(
+            id: "foundry.next",
+            kind: .header,
+            title: next.map { String(localized: "Next up: \($0)") } ?? String(localized: "Nothing queued"),
+            isEnabled: false
+        ))
+        if foundry.attentionCount > 0 {
+            items.append(StatusMenuItem(
+                id: "foundry.attention",
+                title: foundry.attentionCount == 1
+                    ? String(localized: "1 item needs attention")
+                    : String(localized: "\(foundry.attentionCount) items need attention"),
+                symbol: "exclamationmark.triangle",
+                isEnabled: false
+            ))
+        }
+        items.append(.separator("foundry.sep"))
+        items.append(StatusMenuItem(
+            id: "foundry.open",
+            title: String(localized: "Open Foundry"),
+            symbol: "arrow.up.forward.app",
+            action: .openFoundry
+        ))
+        if next != nil {
+            items.append(StatusMenuItem(
+                id: "foundry.openNext",
+                title: String(localized: "Open Next Up Project"),
+                symbol: "arrow.right.circle",
+                action: .openFoundryNextUp
+            ))
+        }
         return items
     }
 

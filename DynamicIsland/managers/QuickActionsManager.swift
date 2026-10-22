@@ -89,7 +89,7 @@ final class QuickActionsManager: ObservableObject {
             return isMicMuted
         case .darkMode:
             return isDarkMode
-        case .screenshot, .sleepDisplay, .shortcut:
+        case .screenshot, .sleepDisplay, .shortcut, .openFoundry, .foundryNextUp:
             return false
         }
     }
@@ -163,6 +163,15 @@ final class QuickActionsManager: ObservableObject {
 
         case .shortcut:
             runShortcut()
+
+        case .openFoundry:
+            // Opening is navigation, not a change to anything in Foundry.
+            FoundryBridge.shared.openApp()
+            closeNotch()
+
+        case .foundryNextUp:
+            FoundryBridge.shared.openNextUp()
+            closeNotch()
         }
     }
 
